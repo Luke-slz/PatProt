@@ -1,32 +1,79 @@
-//
-//  PatProtApp.swift
-//  PatProt
-//
-//  Created by Luke Schulz on 07.05.26.
-//
-
 import SwiftUI
-import SwiftData
+import UIKit
+import Combine
+
+// MARK: - App-weiter State für Screenshot-Import
+
+class AppState: ObservableObject {
+    @Published var pendingImage: UIImage? = nil
+    static let shared = AppState()
+
+    private init() {
+        syncFromiCloud()
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(iCloudDidChange),
+            name: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
+            object: NSUbiquitousKeyValueStore.default
+        )
+        NSUbiquitousKeyValueStore.default.synchronize()
+    }
+
+    @objc private func iCloudDidChange() {
+        DispatchQueue.main.async { self.syncFromiCloud() }
+    }
+
+    private func syncFromiCloud() {
+        let kvs = NSUbiquitousKeyValueStore.default
+        for key in ["recipientEmail", "gespeichertesPersonal", "customFahrzeuge"] {
+            if let val = kvs.string(forKey: key), !val.isEmpty {
+                UserDefaults.standard.set(val, forKey: key)
+            }
+        }
+    }
+
+    static func pushSettingsToiCloud() {
+        let kvs = NSUbiquitousKeyValueStore.default
+        for key in ["recipientEmail", "gespeichertesPersonal", "customFahrzeuge"] {
+            if let val = UserDefaults.standard.string(forKey: key) {
+                kvs.set(val, forKey: key)
+            }
+        }
+        kvs.synchronize()
+    }
+}
+
+// MARK: - App Entry Point
 
 @main
 struct PatProtApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-
-        do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
-        }
-    }()
+    @StateObject private var appState = AppState.shared
 
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environmentObject(appState)
+                .onOpenURL { url in
+                    handleIncomingURL(url)
+                }
         }
-        .modelContainer(sharedModelContainer)
+    }
+
+    private func handleIncomingURL(_ url: URL) {
+        guard url.isFileURL else { return }
+
+        let accessing = url.startAccessingSecurityScopedResource()
+        defer { if accessing { url.stopAccessingSecurityScopedResource() } }
+
+        var image: UIImage?
+        if let data = try? Data(contentsOf: url) {
+            image = UIImage(data: data)
+        }
+
+        if let img = image {
+            DispatchQueue.main.async {
+                AppState.shared.pendingImage = img
+            }
+        }
     }
 }

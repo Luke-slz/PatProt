@@ -1,0 +1,1166 @@
+import UIKit
+
+// =========================================================
+// MARK: - DLRG Einsatzprotokoll – formgetreues PDF
+// =========================================================
+
+struct DINPDFGenerator {
+
+    static let pageSize = CGSize(width: 595.2, height: 841.8)
+
+    // Column X positions (matching original 3-column layout)
+    private static let lx: CGFloat = 7    // left edge
+    private static let c1: CGFloat = 192  // col 1 → 2 boundary
+    private static let c2: CGFloat = 392  // col 2 → 3 boundary
+    private static let rx: CGFloat = 588  // right edge
+
+    // Colors
+    private static let colBlue   = UIColor(red:0.12, green:0.28, blue:0.50, alpha:1)
+    private static let secBlue   = UIColor(red:0.20, green:0.40, blue:0.65, alpha:1)
+    private static let subBlue   = UIColor(red:0.45, green:0.62, blue:0.82, alpha:1)
+    private static let vLightB   = UIColor(red:0.88, green:0.93, blue:0.98, alpha:1)
+    private static let border    = UIColor(white:0.60, alpha:1)
+    private static let hlYellow  = UIColor(red:1, green:0.95, blue:0.75, alpha:1)
+    private static let checkFill = UIColor(red:0.1, green:0.45, blue:0.15, alpha:1)
+    private static let cbBg      = UIColor(red:0.12, green:0.28, blue:0.50, alpha:0.12)
+
+    // Fonts
+    private static let f5  = UIFont.systemFont(ofSize: 5.5)
+    private static let f6  = UIFont.systemFont(ofSize: 6.0)
+    private static let f6b = UIFont.boldSystemFont(ofSize: 6.0)
+    private static let f7  = UIFont.systemFont(ofSize: 7.0)
+    private static let f7b = UIFont.boldSystemFont(ofSize: 7.0)
+    private static let f8b = UIFont.boldSystemFont(ofSize: 8.0)
+    private static let f10b = UIFont.boldSystemFont(ofSize: 10.0)
+    private static let f13b = UIFont.boldSystemFont(ofSize: 13.0)
+
+    // Formatters
+    private static let dateFmt: DateFormatter = {
+        let f = DateFormatter(); f.dateFormat = "dd.MM.yyyy"; return f
+    }()
+    private static let timeFmt: DateFormatter = {
+        let f = DateFormatter(); f.dateFormat = "HH:mm"; return f
+    }()
+    private static func d(_ v: Date?) -> String { v.map { dateFmt.string(from: $0) } ?? "" }
+    private static func t(_ v: Date?) -> String { v.map { timeFmt.string(from: $0) } ?? "" }
+
+    // ─────────────────────────────────────────────────────
+    // MARK: Primitive helpers
+    // ─────────────────────────────────────────────────────
+
+    private static func fillRect(_ r: CGRect, _ c: UIColor) {
+        c.setFill(); UIRectFill(r)
+    }
+    private static func strokeRect(_ r: CGRect, _ c: UIColor = UIColor(white:0.60, alpha:1), lw: CGFloat = 0.35) {
+        c.setStroke()
+        let p = UIBezierPath(rect: r); p.lineWidth = lw; p.stroke()
+    }
+    private static func hline(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat, c: UIColor = UIColor(white:0.60,alpha:1), lw: CGFloat=0.3) {
+        c.setStroke(); let p = UIBezierPath(); p.lineWidth=lw
+        p.move(to: CGPoint(x:x,y:y)); p.addLine(to: CGPoint(x:x+w,y:y)); p.stroke()
+    }
+    private static func vline(_ x: CGFloat, _ y: CGFloat, _ h: CGFloat, c: UIColor = UIColor(white:0.60,alpha:1), lw: CGFloat=0.3) {
+        c.setStroke(); let p = UIBezierPath(); p.lineWidth=lw
+        p.move(to: CGPoint(x:x,y:y)); p.addLine(to: CGPoint(x:x,y:y+h)); p.stroke()
+    }
+
+    /// Draw text clipped to rect, single line truncating
+    private static func txt(_ s: String, _ r: CGRect,
+                             font: UIFont, color: UIColor = .black,
+                             align: NSTextAlignment = .left) {
+        guard !s.isEmpty else { return }
+        let ps = NSMutableParagraphStyle()
+        ps.alignment = align; ps.lineBreakMode = .byTruncatingTail
+        (s as NSString).draw(in: r, withAttributes: [.font:font,.foregroundColor:color,.paragraphStyle:ps])
+    }
+
+    /// Draw text, multiline, returns actual height used
+    @discardableResult
+    private static func mtxt(_ s: String, _ r: CGRect, font: UIFont) -> CGFloat {
+        guard !s.isEmpty else { return 0 }
+        let ps = NSMutableParagraphStyle(); ps.alignment = .left
+        let attrs: [NSAttributedString.Key:Any] = [.font:font,.paragraphStyle:ps]
+        let br = (s as NSString).boundingRect(with: CGSize(width:r.width,height:r.height),
+            options:.usesLineFragmentOrigin, attributes:attrs, context:nil)
+        (s as NSString).draw(in: CGRect(x:r.minX,y:r.minY,width:r.width,height:min(ceil(br.height)+2,r.height)),
+            withAttributes:attrs)
+        return min(ceil(br.height)+4, r.height)
+    }
+
+    // ─────────────────────────────────────────────────────
+    // MARK: Form element helpers
+    // ─────────────────────────────────────────────────────
+
+    /// Blue section header bar
+    private static func secHeader(_ title: String, x: CGFloat, y: CGFloat, w: CGFloat, h: CGFloat = 11) {
+        fillRect(CGRect(x:x,y:y,width:w,height:h), secBlue)
+        txt(title, CGRect(x:x+3,y:y+2,width:w-6,height:h-4), font:f7b, color:.white)
+    }
+
+    /// Light sub-section header
+    private static func subHeader(_ title: String, x: CGFloat, y: CGFloat, w: CGFloat, h: CGFloat = 9.5) {
+        fillRect(CGRect(x:x,y:y,width:w,height:h), subBlue)
+        txt(title, CGRect(x:x+2,y:y+1.5,width:w-4,height:h-3), font:f6b, color:.white)
+    }
+
+    /// Labeled field: [label | value]
+    private static func field(_ label: String, _ value: String,
+                               x: CGFloat, y: CGFloat, w: CGFloat, h: CGFloat,
+                               lw: CGFloat = 55, hl: Bool = false,
+                               lFont: UIFont? = nil, vFont: UIFont? = nil) {
+        let bg = hl ? hlYellow : .white
+        fillRect(CGRect(x:x,y:y,width:w,height:h), bg)
+        strokeRect(CGRect(x:x,y:y,width:w,height:h))
+        if lw > 0 {
+            vline(x+lw, y, h)
+            txt(label, CGRect(x:x+1.5,y:y+1.5,width:lw-3,height:h-3),
+                font:lFont ?? f6, color:.darkGray)
+        }
+        txt(value, CGRect(x:x+lw+1.5,y:y+1.5,width:w-lw-3,height:h-3),
+            font:vFont ?? f7, color:.black)
+    }
+
+    /// Just a bordered value box (no label divider)
+    private static func valBox(_ value: String, x: CGFloat, y: CGFloat, w: CGFloat, h: CGFloat,
+                                font: UIFont? = nil, hl: Bool = false) {
+        fillRect(CGRect(x:x,y:y,width:w,height:h), hl ? hlYellow : .white)
+        strokeRect(CGRect(x:x,y:y,width:w,height:h))
+        txt(value, CGRect(x:x+2,y:y+1.5,width:w-4,height:h-3), font:font ?? f7)
+    }
+
+    /// Small label above a value box
+    private static func labeledVal(_ label: String, _ value: String,
+                                    x: CGFloat, y: CGFloat, w: CGFloat, labelH: CGFloat=8, valH: CGFloat=11) {
+        txt(label, CGRect(x:x+1,y:y,width:w-2,height:labelH), font:f5, color:.darkGray)
+        valBox(value, x:x, y:y+labelH, w:w, h:valH)
+    }
+
+    /// Draw one checkbox with label
+    private static func cb(_ label: String, _ checked: Bool,
+                            x: CGFloat, y: CGFloat, bs: CGFloat = 7, lw: CGFloat = 80) {
+        let box = CGRect(x:x, y:y+0.5, width:bs, height:bs)
+        if checked { fillRect(box, cbBg) }
+        strokeRect(box)
+        if checked {
+            checkFill.setStroke()
+            let tick = UIBezierPath(); tick.lineWidth = 1.1
+            tick.move(to: CGPoint(x:box.minX+1,y:box.midY))
+            tick.addLine(to: CGPoint(x:box.midX-0.5,y:box.maxY-1.5))
+            tick.addLine(to: CGPoint(x:box.maxX-1,y:box.minY+1.5))
+            tick.stroke()
+        }
+        txt(label, CGRect(x:x+bs+1.5,y:y,width:lw,height:bs+2), font:f6)
+    }
+
+    /// Row of checkboxes with equal spacing
+    private static func cbRow(_ items: [(String,Bool)], x: CGFloat, y: CGFloat, w: CGFloat, h: CGFloat = 10) {
+        let colW = w / CGFloat(items.count)
+        for (i,(label,checked)) in items.enumerated() {
+            let cx = x + CGFloat(i)*colW
+            cb(label, checked, x:cx+1, y:y+1, bs:7, lw:colW-11)
+        }
+    }
+
+    // ─────────────────────────────────────────────────────
+    // MARK: - MAIN GENERATE
+    // ─────────────────────────────────────────────────────
+
+    static func generate(protokoll: EinsatzProtokoll) -> URL? {
+        let renderer = UIGraphicsPDFRenderer(bounds: CGRect(origin:.zero, size:pageSize))
+        let fname = protokoll.einsatzOrt.einsatzNummer.isEmpty
+            ? "Protokoll" : "Protokoll_\(protokoll.einsatzOrt.einsatzNummer)"
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(fname).pdf")
+        do {
+            try renderer.writePDF(to: url) { ctx in
+                ctx.beginPage()
+                drawPage1(p: protokoll)
+                ctx.beginPage()
+                drawPage2(p: protokoll)
+            }
+            return url
+        } catch {
+            print("PDF-Generierung fehlgeschlagen: \(error)")
+            return nil
+        }
+    }
+
+    // ─────────────────────────────────────────────────────
+    // MARK: - PAGE 1  (Seiten 1+2 des Originals)
+    // Sections: Insurance · 1 Rettungstech · 2 Anamnese · 3 Befunde · 4.1 Diagnose
+    // ─────────────────────────────────────────────────────
+
+    private static func drawPage1(p: EinsatzProtokoll) {
+
+        // ── Header bar ───────────────────────────────────
+        let hh: CGFloat = 22
+        fillRect(CGRect(x:0,y:0,width:pageSize.width,height:hh), colBlue)
+        txt("EINSATZPROTOKOLL",
+            CGRect(x:lx,y:3,width:230,height:16), font:f13b, color:.white)
+        txt("Einsatz-Nr.: \(p.einsatzOrt.einsatzNummer)   Datum: \(d(p.einsatzOrt.alarmzeit))",
+            CGRect(x:260,y:5,width:240,height:9), font:f7b, color:.white)
+        txt("Seite 1 / 2",
+            CGRect(x:pageSize.width-55,y:13,width:50,height:8), font:f6, color:.white, align:.right)
+
+        var y: CGFloat = hh
+
+        // ── Row A: Insurance (left) | Section 1 (right) ──
+        let rowAH: CGFloat = 88
+
+        // Left: insurance / patient header
+        do {
+            let x = lx; let w = c1 - lx
+            field("Krankenkasse / Kostenträger", p.patientDaten.kostentraeger,
+                  x:x, y:y, w:w, h:14, lw:w*0.48)
+            field("Name des Versicherten",
+                  "\(p.patientDaten.nachname), \(p.patientDaten.vorname)",
+                  x:x, y:y+14, w:w, h:14, lw:w*0.48, hl:true)
+            field("geb. am", d(p.patientDaten.geburtsDatum),
+                  x:x, y:y+28, w:w*0.55, h:12, lw:38)
+            field("Geschlecht", p.patientDaten.geschlecht.rawValue,
+                  x:x+w*0.55, y:y+28, w:w*0.45, h:12, lw:42)
+            // Versichertenart
+            let vRow = CGRect(x:x,y:y+40,width:w,height:12)
+            fillRect(vRow, .white); strokeRect(vRow)
+            txt("Versichertenart:", CGRect(x:x+1,y:y+41,width:65,height:10), font:f6, color:.darkGray)
+            cb("Mitglied", false, x:x+68, y:y+41, bs:7, lw:35)
+            cb("Fam.-Vers.", false, x:x+108, y:y+41, bs:7, lw:40)
+            cb("Rentner", false, x:x+152, y:y+41, bs:7, lw:35)
+            // 3 split fields
+            let fw3 = w/3
+            field("Kostenträger-Kennz.", "", x:x, y:y+52, w:fw3, h:12, lw:fw3*0.55)
+            field("Versicherten-Nr.", p.patientDaten.versicherungsNummer,
+                  x:x+fw3, y:y+52, w:fw3, h:12, lw:fw3*0.5)
+            field("Status", "", x:x+fw3*2, y:y+52, w:fw3, h:12, lw:fw3*0.4)
+            field("Betriebsstätten-Nr.", "", x:x, y:y+64, w:fw3, h:12, lw:fw3*0.55)
+            field("Arzt-Nr.", "", x:x+fw3, y:y+64, w:fw3, h:12, lw:fw3*0.4)
+            field("Datum", d(p.einsatzOrt.alarmzeit), x:x+fw3*2, y:y+64, w:fw3, h:12, lw:fw3*0.35)
+        }
+
+        // Right: Section 1 Rettungstechnische Daten
+        do {
+            let x = c1; let w = rx - c1
+            secHeader("1. Rettungstechnische Daten", x:x, y:y, w:w)
+            let sh: CGFloat = 11; y += sh
+
+            // Vehicle checkboxes
+            let fz = p.einsatzOrt.fahrzeugTyp
+            let cbW = w / 7
+            let vItems: [(String,Bool)] = [
+                ("RTW", fz == .rtw), ("KTW", fz == .ktw), ("NEF", fz == .nef),
+                ("NAW", fz == .naw), ("BabyNAW", fz == .babyNaw), ("V-RTW", fz == .vrtw),
+                ("NKW", false)
+            ]
+            fillRect(CGRect(x:x,y:y,width:w,height:11), .white)
+            strokeRect(CGRect(x:x,y:y,width:w,height:11))
+            for (i,(label,checked)) in vItems.enumerated() {
+                cb(label, checked, x:x+CGFloat(i)*cbW+1, y:y+1.5, bs:7, lw:cbW-10)
+            }
+            y += 11
+
+            // Sondersignal / Notarzt
+            let r2h: CGFloat = 11
+            fillRect(CGRect(x:x,y:y,width:w,height:r2h), .white)
+            strokeRect(CGRect(x:x,y:y,width:w,height:r2h))
+            cb("Sondersignal", p.einsatzOrt.sondersignal, x:x+2, y:y+1.5, bs:7, lw:55)
+            cb("Notarzt", p.einsatzOrt.notarzt, x:x+80, y:y+1.5, bs:7, lw:35)
+            cb("Mit Patient", false, x:x+130, y:y+1.5, bs:7, lw:50)
+            y += r2h
+
+            // Dokumentations-RM
+            field("Dokumentations-Rettungsmittel", p.einsatzOrt.fahrzeugTyp.rawValue,
+                  x:x, y:y, w:w/2, h:11, lw:w*0.22)
+            field("Weitere Rettungsmittel", p.einsatzOrt.weitereEinsatzmittel.joined(separator: ", "),
+                  x:x+w/2, y:y, w:w/2, h:11, lw:w*0.22)
+            y += 11
+
+            // Times block (alarm / ankunft / abfahrt)
+            let tW = w / 3
+            labeledVal("Alarm", t(p.einsatzOrt.alarmzeit),
+                       x:x, y:y, w:tW, labelH:7, valH:11)
+            labeledVal("Ankunft Einsatzort", t(p.einsatzOrt.ankunftzeit),
+                       x:x+tW, y:y, w:tW, labelH:7, valH:11)
+            labeledVal("Abfahrt", t(p.einsatzOrt.abfahrtzeit),
+                       x:x+tW*2, y:y, w:tW, labelH:7, valH:11)
+            y += 18
+
+            labeledVal("Ankunft Krankenhaus", t(p.einsatzOrt.krankenHausAnkunft),
+                       x:x, y:y, w:tW, labelH:7, valH:11)
+            labeledVal("Einsatz-Nr.", p.einsatzOrt.einsatzNummer,
+                       x:x+tW, y:y, w:tW, labelH:7, valH:11)
+            labeledVal("Einsatzart", p.einsatzOrt.stichwort,
+                       x:x+tW*2, y:y, w:tW, labelH:7, valH:11)
+            y += 18
+            let adresseText = [p.einsatzOrt.adresse, p.einsatzOrt.zusatz].filter { !$0.isEmpty }.joined(separator: ", ")
+            field("Einsatzort", adresseText, x:x, y:y, w:w/2, h:11, lw:42)
+            field("Stichwort", p.einsatzOrt.einsatzArt, x:x+w/2, y:y, w:w/2, h:11, lw:42)
+            y += 11
+        }
+        y = hh + rowAH
+
+        // ── EINSATZPROTOKOLL title block ──────────────────
+        do {
+            let x = lx; let w = c1 - lx; let bh: CGFloat = 55
+            fillRect(CGRect(x:x,y:y,width:w,height:bh), vLightB)
+            strokeRect(CGRect(x:x,y:y,width:w,height:bh))
+            txt("EINSATZPROTOKOLL",
+                CGRect(x:x+3,y:y+4,width:w-6,height:16), font:f13b, color:colBlue)
+            cb("Notarzt", p.einsatzOrt.notarzt, x:x+3, y:y+31, bs:7, lw:38)
+            cb("NetSan/RettAss/RS", false, x:x+55, y:y+31, bs:7, lw:75)
+            txt("Einsatznummer:", CGRect(x:x+3,y:y+42,width:55,height:9), font:f6b, color:.darkGray)
+            valBox(p.einsatzOrt.einsatzNummer, x:x+58, y:y+41, w:w-62, h:11, font:f8b, hl:true)
+            y += bh
+        }
+
+        // ── Männlich/Weiblich + Standort row ─────────────
+        do {
+            let x = lx; let w = c1 - lx
+            let rh: CGFloat = 12
+            fillRect(CGRect(x:x,y:y,width:w,height:rh), .white)
+            strokeRect(CGRect(x:x,y:y,width:w,height:rh))
+            cb("männlich", p.patientDaten.geschlecht == .maennlich, x:x+2, y:y+2, bs:7, lw:35)
+            cb("weiblich", p.patientDaten.geschlecht == .weiblich, x:x+55, y:y+2, bs:7, lw:35)
+            cb("unbek.", p.patientDaten.geschlecht == .unbekannt, x:x+108, y:y+2, bs:7, lw:30)
+            // Right side: additional info (Einsatzabbruch etc)
+            let rx2 = c1; let rw = rx - c1
+            fillRect(CGRect(x:rx2,y:y,width:rw,height:rh), .white)
+            strokeRect(CGRect(x:rx2,y:y,width:rw,height:rh))
+            cb("Einsatzabbruch", false, x:rx2+2, y:y+2, bs:7, lw:60)
+            cb("Transportverweigerung", false, x:rx2+80, y:y+2, bs:7, lw:80)
+            cb("Fehlalarm", false, x:rx2+180, y:y+2, bs:7, lw:50)
+            y += rh
+        }
+
+        // ── Notrufnummer / Alarmierungsnummer ────────────
+        do {
+            field("Notrufnummer", "", x:lx, y:y, w:(c1-lx)/2, h:11, lw:55)
+            field("Alarmierungsnummer", "", x:lx+(c1-lx)/2, y:y, w:(c1-lx)/2, h:11, lw:65)
+            field("Standort RM", "", x:c1, y:y, w:(rx-c1)/2, h:11, lw:45)
+            field("Vorsorgevollmächtigter", "", x:c1+(rx-c1)/2, y:y, w:(rx-c1)/2, h:11, lw:75)
+            y += 11
+        }
+
+        // ── SECTION 2 ──────────────────────────────────────
+        secHeader("2. Notfallgeschehen / Anamnese / Erstbefund", x:lx, y:y, w:rx-lx)
+        y += 11
+
+        // Notfallgeschehen Felder
+        let ng = p.notfallGeschehen
+        if !ng.erstbefundVorOrt.isEmpty {
+            field("Erstbefund", ng.erstbefundVorOrt, x:lx, y:y, w:rx-lx, h:11, lw:50)
+            y += 11
+        }
+        if !ng.patientGefunden.isEmpty || ng.manv {
+            let beteiligte = ng.manv ? "MANV · \(ng.anzahlBeteiligte) Beteiligte" : "\(ng.anzahlBeteiligte) Beteiligter"
+            let halbW = (rx - lx) / 2
+            field("Pat. vorgef.", ng.patientGefunden, x:lx, y:y, w:halbW, h:11, lw:52)
+            field("Beteiligte", beteiligte, x:lx + halbW, y:y, w:halbW, h:11, lw:45)
+            y += 11
+        }
+        if !ng.ersthelferMassnahmen.isEmpty {
+            field("Ersthelfer", ng.ersthelferMassnahmen, x:lx, y:y, w:rx-lx, h:11, lw:50)
+            y += 11
+        }
+
+        // ABCDE + SAMPLER grid
+        let abcdeLetters = ["A","B","C","D","E"]
+        let samplerLetters = ["S","M","P","L","R"]
+        let abcdeVals = [
+            p.airway.freitext,
+            p.breathing.freitext,
+            p.circulation.freitext,
+            p.disability.freitext,
+            p.exposure.freitext,
+        ]
+        let rowH: CGFloat = 15
+        for i in 0..<5 {
+            let ry = y + CGFloat(i)*rowH
+            // Letter box A-E
+            fillRect(CGRect(x:lx,y:ry,width:12,height:rowH), subBlue)
+            txt(abcdeLetters[i], CGRect(x:lx+1,y:ry+3,width:10,height:rowH-6), font:f7b, color:.white, align:.center)
+            // Content
+            let cw = rx - lx - 26
+            fillRect(CGRect(x:lx+12,y:ry,width:cw,height:rowH), i%2==0 ? .white : UIColor(white:0.97,alpha:1))
+            strokeRect(CGRect(x:lx+12,y:ry,width:cw,height:rowH))
+            txt(abcdeVals[i], CGRect(x:lx+14,y:ry+3,width:cw-4,height:rowH-6), font:f7)
+            // Right SAMPLER letter
+            fillRect(CGRect(x:rx-14,y:ry,width:14,height:rowH), subBlue.withAlphaComponent(0.7))
+            txt(samplerLetters[i], CGRect(x:rx-13,y:ry+3,width:12,height:rowH-6), font:f7b, color:.white, align:.center)
+        }
+        y += CGFloat(5)*rowH
+
+        // ── SECTION 3 ──────────────────────────────────────
+        secHeader("3. Befunde", x:lx, y:y, w:rx-lx)
+        y += 11
+
+        // Sub-headers for columns
+        let bW1 = c1 - lx                     // messwerte
+        let bW2 = (c2 - c1) * 0.50            // A+B Atmung
+        let bW3 = (c2 - c1) * 0.50            // C Cirkulation
+        let bW4 = (rx - c2) * 0.55            // D Neurologie
+        let bW5 = (rx - c2) * 0.45            // E/Haut
+
+        subHeader("Messwerte", x:lx, y:y, w:bW1)
+        subHeader("A+B Atmung", x:lx+bW1, y:y, w:bW2)
+        subHeader("C Cirkulation+EKG", x:lx+bW1+bW2, y:y, w:bW3)
+        subHeader("D Neurologie", x:c2, y:y, w:bW4)
+        subHeader("E/Haut", x:c2+bW4, y:y, w:bW5)
+        y += 9.5
+
+        // Messwerte column: RR SYS / DIA / HF / SpO2 / AF / etCO2 / BZ / Temp
+        let mvH: CGFloat = 11
+        let mvLw: CGFloat = 42
+        let mvVw = bW1 - mvLw - 2
+        let mvItems: [(String,String)] = [
+            ("RR syst.", p.circulation.blutdruckSystolisch.map { "\($0)" } ?? ""),
+            ("RR diast.", p.circulation.blutdruckDiastolisch.map { "\($0)" } ?? ""),
+            ("HF (/min)", p.circulation.puls.map { "\($0)" } ?? ""),
+            ("Rhythmus", p.circulation.pulsRhythmus),
+            ("SpO₂ (%)", p.breathing.spo2.map { "\($0)" } ?? ""),
+            ("AF (/min)", p.breathing.atemFrequenz.map { "\($0)" } ?? ""),
+            ("etCO₂", ""),
+            ("BZ", p.disability.blutzucker.map { String(format:"%.1f",$0) } ?? ""),
+            ("Temp (°C)", p.exposure.temperatur.map { String(format:"%.1f",$0) } ?? ""),
+        ]
+        let mvColY = y
+        for (i,(label,value)) in mvItems.enumerated() {
+            let ry = mvColY + CGFloat(i)*mvH
+            let bg: UIColor = i%2 == 0 ? .white : UIColor(white:0.97,alpha:1)
+            let hl = (label == "RR syst." || label == "RR diast.")
+            fillRect(CGRect(x:lx,y:ry,width:bW1,height:mvH), hl ? hlYellow : bg)
+            strokeRect(CGRect(x:lx,y:ry,width:bW1,height:mvH))
+            vline(lx+mvLw, ry, mvH)
+            txt(label, CGRect(x:lx+1.5,y:ry+2,width:mvLw-3,height:mvH-4), font:f6, color:.darkGray)
+            txt(value, CGRect(x:lx+mvLw+2,y:ry+2,width:mvVw-4,height:mvH-4), font:f7b)
+        }
+
+        // A+B Atmung checkboxes
+        let atAx = lx + bW1
+        let atItems: [(String,Bool)] = [
+            ("unauffällig", p.breathing.status == .nicht_kritisch),
+            ("Dyspnoe", p.breathing.dyspnoe),
+            ("Zyanose", p.breathing.zyanose),
+            ("Atemweg frei", p.airway.freiheit),
+            ("Verlegt", p.airway.verlegung),
+            ("Guedel", p.airway.oropharyngealtubus),
+            ("Wendl", p.airway.nasopharyngealtubus),
+            ("iGel/EGA", p.massnahmen.supraglottisch),
+            ("Intubiert", p.airway.intubiert),
+            ("Konikotomie", p.airway.konikotomie),
+            ("O₂-Gabe", p.breathing.sauerstoffGabe),
+            ("Beatmung", p.breathing.beatmung),
+        ]
+        fillRect(CGRect(x:atAx,y:mvColY,width:bW2,height:CGFloat(atItems.count)*mvH), .white)
+        strokeRect(CGRect(x:atAx,y:mvColY,width:bW2,height:CGFloat(atItems.count)*mvH))
+        for (i,(label,checked)) in atItems.enumerated() {
+            let ry = mvColY + CGFloat(i)*mvH
+            if i%2 == 1 { fillRect(CGRect(x:atAx,y:ry,width:bW2,height:mvH), UIColor(white:0.97,alpha:1)) }
+            cb(label, checked, x:atAx+2, y:ry+2, bs:7, lw:bW2-12)
+        }
+
+        // C Cirkulation
+        let ciAx = atAx + bW2
+        let ciItems: [(String,Bool)] = [
+            ("unauffällig", p.circulation.status == .nicht_kritisch),
+            ("Pulslosigkeit", p.circulation.pulslosigkeit),
+            ("Blutung", p.circulation.blutung),
+            ("IV-Zugang", p.circulation.ivZugang),
+            ("EKG", p.circulation.ekg),
+            ("Sinusrhythmus", false),
+            ("Tachykardie", false),
+            ("Bradykardie", false),
+            ("AV-Block", false),
+            ("Kammerflattern", false),
+            ("Asystolie", p.reanimationAktiv && p.reanimation.initialRhythmus == .asystolie),
+        ]
+        fillRect(CGRect(x:ciAx,y:mvColY,width:bW3,height:CGFloat(ciItems.count)*mvH), .white)
+        strokeRect(CGRect(x:ciAx,y:mvColY,width:bW3,height:CGFloat(ciItems.count)*mvH))
+        for (i,(label,checked)) in ciItems.enumerated() {
+            let ry = mvColY + CGFloat(i)*mvH
+            if i%2 == 1 { fillRect(CGRect(x:ciAx,y:ry,width:bW3,height:mvH), UIColor(white:0.97,alpha:1)) }
+            cb(label, checked, x:ciAx+2, y:ry+2, bs:7, lw:bW3-12)
+        }
+
+        // D Neurologie / GCS
+        let neAx = c2
+        let gcs = p.disability
+        let neItems: [(String,String)] = [
+            ("Bewusstsein", p.patientDaten.ansprechbar ? "ansprechbar" : "nicht ansprechbar"),
+            ("GCS gesamt", "\(gcs.gcsGesamt)/15"),
+            ("Augen (E)", "\(gcs.gcsAugen)"),
+            ("Verbal (V)", "\(gcs.gcsVerbal)"),
+            ("Motorik (M)", "\(gcs.gcsMotor)"),
+            ("Pupille re", gcs.pupillenRechts),
+            ("Pupille li", gcs.pupillenLinks),
+            ("Lichtreaktion", gcs.pupillenReaktion ? "+" : "–"),
+            ("Schmerz NRS", "\(gcs.schmerz)/10"),
+        ]
+        for (i,(label,value)) in neItems.enumerated() {
+            let ry = mvColY + CGFloat(i)*mvH
+            let hl2 = label == "GCS gesamt"
+            let bg2: UIColor = hl2 ? hlYellow : (i%2==0 ? .white : UIColor(white:0.97,alpha:1))
+            fillRect(CGRect(x:neAx,y:ry,width:bW4,height:mvH), bg2)
+            strokeRect(CGRect(x:neAx,y:ry,width:bW4,height:mvH))
+            vline(neAx+42, ry, mvH)
+            txt(label, CGRect(x:neAx+1.5,y:ry+2,width:40,height:mvH-4), font:f6, color:.darkGray)
+            txt(value, CGRect(x:neAx+44,y:ry+2,width:bW4-46,height:mvH-4), font:f7b)
+        }
+
+        // E / Haut
+        let haAx = c2 + bW4
+        let haItems: [(String,Bool)] = [
+            ("unauffällig", p.exposure.status == .nicht_kritisch),
+            ("Trauma", p.exposure.trauma),
+            ("Ödeme", p.exposure.oedeme),
+            ("Verletzt", !p.exposure.verletzungen.isEmpty),
+            ("Bewusstlos", p.exposure.bewusstseinsverlust),
+            ("Zyanose", p.breathing.zyanose),
+            ("Blass", false),
+            ("Gerötet", false),
+            ("Ikterisch", false),
+        ]
+        fillRect(CGRect(x:haAx,y:mvColY,width:bW5,height:CGFloat(haItems.count)*mvH), .white)
+        strokeRect(CGRect(x:haAx,y:mvColY,width:bW5,height:CGFloat(haItems.count)*mvH))
+        for (i,(label,checked)) in haItems.enumerated() {
+            let ry = mvColY + CGFloat(i)*mvH
+            if i%2 == 1 { fillRect(CGRect(x:haAx,y:ry,width:bW5,height:mvH), UIColor(white:0.97,alpha:1)) }
+            cb(label, checked, x:haAx+2, y:ry+2, bs:7, lw:bW5-12)
+        }
+
+        y = mvColY + CGFloat(max(mvItems.count, atItems.count, ciItems.count))*mvH + 2
+
+        // Hautfarbe / Temp row
+        field("Hautfarbe", p.exposure.hautfarbe, x:lx, y:y, w:(rx-lx)/3, h:11, lw:42)
+        field("Temperatur", p.exposure.temperatur.map{String(format:"%.1f °C",$0)} ?? "",
+              x:lx+(rx-lx)/3, y:y, w:(rx-lx)/3, h:11, lw:45)
+        field("Verletzungen", p.exposure.verletzungen, x:lx+(rx-lx)*2/3, y:y, w:(rx-lx)/3, h:11, lw:45)
+        y += 11
+
+        // ── SECTION 4 ──────────────────────────────────────
+        secHeader("4. Diagnose", x:lx, y:y, w:rx-lx)
+        y += 11
+
+        // Leitsymptom (full width)
+        let leitsymptomText = p.diagnose.leitsymptom.isEmpty
+            ? (p.diagnose.verdachtsdiagnosen.first { $0.wahrscheinlichkeit == .fuehrend }?.name ?? "")
+            : p.diagnose.leitsymptom
+        field("Leitsymptom / Diagnose", leitsymptomText,
+              x:lx, y:y, w:rx-lx, h:13, lw:85, hl:true)
+        y += 13
+
+        // Verdachtsdiagnosen
+        if !p.diagnose.verdachtsdiagnosen.isEmpty {
+            let diagText = DiagnoseWahrscheinlichkeit.allCases
+                .flatMap { stufe in p.diagnose.verdachtsdiagnosen.filter { $0.wahrscheinlichkeit == stufe }.map { "\($0.name) (\(stufe.rawValue))" } }
+                .joined(separator: " · ")
+            field("Verdachtsdiagnosen", diagText, x:lx, y:y, w:rx-lx, h:11, lw:85)
+            y += 11
+        }
+
+        // 4.1 Three-column erkrankung layout
+        let dW = (rx-lx)/3
+        let d1x = lx; let d2x = lx+dW; let d3x = lx+dW*2
+        subHeader("ZNS / Neurologie", x:d1x, y:y, w:dW)
+        subHeader("Herz-Kreislauf", x:d2x, y:y, w:dW)
+        subHeader("Infektionen / Sonstiges", x:d3x, y:y, w:dW)
+        y += 9.5
+
+        let col1Items: [(String,Bool)] = [
+            ("Akutes neurol. Defizit", p.diagnose.znsAkutNeuro),
+            ("SAB / ICB", p.diagnose.znsSab),
+            ("Status Epilepticus", p.diagnose.znsEpilepsie),
+            ("Fieberkrampf", p.diagnose.znsFieberkrampf),
+            ("Transplantation", p.diagnose.znsTransplantat),
+        ]
+        let col1b: [(String,Bool)] = [
+            ("Asthma", p.diagnose.atmungAsthma),
+            ("Exazerbierte COPD", p.diagnose.atmungExazerbiert),
+            ("Pneumonie", p.diagnose.atmungPneumonie),
+            ("LTB", p.diagnose.atmungLtb),
+            ("Epiglottitis", p.diagnose.atmungEpiglottitis),
+        ]
+
+        let col2Items: [(String,Bool)] = [
+            ("ACS", p.diagnose.herzAcs),
+            ("STEMI", p.diagnose.herzStemi),
+            ("VW (Vorderwand)", p.diagnose.herzVW),
+            ("HW (Hinterwand)", p.diagnose.herzHW),
+            ("PM/ICD-Fehlfunktion", p.diagnose.herzPmFehlfunktion),
+            ("Rhythmusstörung", p.diagnose.herzRhythmus),
+            ("Hypertensiver Notfall", p.diagnose.herzHypertonerNotfall),
+            ("Aortenaneurysma", p.diagnose.herzAortenaneurysma),
+            ("Hypotonie", p.diagnose.herzHypotonie),
+            ("Dekomp. Herzinsuff.", p.diagnose.herzDekomp),
+            ("Synkope", p.diagnose.herzSynkope),
+            ("Thrombose / Embolie", p.diagnose.herzThromboseEmbolie),
+        ]
+
+        let col3Items: [(String,Bool)] = [
+            ("HIV", p.diagnose.infektHiv),
+            ("Hochkontagiös/SARS", p.diagnose.infektHighToxSars),
+            ("Gastrointestinal", p.diagnose.infektGastro),
+            ("Anaphylaxie Gr 1/2", p.diagnose.infektAnaphylaxie12),
+            ("SIDS", p.diagnose.infektSids),
+            ("Intoxikation", p.diagnose.infektIntoxikation),
+            ("Akute Lumbago", p.diagnose.infektAkuteLumbalgie),
+            ("Palliative Situation", p.diagnose.infektPalliativ),
+            ("Behandlungskompl.", p.diagnose.infektBehandlungKompl),
+            ("Urologisch", p.diagnose.infektUrologisch),
+        ]
+
+        let cbH: CGFloat = 10
+        let allCol1 = col1Items + col1b
+        let maxRows = max(allCol1.count, col2Items.count, col3Items.count)
+
+        for (i,(label,checked)) in allCol1.enumerated() {
+            let ry = y + CGFloat(i)*cbH
+            let bg: UIColor = i%2==0 ? .white : UIColor(white:0.97,alpha:1)
+            fillRect(CGRect(x:d1x,y:ry,width:dW,height:cbH), bg)
+            strokeRect(CGRect(x:d1x,y:ry,width:dW,height:cbH))
+            cb(label, checked, x:d1x+2, y:ry+1, bs:7, lw:dW-12)
+        }
+        for (i,(label,checked)) in col2Items.enumerated() {
+            let ry = y + CGFloat(i)*cbH
+            let bg: UIColor = i%2==0 ? .white : UIColor(white:0.97,alpha:1)
+            fillRect(CGRect(x:d2x,y:ry,width:dW,height:cbH), bg)
+            strokeRect(CGRect(x:d2x,y:ry,width:dW,height:cbH))
+            cb(label, checked, x:d2x+2, y:ry+1, bs:7, lw:dW-12)
+        }
+        for (i,(label,checked)) in col3Items.enumerated() {
+            let ry = y + CGFloat(i)*cbH
+            let bg: UIColor = i%2==0 ? .white : UIColor(white:0.97,alpha:1)
+            fillRect(CGRect(x:d3x,y:ry,width:dW,height:cbH), bg)
+            strokeRect(CGRect(x:d3x,y:ry,width:dW,height:cbH))
+            cb(label, checked, x:d3x+2, y:ry+1, bs:7, lw:dW-12)
+        }
+        y += CGFloat(maxRows)*cbH + 2
+
+        // Psychiatrie + Gyn + Stoffwechsel + Abdomen
+        subHeader("Psychiatrie", x:d1x, y:y, w:dW)
+        subHeader("Gyn / Geburtshilfe", x:d2x, y:y, w:dW)
+        subHeader("Stoffwechsel / Abdomen", x:d3x, y:y, w:dW)
+        y += 9.5
+
+        let psyItems: [(String,Bool)] = [
+            ("Psych. Akutzustand", p.diagnose.psychAkut),
+            ("Psych. Krise", p.diagnose.psychKrise),
+            ("Manie / Depression", p.diagnose.psychManie),
+            ("Intoxikation/Drogen", p.diagnose.psychIntoxikation),
+            ("Entzug / Delir", p.diagnose.psychEntzug),
+            ("Suizidal", p.diagnose.psychSuizidal),
+        ]
+        let gynItems: [(String,Bool)] = [
+            ("Schwangersch. >35. SSW", p.diagnose.gynSchwangerschaft35),
+            ("Geburt", p.diagnose.gynGeburt),
+            ("Eklampsie", p.diagnose.gynEklampsie),
+            ("Vaginale Blutung", p.diagnose.gynVaginalblutung),
+            ("Extrauterine Gravidität", p.diagnose.gynSonstige),
+        ]
+        let stoffItems: [(String,Bool)] = [
+            ("Exsikkose", p.diagnose.stoffExsikkose),
+            ("Hypoglykämie", p.diagnose.stoffHypoglykämie),
+            ("Hyperglykämie", p.diagnose.stoffHyperglykämie),
+            ("Urämie / ARI", p.diagnose.stoffUremie),
+            ("Akutes Abdomen", p.diagnose.abdoAkutes),
+            ("Kolik", p.diagnose.abdoKoliken),
+            ("GIB oben", p.diagnose.abdoGibOben),
+            ("GIB unten", p.diagnose.abdoGibUnten),
+            ("Gallen-/Nierenstein", p.diagnose.abdoGalleNiere),
+        ]
+        let maxRows2 = max(psyItems.count, gynItems.count, stoffItems.count)
+        for (i,(label,checked)) in psyItems.enumerated() {
+            let ry = y + CGFloat(i)*cbH
+            let bg: UIColor = i%2==0 ? .white : UIColor(white:0.97,alpha:1)
+            fillRect(CGRect(x:d1x,y:ry,width:dW,height:cbH), bg)
+            strokeRect(CGRect(x:d1x,y:ry,width:dW,height:cbH))
+            cb(label, checked, x:d1x+2, y:ry+1, bs:7, lw:dW-12)
+        }
+        for (i,(label,checked)) in gynItems.enumerated() {
+            let ry = y + CGFloat(i)*cbH
+            let bg: UIColor = i%2==0 ? .white : UIColor(white:0.97,alpha:1)
+            fillRect(CGRect(x:d2x,y:ry,width:dW,height:cbH), bg)
+            strokeRect(CGRect(x:d2x,y:ry,width:dW,height:cbH))
+            cb(label, checked, x:d2x+2, y:ry+1, bs:7, lw:dW-12)
+        }
+        for (i,(label,checked)) in stoffItems.enumerated() {
+            let ry = y + CGFloat(i)*cbH
+            let bg: UIColor = i%2==0 ? .white : UIColor(white:0.97,alpha:1)
+            fillRect(CGRect(x:d3x,y:ry,width:dW,height:cbH), bg)
+            strokeRect(CGRect(x:d3x,y:ry,width:dW,height:cbH))
+            cb(label, checked, x:d3x+2, y:ry+1, bs:7, lw:dW-12)
+        }
+        y += CGFloat(maxRows2)*cbH + 2
+
+        // SAMPLER Anamnese block (remaining space)
+        if y + 80 < pageSize.height - 15 {
+            secHeader("SAMPLER-Anamnese", x:lx, y:y, w:rx-lx)
+            y += 11
+            let samplerData: [(String,String)] = [
+                ("S – Symptome", p.sampler.symptome),
+                ("A – Allergien", p.sampler.allergien),
+                ("M – Medikamente", p.sampler.medikamente),
+                ("P – Vorgeschichte", p.sampler.patientenVorgeschichte),
+                ("L – Letztes Essen", p.sampler.letztesMahl),
+                ("E – Ereignis", p.sampler.ereignis),
+                ("R – Risikofaktoren", p.sampler.risikofaktoren),
+            ]
+            for (label, value) in samplerData {
+                guard y + 11 < pageSize.height - 15 else { break }
+                field(label, value, x:lx, y:y, w:rx-lx, h:11, lw:85)
+                y += 11
+            }
+        }
+
+        // Footer
+        drawFooter()
+    }
+
+    // ─────────────────────────────────────────────────────
+    // MARK: - PAGE 2  (Seiten 3+4 des Originals)
+    // Sections: 4.2 Verletzungen · 5 Verlauf · 6 Maßnahmen · 6.5 Medi · 7 Reani · 8 Ergebnis · 9 Übergabe
+    // ─────────────────────────────────────────────────────
+
+    private static func drawPage2(p: EinsatzProtokoll) {
+
+        let hh: CGFloat = 22
+        fillRect(CGRect(x:0,y:0,width:pageSize.width,height:hh), colBlue)
+        txt("EINSATZPROTOKOLL – Seite 2 / 2",
+            CGRect(x:lx,y:3,width:280,height:16), font:f13b, color:.white)
+        txt("\(p.patientDaten.nachname), \(p.patientDaten.vorname)   |   Einsatz: \(p.einsatzOrt.einsatzNummer)",
+            CGRect(x:260,y:5,width:240,height:9), font:f7b, color:.white)
+        txt("Seite 2 / 2",
+            CGRect(x:pageSize.width-55,y:13,width:50,height:8), font:f6, color:.white, align:.right)
+
+        var y: CGFloat = hh
+
+        // ── SECTION 4.2 Verletzungen ──────────────────────
+        let v2W = (rx - lx) * 0.42
+        let v2RW = (rx - lx) * 0.58
+        let v2Rx = lx + v2W
+
+        secHeader("4.2 Verletzungen", x:lx, y:y, w:v2W)
+        secHeader("Spezielle Traumen", x:v2Rx, y:y, w:v2RW)
+        y += 11
+
+        // Body region injury table
+        let regions: [(String, Verletzungsgrad)] = [
+            ("Schädel-Hirn", p.diagnose.verletzungsMatrix.schaedelHirn),
+            ("Gesicht", p.diagnose.verletzungsMatrix.gesicht),
+            ("HWS", p.diagnose.verletzungsMatrix.hws),
+            ("Thorax", p.diagnose.verletzungsMatrix.thorax),
+            ("Abdomen", p.diagnose.verletzungsMatrix.abdomen),
+            ("BWS / LWS", p.diagnose.verletzungsMatrix.bwsLws),
+            ("Becken", p.diagnose.verletzungsMatrix.becken),
+            ("Obere Extremitäten", p.diagnose.verletzungsMatrix.obereExtrem),
+            ("Untere Extremitäten", p.diagnose.verletzungsMatrix.untereExtrem),
+            ("Weichteile", p.diagnose.verletzungsMatrix.weichteile),
+        ]
+        let colW3 = v2W / 3
+        // Header row for injury table
+        fillRect(CGRect(x:lx,y:y,width:v2W,height:9), vLightB)
+        txt("Region", CGRect(x:lx+2,y:y+1,width:colW3-4,height:7), font:f6b, color:colBlue)
+        txt("leicht", CGRect(x:lx+colW3+2,y:y+1,width:colW3-4,height:7), font:f6b, color:colBlue, align:.center)
+        txt("schwer", CGRect(x:lx+colW3*2+2,y:y+1,width:colW3-4,height:7), font:f6b, color:colBlue, align:.center)
+        strokeRect(CGRect(x:lx,y:y,width:v2W,height:9))
+        y += 9
+
+        let regH: CGFloat = 10
+        let regY0 = y
+        for (i,(region,grad)) in regions.enumerated() {
+            let ry = regY0 + CGFloat(i)*regH
+            let bg: UIColor = i%2==0 ? .white : UIColor(white:0.97,alpha:1)
+            fillRect(CGRect(x:lx,y:ry,width:v2W,height:regH), bg)
+            strokeRect(CGRect(x:lx,y:ry,width:v2W,height:regH))
+            vline(lx+colW3, ry, regH); vline(lx+colW3*2, ry, regH)
+            txt(region, CGRect(x:lx+2,y:ry+1.5,width:colW3-4,height:regH-3), font:f6)
+            cb("", grad == .leicht, x:lx+colW3+colW3/2-4, y:ry+1.5, bs:7, lw:0)
+            cb("", grad == .schwer, x:lx+colW3*2+colW3/2-4, y:ry+1.5, bs:7, lw:0)
+        }
+
+        // Verletzungsmuster + art
+        let vmY = regY0 + CGFloat(regions.count)*regH
+        field("Verletzungsmuster", p.diagnose.verletzungsMuster,
+              x:lx, y:vmY, w:v2W, h:10, lw:65)
+        field("Verletzungsart", p.diagnose.verletzungsArt,
+              x:lx, y:vmY+10, w:v2W, h:10, lw:55)
+
+        // Spezielle Traumen (right side)
+        let spezItems: [(String,Bool)] = [
+            ("Verbrennung / Verbrühung", p.diagnose.spezVerbrVerbrh),
+            ("Tauchunfall", p.diagnose.spezTauchunfall),
+            ("Elektrounfall", p.diagnose.spezElektrounfall),
+            ("PKW / LKW-Insasse", p.diagnose.spezPkwLkw),
+            ("Motorradfahrer", p.diagnose.spezMotorrad),
+            ("Fahrradfahrer", p.diagnose.spezFahrrad),
+            ("Fußgänger", p.diagnose.spezFussgaenger),
+            ("Sturz > 3m Höhe", p.diagnose.spezSturzHoehe),
+            ("And. Verkehrsunfall", p.diagnose.spezAndVerkehr),
+            ("Maschinenunfall", p.diagnose.spezMaschine),
+            ("Gewaltvergehen", p.diagnose.spezGewalt),
+            ("Anderer Unfall", p.diagnose.spezAndererUnfall),
+            ("Nicht bekannt", false),
+        ]
+        let spezH: CGFloat = 10
+        let spezY0 = y
+        for (i,(label,checked)) in spezItems.enumerated() {
+            let ry = spezY0 + CGFloat(i)*spezH
+            let bg: UIColor = i%2==0 ? .white : UIColor(white:0.97,alpha:1)
+            fillRect(CGRect(x:v2Rx,y:ry,width:v2RW,height:spezH), bg)
+            strokeRect(CGRect(x:v2Rx,y:ry,width:v2RW,height:spezH))
+            cb(label, checked, x:v2Rx+2, y:ry+1.5, bs:7, lw:v2RW-12)
+        }
+
+        y = max(vmY + 20, spezY0 + CGFloat(spezItems.count)*spezH) + 2
+
+        // ── SECTION 5 Verlauf ─────────────────────────────
+        secHeader("5. Verlauf / Verlaufsbeschreibung", x:lx, y:y, w:rx-lx)
+        y += 11
+        let verlaufH: CGFloat = 40
+        fillRect(CGRect(x:lx,y:y,width:rx-lx,height:verlaufH), .white)
+        strokeRect(CGRect(x:lx,y:y,width:rx-lx,height:verlaufH))
+        // Verlaufsmessungen als Text formatieren
+        var verlaufText = p.diagnose.verlauf
+        if !p.verlaufMessungen.isEmpty {
+            let tf2 = DateFormatter(); tf2.dateFormat = "HH:mm"
+            let messStr = p.verlaufMessungen
+                .sorted { $0.zeitpunkt < $1.zeitpunkt }
+                .map { m -> String in
+                    var parts: [String] = [tf2.string(from: m.zeitpunkt)]
+                    if let af = m.atemFrequenz { parts.append("AF \(af)") }
+                    if let sp = m.spo2 { parts.append("SpO₂ \(sp)%") }
+                    if let pu = m.puls { parts.append("Puls \(pu)") }
+                    if let sy = m.blutdruckSys, let di = m.blutdruckDia { parts.append("RR \(sy)/\(di)") }
+                    if let gc = m.gcsGesamt { parts.append("GCS \(gc)") }
+                    if let bz = m.blutzucker { parts.append("BZ \(String(format:"%.1f",bz))") }
+                    if let tmp = m.temperatur { parts.append("T \(String(format:"%.1f",tmp))°C") }
+                    if !m.massnahmen.isEmpty { parts.append(m.massnahmen) }
+                    return parts.joined(separator: " | ")
+                }
+                .joined(separator: "\n")
+            verlaufText = verlaufText.isEmpty ? messStr : verlaufText + "\n" + messStr
+        }
+        mtxt(verlaufText, CGRect(x:lx+2,y:y+2,width:rx-lx-4,height:verlaufH-4), font:f7)
+        y += verlaufH + 2
+
+        // ── SECTION 6 Maßnahmen ────────────────────────────
+        secHeader("6. Maßnahmen", x:lx, y:y, w:rx-lx)
+        y += 11
+
+        let m6W = (rx-lx) / 3
+        let m6x1 = lx; let m6x2 = lx+m6W; let m6x3 = lx+m6W*2
+
+        // Sub-headers
+        subHeader("Airway / Stabilisation", x:m6x1, y:y, w:m6W)
+        subHeader("Atmung / Beatmung", x:m6x2, y:y, w:m6W)
+        subHeader("Lagerung / Transport", x:m6x3, y:y, w:m6W)
+        y += 9.5
+
+        let maH: CGFloat = 9.5
+        let maItems1: [(String,Bool)] = [
+            ("Atemweg freimachen", p.massnahmen.atemwegFreimachen),
+            ("Cervikalstütze/HWS", p.massnahmen.cervikalStuetze),
+            ("Absaugung", p.massnahmen.absaugung),
+            ("Sauerstoffgabe", p.massnahmen.sauerstoffgabe),
+            ("Maskenbeatmung", p.massnahmen.maskenbeatmung),
+            ("Mask.beat. unmöglich", p.massnahmen.maskenbeatmungUnmoeglich),
+            ("EGA supraglottisch", p.massnahmen.supraglottisch),
+            ("Atemweg erschwert", p.massnahmen.atemwegErschwert),
+            ("Intubation", p.massnahmen.intubationRD),
+            ("Tracheotomie", p.massnahmen.tracheotomie),
+        ]
+        let maItems2: [(String,Bool)] = [
+            ("Thoraxdrainage", p.massnahmen.thoraxdrainage),
+            ("CPAP / NIV", p.massnahmen.cpapNiv),
+            ("Entlastungspunkt. re", p.massnahmen.entlastungspunktionRe),
+            ("Entlastungspunkt. li", p.massnahmen.entlastungspunktionLi),
+            ("Kontroll. Beatmung", p.massnahmen.kontrollierteBeatmung),
+            ("Peripher-venös", p.massnahmen.peripherVenoes),
+            ("Zentral-venös", p.massnahmen.zentralVenoes),
+            ("Intraossär", p.massnahmen.intraossaer),
+            ("Art. Kanüle", p.massnahmen.artKanule),
+            ("IO-Applikation", p.massnahmen.intraossaleApplikation),
+        ]
+        let maItems3: [(String,Bool)] = [
+            ("OK-Hochlagerung", p.massnahmen.okHochlagerung),
+            ("Flachlagerung", p.massnahmen.flachlagerung),
+            ("Schocklagerung", p.massnahmen.schocklagerung),
+            ("Herz-Tieflage", p.massnahmen.herzTieflage),
+            ("Linksseitenlage", p.massnahmen.linksseitenlage),
+            ("Sitzender Transport", p.massnahmen.sitzenderTransport),
+            ("Vakuummatratze", p.massnahmen.vakuummatratze),
+            ("Schaufeltrage", p.massnahmen.schaufeltrage),
+            ("Extremit.schienung", p.massnahmen.extremitaetenschienung),
+            ("Beckenschlinge", p.massnahmen.beckenschlinge),
+        ]
+        let maY0 = y
+        for (i,(label,checked)) in maItems1.enumerated() {
+            let ry = maY0 + CGFloat(i)*maH
+            let bg: UIColor = i%2==0 ? .white : UIColor(white:0.97,alpha:1)
+            fillRect(CGRect(x:m6x1,y:ry,width:m6W,height:maH), bg)
+            strokeRect(CGRect(x:m6x1,y:ry,width:m6W,height:maH))
+            cb(label, checked, x:m6x1+2, y:ry+1, bs:7, lw:m6W-12)
+        }
+        for (i,(label,checked)) in maItems2.enumerated() {
+            let ry = maY0 + CGFloat(i)*maH
+            let bg: UIColor = i%2==0 ? .white : UIColor(white:0.97,alpha:1)
+            fillRect(CGRect(x:m6x2,y:ry,width:m6W,height:maH), bg)
+            strokeRect(CGRect(x:m6x2,y:ry,width:m6W,height:maH))
+            cb(label, checked, x:m6x2+2, y:ry+1, bs:7, lw:m6W-12)
+        }
+        for (i,(label,checked)) in maItems3.enumerated() {
+            let ry = maY0 + CGFloat(i)*maH
+            let bg: UIColor = i%2==0 ? .white : UIColor(white:0.97,alpha:1)
+            fillRect(CGRect(x:m6x3,y:ry,width:m6W,height:maH), bg)
+            strokeRect(CGRect(x:m6x3,y:ry,width:m6W,height:maH))
+            cb(label, checked, x:m6x3+2, y:ry+1, bs:7, lw:m6W-12)
+        }
+        y = maY0 + CGFloat(max(maItems1.count, maItems2.count, maItems3.count))*maH + 1
+
+        // Monitoring + Weitere + Medizintechnik row
+        subHeader("Monitoring", x:m6x1, y:y, w:m6W)
+        subHeader("Weitere Maßnahmen", x:m6x2, y:y, w:m6W)
+        subHeader("Medizintechnik", x:m6x3, y:y, w:m6W)
+        y += 9.5
+
+        let monItems: [(String,Bool)] = [
+            ("EKG", p.massnahmen.monEkg),
+            ("12-Kanal-EKG", p.massnahmen.mon12KanalEkg),
+            ("NIBP", p.massnahmen.monNibp),
+            ("BZ", p.massnahmen.monBz),
+            ("Invasive RR", p.massnahmen.monInvaRR),
+            ("SpO₂", p.massnahmen.monSpo2),
+            ("Temperatur", p.massnahmen.monTemperatur),
+            ("Kapnografie", p.massnahmen.monKapnografie),
+        ]
+        let weiItems: [(String,Bool)] = [
+            ("Kühlung", p.massnahmen.kuehlung),
+            ("Wärmeerhalt", p.massnahmen.waermeerhalt),
+            ("Entbindung", p.massnahmen.entbindung),
+            ("Krisenintervention", p.massnahmen.krisenintervention),
+            ("Kardioversion", p.massnahmen.kardioversion),
+            ("Tourniquet", p.massnahmen.tourniquet),
+            ("Narkose/Analgesed.", p.massnahmen.narkoseAnalgesedierung),
+            ("Reposition/Verband", p.massnahmen.reposition || p.massnahmen.verband),
+        ]
+        let techItems: [(String,Bool)] = [
+            ("Ultraschall / Sono", p.massnahmen.ultraschall),
+            ("Funk-EKG", p.massnahmen.funkEkgUebermittlung),
+            ("Notfallpager", p.massnahmen.notfallpager),
+            ("Spritzenpumpe", p.massnahmen.spritzenpumpe),
+            ("Video-Laryngoskop", p.massnahmen.videoLaryngoskop),
+            ("Transportinkubator", p.massnahmen.transportinkubator),
+            ("Mech. Thoraxkompr.", p.massnahmen.mechanischeThorax),
+        ]
+        let maY1 = y
+        for (col, items) in [(m6x1, monItems),(m6x2, weiItems),(m6x3, techItems)] {
+            for (i,(label,checked)) in items.enumerated() {
+                let ry = maY1 + CGFloat(i)*maH
+                let bg: UIColor = i%2==0 ? .white : UIColor(white:0.97,alpha:1)
+                fillRect(CGRect(x:col,y:ry,width:m6W,height:maH), bg)
+                strokeRect(CGRect(x:col,y:ry,width:m6W,height:maH))
+                cb(label, checked, x:col+2, y:ry+1, bs:7, lw:m6W-12)
+            }
+        }
+        y = maY1 + CGFloat(max(monItems.count,weiItems.count,techItems.count))*maH + 2
+
+        // ── SECTION 6.5 Medikamente ───────────────────────
+        secHeader("6.5 Medikamente", x:lx, y:y, w:rx-lx)
+        y += 11
+
+        let medCols: [(String,CGFloat)] = [
+            ("Uhrzeit",43), ("Medikament",140), ("Dosis",60), ("Einheit",38), ("Route",50), ("Bemerkung",rx-lx-343)
+        ]
+        // Header row
+        fillRect(CGRect(x:lx,y:y,width:rx-lx,height:9), vLightB)
+        strokeRect(CGRect(x:lx,y:y,width:rx-lx,height:9))
+        var xOff = lx
+        for (header,colW) in medCols {
+            txt(header, CGRect(x:xOff+1.5,y:y+1,width:colW-3,height:7), font:f6b, color:colBlue)
+            vline(xOff+colW, y, 9)
+            xOff += colW
+        }
+        y += 9
+
+        let medH: CGFloat = 10
+        if p.medikamente.isEmpty {
+            fillRect(CGRect(x:lx,y:y,width:rx-lx,height:medH*2), .white)
+            strokeRect(CGRect(x:lx,y:y,width:rx-lx,height:medH*2))
+            txt("– keine Medikamente verabreicht –",
+                CGRect(x:lx+4,y:y+4,width:rx-lx-8,height:medH-4), font:f7, color:.lightGray)
+            y += medH*2
+        } else {
+            for med in p.medikamente {
+                fillRect(CGRect(x:lx,y:y,width:rx-lx,height:medH), .white)
+                strokeRect(CGRect(x:lx,y:y,width:rx-lx,height:medH))
+                var xM = lx
+                let vals = [t(med.zeit), med.name, med.dosis, med.einheit, med.route, ""]
+                for (vi,(_, colW)) in medCols.enumerated() {
+                    txt(vals[vi], CGRect(x:xM+1.5,y:y+1.5,width:colW-3,height:medH-3), font:f7)
+                    vline(xM+colW, y, medH)
+                    xM += colW
+                }
+                y += medH
+            }
+        }
+        y += 2
+
+        // ── SECTION 7 Reanimation / Tod ───────────────────
+        let r7W = (rx-lx) * 0.55
+        let r8W = (rx-lx) * 0.45
+        let r8x = lx + r7W
+
+        secHeader("7. Reanimation / Tod", x:lx, y:y, w:r7W)
+        secHeader("8. Ergebnis / NACA", x:r8x, y:y, w:r8W)
+        y += 11
+
+        // Reanimation content
+        let rea = p.reanimation
+        let r7H: CGFloat = 10
+        let r7items: [(String,Bool)] = [
+            ("Beginn CPR Ersthelfer", rea.erstHelfer),
+            ("Vorab Telefon-Rea", rea.vorabTelefonRea),
+            ("Rettungsdienst", !p.reanimationAktiv ? false : true),
+            ("AED eingesetzt", rea.aed),
+            ("DNR-Order", rea.dnrOrder),
+            ("KH-Aufnahme v. ROSC", rea.khAufnahmeVorROSC),
+        ]
+        let r7y0 = y
+        for (i,(label,checked)) in r7items.enumerated() {
+            let ry = r7y0 + CGFloat(i)*r7H
+            let bg: UIColor = i%2==0 ? .white : UIColor(white:0.97,alpha:1)
+            fillRect(CGRect(x:lx,y:ry,width:r7W/2,height:r7H), bg)
+            strokeRect(CGRect(x:lx,y:ry,width:r7W/2,height:r7H))
+            cb(label, checked, x:lx+2, y:ry+1, bs:7, lw:r7W/2-12)
+        }
+
+        // Times column
+        let r7tx = lx + r7W/2
+        let r7tW = r7W/2
+        field("Kollaps-Zeit", rea.kollapsZeitUnbekannt ? "Unbekannt" : t(rea.kollapsZeit),
+              x:r7tx, y:r7y0, w:r7tW, h:r7H, lw:r7tW*0.55)
+        field("Init. Rhythmus", rea.initialRhythmus.rawValue,
+              x:r7tx, y:r7y0+r7H, w:r7tW, h:r7H, lw:r7tW*0.55)
+        field("Start Ersthelfer", rea.startErsthelferUnbekannt ? "Unbek." : t(rea.startErsthelferCPR),
+              x:r7tx, y:r7y0+r7H*2, w:r7tW, h:r7H, lw:r7tW*0.55)
+        field("Start RD-CPR", rea.startRDUnbekannt ? "Unbekannt" : t(rea.startRettungsdienst),
+              x:r7tx, y:r7y0+r7H*3, w:r7tW, h:r7H, lw:r7tW*0.55)
+        field("Ende RD-CPR", t(rea.endeRettungsdienst),
+              x:r7tx, y:r7y0+r7H*4, w:r7tW, h:r7H, lw:r7tW*0.55)
+        field("Outcome", p.reanimationAktiv ? rea.outcome.rawValue : "–",
+              x:r7tx, y:r7y0+r7H*5, w:r7tW, h:r7H, lw:r7tW*0.55, hl:p.reanimationAktiv)
+
+        if rea.defiAnzahl > 0 {
+            let defY = r7y0 + CGFloat(r7items.count)*r7H
+            field("Defi Anzahl", "\(rea.defiAnzahl)", x:lx, y:defY, w:r7W/2, h:r7H, lw:r7W*0.22)
+            field("Defi Joule", "\(rea.defiJoule) J", x:r7tx, y:defY, w:r7tW, h:r7H, lw:r7tW*0.55)
+        }
+
+        // NACA Score (right side)
+        let nacaRows: [(String,Bool)] = NacaScore.allCases.map {
+            ($0.beschreibung, $0 == p.ergebnis.nacaScore)
+        }
+        let nacaH: CGFloat = r7H
+        for (i,(label,active)) in nacaRows.enumerated() {
+            let ry = r7y0 + CGFloat(i)*nacaH
+            let bg: UIColor = active ? hlYellow : (i%2==0 ? .white : UIColor(white:0.97,alpha:1))
+            fillRect(CGRect(x:r8x,y:ry,width:r8W,height:nacaH), bg)
+            strokeRect(CGRect(x:r8x,y:ry,width:r8W,height:nacaH))
+            cb(label, active, x:r8x+2, y:ry+1, bs:7, lw:r8W-12)
+        }
+
+        let maxR78 = max(r7items.count + (rea.defiAnzahl>0 ? 1 : 0), nacaRows.count)
+        y = r7y0 + CGFloat(maxR78)*r7H + 2
+
+        // ── SECTION 9 Übergabe ────────────────────────────
+        secHeader("9. Übergabe / Transportziel / Einsatzbesonderheiten", x:lx, y:y, w:rx-lx)
+        y += 11
+
+        let uHW = (rx-lx)/2
+        field("Transportziel",
+              p.ergebnis.transportZiel == .sonstige ? p.ergebnis.transportZielSonstige : p.ergebnis.transportZiel.rawValue,
+              x:lx, y:y, w:uHW, h:12, lw:65, hl:true)
+        field("Zielklinik", p.zielKlinik, x:lx+uHW, y:y, w:uHW, h:12, lw:50, hl:true)
+        y += 12
+
+        field("Übergabe an", p.uebergabeAn, x:lx, y:y, w:uHW, h:11, lw:55)
+        field("Zustand bei Übergabe", p.zustandBeiUebergabe, x:lx+uHW, y:y, w:uHW, h:11, lw:75)
+        y += 11
+
+        let besatzungNames = [p.besatzung.sanitaeter1, p.besatzung.sanitaeter2,
+                              p.besatzung.sanitaeter3, p.besatzung.sanitaeter4]
+            .filter { !$0.isEmpty }.joined(separator: " · ")
+        if !besatzungNames.isEmpty {
+            field("Besatzung", besatzungNames, x:lx, y:y, w:rx-lx, h:11, lw:42)
+            y += 11
+        }
+
+        // Einsatzbesonderheiten checkboxes
+        let besItems: [(String,Bool)] = [
+            ("Ambulant vor Ort", p.ergebnis.ambulantVorOrt),
+            ("KH nicht erreichbar", p.ergebnis.naechstesKHNichtErreichbar),
+            ("Pat. nicht transp.fähig", p.ergebnis.patNichtTransportfaehig),
+            ("Tod Einsatzstelle", p.ergebnis.todAnEinsatzstelle),
+            ("Zwangsunterbringung", p.ergebnis.zwangsunterbringung),
+            ("Mehrere Patienten", p.ergebnis.mehrerePatient),
+            ("Aufwändige Rettung", p.ergebnis.aufwaendigeRettung),
+            ("Infektionsschutz", p.ergebnis.infektionsSchutz),
+            ("LNA/GRL im Einsatz", p.ergebnis.lnaGrleimEinsatz),
+            ("Schwerlasttransport", p.ergebnis.schwerlasttransport),
+            ("Voranmeldung", p.ergebnis.voranmeldung),
+            ("Gelb Alarm", p.ergebnis.gelbAlarm),
+            ("Rot Alarm", p.ergebnis.rotAlarm),
+            ("Mitfahrverweigerung", p.ergebnis.mifahrverweigerung),
+        ]
+        let besH: CGFloat = 9.5
+        let besPerCol = (besItems.count + 2) / 3
+        let besColW = (rx-lx) / 3
+        for (i,(label,checked)) in besItems.enumerated() {
+            let col = i / besPerCol
+            let row = i % besPerCol
+            let bx = lx + CGFloat(col)*besColW
+            let by = y + CGFloat(row)*besH
+            let bg: UIColor = row%2==0 ? .white : UIColor(white:0.97,alpha:1)
+            fillRect(CGRect(x:bx,y:by,width:besColW,height:besH), bg)
+            strokeRect(CGRect(x:bx,y:by,width:besColW,height:besH))
+            cb(label, checked, x:bx+2, y:by+1, bs:7, lw:besColW-12)
+        }
+        y += CGFloat(besPerCol)*besH + 2
+
+        // Freitext / Bemerkungen
+        let ftH: CGFloat = 28
+        fillRect(CGRect(x:lx,y:y,width:rx-lx,height:ftH), .white)
+        strokeRect(CGRect(x:lx,y:y,width:rx-lx,height:ftH))
+        txt("Bemerkungen:", CGRect(x:lx+2,y:y+1.5,width:60,height:8), font:f6b, color:.darkGray)
+        mtxt(p.freitext, CGRect(x:lx+2,y:y+10,width:rx-lx-4,height:ftH-12), font:f7)
+        y += ftH + 2
+
+        // ── Unterschrift ──────────────────────────────────
+        let sigH: CGFloat = min(40, pageSize.height - y - 10)
+        if sigH > 15 {
+            fillRect(CGRect(x:lx,y:y,width:rx-lx,height:sigH), .white)
+            strokeRect(CGRect(x:lx,y:y,width:rx-lx,height:sigH))
+            let sigDate = DateFormatter()
+            sigDate.dateFormat = "dd.MM.yyyy HH:mm"
+            txt("Datum / Uhrzeit: \(sigDate.string(from: Date()))          Unterschrift: ________________________________________",
+                CGRect(x:lx+4,y:y+sigH-12,width:rx-lx-8,height:10), font:f7)
+        }
+
+        drawFooter()
+    }
+
+    // ─────────────────────────────────────────────────────
+    // MARK: - Footer
+    // ─────────────────────────────────────────────────────
+
+    private static func drawFooter() {
+        let fy = pageSize.height - 14
+        fillRect(CGRect(x:0,y:fy,width:pageSize.width,height:14), UIColor(white:0.93,alpha:1))
+        UIColor.lightGray.setStroke()
+        UIBezierPath(rect: CGRect(x:0,y:fy,width:pageSize.width,height:0.4)).stroke()
+        let fmt = DateFormatter(); fmt.dateFormat = "dd.MM.yyyy HH:mm"
+        let attrs: [NSAttributedString.Key:Any] = [.font:f5, .foregroundColor:UIColor.gray]
+        ("Generiert: \(fmt.string(from: Date()))" as NSString).draw(
+            at: CGPoint(x:lx,y:fy+4), withAttributes:attrs)
+        ("DLRG Einsatzprotokoll – Vertraulich" as NSString).draw(
+            at: CGPoint(x:pageSize.width-175,y:fy+4), withAttributes:attrs)
+    }
+}

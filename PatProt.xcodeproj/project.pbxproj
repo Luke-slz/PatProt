@@ -23,15 +23,41 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		D21EE9D12FACCF61002F6879 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		D21EE9752FACB636002F6879 /* PatProt.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PatProt.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D21EE9842FACB637002F6879 /* PatProtTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PatProtTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D21EE98E2FACB637002F6879 /* PatProtUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PatProtUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		03A984BDCC114336B1B9D5FB /* Exceptions for "PatProt" folder in "PatProt" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = D21EE9742FACB636002F6879 /* PatProt */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		D21EE9772FACB636002F6879 /* PatProt */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				03A984BDCC114336B1B9D5FB /* Exceptions for "PatProt" folder in "PatProt" target */,
+			);
 			path = PatProt;
 			sourceTree = "<group>";
 		};
@@ -43,6 +69,11 @@
 		D21EE9912FACB637002F6879 /* PatProtUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = PatProtUITests;
+			sourceTree = "<group>";
+		};
+		D21EE9C62FACCF61002F6879 /* Location */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Location;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -78,6 +109,7 @@
 				D21EE9772FACB636002F6879 /* PatProt */,
 				D21EE9872FACB637002F6879 /* PatProtTests */,
 				D21EE9912FACB637002F6879 /* PatProtUITests */,
+				D21EE9C62FACCF61002F6879 /* Location */,
 				D21EE9762FACB636002F6879 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -102,6 +134,7 @@
 				D21EE9712FACB636002F6879 /* Sources */,
 				D21EE9722FACB636002F6879 /* Frameworks */,
 				D21EE9732FACB636002F6879 /* Resources */,
+				D21EE9D12FACCF61002F6879 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
@@ -395,13 +428,11 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FX962KCY3R;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = PatProt/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -426,13 +457,11 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FX962KCY3R;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = PatProt/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
