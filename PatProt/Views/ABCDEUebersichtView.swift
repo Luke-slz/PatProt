@@ -94,7 +94,7 @@ struct ABCDEUebersichtView: View {
                         buchstabe: "A",
                         titel: "Airway",
                         untertitel: atemwegSubtitel(),
-                        status: protokoll.airway.status,
+                        status: $protokoll.airway.status,
                         farbe: .orange,
                         action: onAirway
                     )
@@ -102,7 +102,7 @@ struct ABCDEUebersichtView: View {
                         buchstabe: "B",
                         titel: "Breathing",
                         untertitel: breathingSubtitel(),
-                        status: protokoll.breathing.status,
+                        status: $protokoll.breathing.status,
                         farbe: .blue,
                         action: onBreathing
                     )
@@ -110,7 +110,7 @@ struct ABCDEUebersichtView: View {
                         buchstabe: "C",
                         titel: "Circulation",
                         untertitel: circulationSubtitel(),
-                        status: protokoll.circulation.status,
+                        status: $protokoll.circulation.status,
                         farbe: .red,
                         action: onCirculation
                     )
@@ -118,7 +118,7 @@ struct ABCDEUebersichtView: View {
                         buchstabe: "D",
                         titel: "Disability",
                         untertitel: disabilitySubtitel(),
-                        status: protokoll.disability.status,
+                        status: $protokoll.disability.status,
                         farbe: .purple,
                         action: onDisability
                     )
@@ -126,7 +126,7 @@ struct ABCDEUebersichtView: View {
                         buchstabe: "E",
                         titel: "Exposure",
                         untertitel: exposureSubtitel(),
-                        status: protokoll.exposure.status,
+                        status: $protokoll.exposure.status,
                         farbe: .green,
                         action: onExposure
                     )
@@ -386,7 +386,7 @@ struct ABCDEZeile: View {
     let buchstabe: String
     let titel: String
     let untertitel: String
-    let status: ABCDEStatus
+    @Binding var status: ABCDEStatus
     let farbe: Color
     let action: () -> Void
 
@@ -399,42 +399,81 @@ struct ABCDEZeile: View {
     }
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 14) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(status == .unbewertet ? farbe.opacity(0.15) : status.color.opacity(0.2))
-                        .frame(width: 40, height: 40)
-                    Text(buchstabe)
-                        .font(.title2).fontWeight(.bold)
-                        .foregroundColor(status == .unbewertet ? farbe : status.color)
-                }
+        VStack(spacing: 0) {
+            Button(action: action) {
+                HStack(spacing: 14) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(status == .unbewertet ? farbe.opacity(0.15) : status.color.opacity(0.2))
+                            .frame(width: 40, height: 40)
+                        Text(buchstabe)
+                            .font(.title2).fontWeight(.bold)
+                            .foregroundColor(status == .unbewertet ? farbe : status.color)
+                    }
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(titel)
-                        .font(.subheadline).fontWeight(.semibold)
-                        .foregroundColor(.primary)
-                    Text(untertitel)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(titel)
+                            .font(.subheadline).fontWeight(.semibold)
+                            .foregroundColor(.primary)
+                        Text(untertitel)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: status.symbol)
+                        .foregroundColor(status.color)
+                        .font(.title3)
+
+                    Image(systemName: "chevron.right")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                        .lineLimit(1)
                 }
+                .padding(.horizontal, 14)
+                .padding(.top, 12)
+                .padding(.bottom, 8)
+                .background(rowBg)
+            }
+            .buttonStyle(.plain)
+
+            HStack(spacing: 8) {
+                Button { status = .kritisch } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "xmark.circle.fill")
+                        Text("Kritisch").fontWeight(.medium)
+                    }
+                    .font(.caption)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(status == .kritisch ? Color.red : Color.red.opacity(0.10))
+                    .foregroundColor(status == .kritisch ? .white : .red)
+                    .cornerRadius(8)
+                }
+                .buttonStyle(.plain)
+
+                Button { status = .nicht_kritisch } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "checkmark.circle.fill")
+                        Text("Ohne Befund").fontWeight(.medium)
+                    }
+                    .font(.caption)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(status == .nicht_kritisch ? Color.green : Color.green.opacity(0.10))
+                    .foregroundColor(status == .nicht_kritisch ? .white : .green)
+                    .cornerRadius(8)
+                }
+                .buttonStyle(.plain)
 
                 Spacer()
-
-                Image(systemName: status.symbol)
-                    .foregroundColor(status.color)
-                    .font(.title3)
-
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
             }
             .padding(.horizontal, 14)
-            .padding(.vertical, 12)
+            .padding(.bottom, 10)
             .background(rowBg)
         }
-        .buttonStyle(.plain)
+
         Divider().padding(.leading, 68)
     }
 }
