@@ -12,6 +12,7 @@ struct EinsatzOrtView: View {
 
     @AppStorage("gespeichertesPersonal") private var personalJSON: String = "[]"
     @AppStorage("customFahrzeuge") private var customFahrzeugeJSON: String = "[]"
+    @AppStorage("standardFahrzeugNamen") private var standardFahrzeugNamenJSON: String = "{}"
 
     @State private var geburtsdatumText: String = ""
     @State private var zeigeWeiteresEinsatzmittel = false
@@ -36,6 +37,14 @@ struct EinsatzOrtView: View {
 
     private var customFahrzeuge: [String] {
         (try? JSONDecoder().decode([String].self, from: Data(customFahrzeugeJSON.utf8))) ?? []
+    }
+
+    private var standardFahrzeugNamen: [String: String] {
+        (try? JSONDecoder().decode([String: String].self, from: Data(standardFahrzeugNamenJSON.utf8))) ?? [:]
+    }
+
+    private func anzeigeName(für typ: FahrzeugTyp) -> String {
+        standardFahrzeugNamen[typ.rawValue] ?? typ.rawValue
     }
 
     var body: some View {
@@ -81,7 +90,7 @@ struct EinsatzOrtView: View {
 
                 Picker("Primärfahrzeug", selection: $protokoll.einsatzOrt.fahrzeugTyp) {
                     ForEach(FahrzeugTyp.allCases, id: \.self) { typ in
-                        Text(typ.rawValue).tag(typ)
+                        Text(anzeigeName(für: typ)).tag(typ)
                     }
                 }
 
@@ -239,6 +248,7 @@ struct EinsatzOrtView: View {
         .sheet(isPresented: $zeigeWeiteresEinsatzmittel) {
             EinsatzmittelPickerSheet(
                 customFahrzeuge: customFahrzeuge,
+                standardFahrzeugNamen: standardFahrzeugNamen,
                 onAuswahl: { name in
                     if !protokoll.einsatzOrt.weitereEinsatzmittel.contains(name) {
                         protokoll.einsatzOrt.weitereEinsatzmittel.append(name)
@@ -345,6 +355,7 @@ struct PersonalPickerSheet: View {
 
 struct EinsatzmittelPickerSheet: View {
     let customFahrzeuge: [String]
+    let standardFahrzeugNamen: [String: String]
     let onAuswahl: (String) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var manuell = ""
@@ -354,8 +365,9 @@ struct EinsatzmittelPickerSheet: View {
             List {
                 Section("Standardfahrzeuge") {
                     ForEach(FahrzeugTyp.allCases, id: \.self) { typ in
-                        Button(typ.rawValue) {
-                            onAuswahl(typ.rawValue)
+                        let name = standardFahrzeugNamen[typ.rawValue] ?? typ.rawValue
+                        Button(name) {
+                            onAuswahl(name)
                             dismiss()
                         }
                         .foregroundStyle(.primary)

@@ -25,7 +25,7 @@ class AppState: ObservableObject {
 
     private func syncFromiCloud() {
         let kvs = NSUbiquitousKeyValueStore.default
-        for key in ["recipientEmail", "gespeichertesPersonal", "customFahrzeuge"] {
+        for key in ["recipientEmail", "gespeichertesPersonal", "customFahrzeuge", "standardFahrzeugNamen"] {
             if let val = kvs.string(forKey: key), !val.isEmpty {
                 UserDefaults.standard.set(val, forKey: key)
             }
@@ -34,7 +34,7 @@ class AppState: ObservableObject {
 
     static func pushSettingsToiCloud() {
         let kvs = NSUbiquitousKeyValueStore.default
-        for key in ["recipientEmail", "gespeichertesPersonal", "customFahrzeuge"] {
+        for key in ["recipientEmail", "gespeichertesPersonal", "customFahrzeuge", "standardFahrzeugNamen"] {
             if let val = UserDefaults.standard.string(forKey: key) {
                 kvs.set(val, forKey: key)
             }
