@@ -14,9 +14,10 @@ class LocationPushService: NSObject, CLLocationPushServiceExtension, CLLocationM
 
     func didReceiveLocationPushPayload(_ payload: [String : Any], completion: @escaping () -> Void) {
         self.completion = completion
-        self.locationManager = CLLocationManager()
-        self.locationManager!.delegate = self
-        self.locationManager!.requestLocation()
+        let manager = CLLocationManager()
+        manager.delegate = self
+        manager.requestLocation()
+        self.locationManager = manager
     }
     
     func serviceExtensionWillTerminate() {
