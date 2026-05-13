@@ -36,6 +36,16 @@ struct AbschlussView: View {
                 }
             }
 
+            // Verfasser
+            Section {
+                Picker("Verfasser", selection: $protokoll.verfasser) {
+                    ForEach(ProtokollVerfasser.allCases, id: \.self) { v in
+                        Text(v.rawValue).tag(v)
+                    }
+                }
+                .pickerStyle(.segmented)
+            } header: { Label("Protokoll geschrieben von", systemImage: "person.text.rectangle") }
+
             // NACA Score
             Section {
                 Picker("NACA-Score", selection: $protokoll.ergebnis.nacaScore) {
@@ -168,6 +178,7 @@ struct AbschlussView: View {
                 .tint(Color("RDOrange"))
                 .disabled(isGenerating || recipientEmail.isEmpty)
             } header: { Label("PDF Export", systemImage: "square.and.arrow.up") }
+              footer: { Text("Nach erfolgreichem Export wird das Protokoll automatisch vom Gerät gelöscht.").font(.footnote).foregroundStyle(.secondary) }
         }
         .navigationTitle("Abschluss & Export")
         .navigationBarTitleDisplayMode(.inline)
@@ -180,7 +191,11 @@ struct AbschlussView: View {
         }
         .sheet(isPresented: $zeigeShareSheet) {
             if let url = pdfURL {
-                ShareSheet(activityItems: [url])
+                ShareSheet(activityItems: [url]) { completed in
+                    if completed {
+                        nachExportBereinigen()
+                    }
+                }
             }
         }
         .alert("PDF-Fehler", isPresented: $pdfFehler) {
@@ -207,12 +222,23 @@ struct AbschlussView: View {
                     attachmentURL: url
                 ) { result in
                     if result == .sent {
-                        try? FileManager.default.removeItem(at: url)
-                        pdfURL = nil
+                        nachExportBereinigen()
                     }
                 }
             }
         }
+    }
+
+    private func nachExportBereinigen() {
+        if let url = pdfURL {
+            try? FileManager.default.removeItem(at: url)
+            pdfURL = nil
+        }
+        if gespeichert {
+            ProtokollArchiv.shared.loeschen(protokoll.id)
+        }
+        protokoll.reset()
+        onBack()
     }
 }
 
@@ -220,9 +246,14 @@ struct AbschlussView: View {
 
 struct ShareSheet: UIViewControllerRepresentable {
     var activityItems: [Any]
+    var onCompletion: ((Bool) -> Void)? = nil
 
     func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+        let vc = UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+        vc.completionWithItemsHandler = { _, completed, _, _ in
+            onCompletion?(completed)
+        }
+        return vc
     }
 
     func updateUIViewController(_ uvc: UIActivityViewController, context: Context) {}

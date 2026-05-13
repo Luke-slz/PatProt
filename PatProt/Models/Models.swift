@@ -80,6 +80,11 @@ enum NacaScore: Int, CaseIterable, Codable {
     }
 }
 
+enum ProtokollVerfasser: String, CaseIterable, Codable {
+    case notfallsanitaeter = "Notfallsanitäter"
+    case rettungssanitaeter = "Rettungssanitäter"
+}
+
 enum TransportZiel: String, CaseIterable, Codable {
     case zna = "ZNA / INA"
     case herzkatheterlabor = "Herzkatheterlabor HKL"
@@ -150,6 +155,7 @@ class EinsatzProtokoll: ObservableObject, Identifiable {
     @Published var uebergabeAn = ""
     @Published var zustandBeiUebergabe = ""
     @Published var freitext = ""
+    @Published var verfasser: ProtokollVerfasser = .notfallsanitaeter
 
     var erstelltAm: Date = Date()
 
@@ -179,6 +185,7 @@ class EinsatzProtokoll: ObservableObject, Identifiable {
         uebergabeAn = ""
         zustandBeiUebergabe = ""
         freitext = ""
+        verfasser = .notfallsanitaeter
         erstelltAm = Date()
     }
 }
@@ -683,6 +690,7 @@ struct ProtokollDaten: Codable, Identifiable {
     var uebergabeAn: String
     var zustandBeiUebergabe: String
     var freitext: String
+    var verfasser: ProtokollVerfasser?
 }
 
 extension EinsatzProtokoll {
@@ -698,7 +706,8 @@ extension EinsatzProtokoll {
             medikamente: medikamente, reanimationAktiv: reanimationAktiv,
             reanimation: reanimation, ergebnis: ergebnis,
             zielKlinik: zielKlinik, uebergabeAn: uebergabeAn,
-            zustandBeiUebergabe: zustandBeiUebergabe, freitext: freitext
+            zustandBeiUebergabe: zustandBeiUebergabe, freitext: freitext,
+            verfasser: verfasser
         )
     }
 
@@ -713,6 +722,7 @@ extension EinsatzProtokoll {
         reanimation = d.reanimation; ergebnis = d.ergebnis
         zielKlinik = d.zielKlinik; uebergabeAn = d.uebergabeAn
         zustandBeiUebergabe = d.zustandBeiUebergabe; freitext = d.freitext
+        verfasser = d.verfasser ?? .notfallsanitaeter
         erstelltAm = d.erstelltAm
     }
 }
