@@ -123,15 +123,18 @@ struct AbschlussView: View {
             Section {
                 Button {
                     isGenerating = true
-                    DispatchQueue.main.async {
-                        guard let url = DINPDFGenerator.generate(protokoll: protokoll) else {
+                    let prot = protokoll
+                    Task.detached(priority: .userInitiated) {
+                        let url = DINPDFGenerator.generate(protokoll: prot)
+                        await MainActor.run {
+                            pdfURL = url
                             isGenerating = false
-                            pdfFehler = true
-                            return
+                            if url != nil {
+                                zeigeShareSheet = true
+                            } else {
+                                pdfFehler = true
+                            }
                         }
-                        pdfURL = url
-                        isGenerating = false
-                        zeigeShareSheet = true
                     }
                 } label: {
                     HStack {
@@ -156,15 +159,18 @@ struct AbschlussView: View {
                     }
                     if pdfURL == nil {
                         isGenerating = true
-                        DispatchQueue.main.async {
-                            guard let url = DINPDFGenerator.generate(protokoll: protokoll) else {
+                        let prot = protokoll
+                        Task.detached(priority: .userInitiated) {
+                            let url = DINPDFGenerator.generate(protokoll: prot)
+                            await MainActor.run {
+                                pdfURL = url
                                 isGenerating = false
-                                pdfFehler = true
-                                return
+                                if url != nil {
+                                    zeigeMailComposer = true
+                                } else {
+                                    pdfFehler = true
+                                }
                             }
-                            pdfURL = url
-                            isGenerating = false
-                            zeigeMailComposer = true
                         }
                     } else {
                         zeigeMailComposer = true
