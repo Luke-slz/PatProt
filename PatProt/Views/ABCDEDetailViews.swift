@@ -434,6 +434,23 @@ struct DisabilityView: View {
             .listRowBackground(gcsBg)
 
             Section {
+                Toggle("BEFAST-Schema", isOn: $befund.befastAktiv)
+                if befund.befastAktiv {
+                    CheckboxRow("B – Balance (Schwindel / Gleichgewichtsstörung)", isOn: $befund.befastBalance)
+                    CheckboxRow("E – Eyes (Sehstörung / Doppelbilder)", isOn: $befund.befastEyes)
+                    CheckboxRow("F – Face (Gesichtslähmung / hängender Mundwinkel)", isOn: $befund.befastFace)
+                    CheckboxRow("A – Arm (Armparese / Armhalteversuch auffällig)", isOn: $befund.befastArm)
+                    CheckboxRow("S – Speech (Sprachstörung / Aphasie)", isOn: $befund.befastSpeech)
+                    Toggle("T – Zeitpunkt unbekannt", isOn: $befund.befastZeitUnbekannt)
+                    if !befund.befastZeitUnbekannt {
+                        ZeitFeld(label: "T – Symptombeginn", datum: $befund.befastSymptombeginn)
+                    }
+                }
+            } header: {
+                Label("BEFAST-Schema (Schlaganfall)", systemImage: "brain")
+            }
+
+            Section {
                 TextField("Pupillen links (z.B. weit, eng, mittel)", text: $befund.pupillenLinks)
                 TextField("Pupillen rechts", text: $befund.pupillenRechts)
                 Toggle("Lichtreaktion vorhanden", isOn: $befund.pupillenReaktion)
