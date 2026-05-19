@@ -6,7 +6,6 @@ struct SettingsView: View {
     @AppStorage("recipientEmail") private var recipientEmail: String = ""
     @AppStorage("gespeichertesPersonal") private var personalJSON: String = "[]"
     @AppStorage("customFahrzeuge") private var customFahrzeugeJSON: String = "[]"
-    @AppStorage("standardFahrzeugNamen") private var standardFahrzeugNamenJSON: String = "{}"
 
     @State private var zeigePersonalHinzufuegen = false
     @State private var zeigeFahrzeugHinzufuegen = false
@@ -15,9 +14,6 @@ struct SettingsView: View {
     @State private var neuesFahrzeug = ""
     @State private var zuBearbeitenderIndex: Int? = nil
     @State private var bearbeitungsName = ""
-    @State private var zeigeStandardBearbeiten = false
-    @State private var zuBearbeitenderTyp: FahrzeugTyp? = nil
-    @State private var bearbeitungsStandardName = ""
 
     private var personal: [String] {
         (try? JSONDecoder().decode([String].self, from: Data(personalJSON.utf8))) ?? []
@@ -25,7 +21,7 @@ struct SettingsView: View {
 
     private func personalSpeichern(_ liste: [String]) {
         personalJSON = (try? String(data: JSONEncoder().encode(liste), encoding: .utf8)) ?? "[]"
-        AppState.pushSettingsToiCloud()
+        // AppState.pushSettingsToiCloud()  // Option A: einkommentieren wenn paid Developer Account
     }
 
     private var customFahrzeuge: [String] {
@@ -34,17 +30,9 @@ struct SettingsView: View {
 
     private func customFahrzeugeSpeichern(_ liste: [String]) {
         customFahrzeugeJSON = (try? String(data: JSONEncoder().encode(liste), encoding: .utf8)) ?? "[]"
-        AppState.pushSettingsToiCloud()
+        // AppState.pushSettingsToiCloud()  // Option A: einkommentieren wenn paid Developer Account
     }
 
-    private var standardFahrzeugNamen: [String: String] {
-        (try? JSONDecoder().decode([String: String].self, from: Data(standardFahrzeugNamenJSON.utf8))) ?? [:]
-    }
-
-    private func standardFahrzeugNamenSpeichern(_ dict: [String: String]) {
-        standardFahrzeugNamenJSON = (try? String(data: JSONEncoder().encode(dict), encoding: .utf8)) ?? "{}"
-        AppState.pushSettingsToiCloud()
-    }
 
     var body: some View {
         Form {
@@ -57,7 +45,7 @@ struct SettingsView: View {
                     .textInputAutocapitalization(.never)
                     .keyboardType(.emailAddress)
                     .autocorrectionDisabled(true)
-                    .onChange(of: recipientEmail) { _, _ in AppState.pushSettingsToiCloud() }
+                    // .onChange(of: recipientEmail) { _, _ in AppState.pushSettingsToiCloud() }  // Option A
             }
 
             // Personal
@@ -81,32 +69,6 @@ struct SettingsView: View {
                 Label("Gespeichertes Personal", systemImage: "person.2")
             } footer: {
                 Text("Namen werden beim Ausfüllen der Besatzung zur Auswahl angeboten. Mit Wischgeste löschen.")
-                    .font(.footnote).foregroundStyle(.secondary)
-            }
-
-            // Standardfahrzeuge
-            Section {
-                ForEach(FahrzeugTyp.allCases, id: \.self) { typ in
-                    Button {
-                        zuBearbeitenderTyp = typ
-                        bearbeitungsStandardName = standardFahrzeugNamen[typ.rawValue] ?? typ.rawValue
-                        zeigeStandardBearbeiten = true
-                    } label: {
-                        HStack {
-                            Label(standardFahrzeugNamen[typ.rawValue] ?? typ.rawValue, systemImage: "car")
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            Image(systemName: standardFahrzeugNamen[typ.rawValue] != nil ? "pencil.circle.fill" : "pencil")
-                                .font(.caption)
-                                .foregroundStyle(standardFahrzeugNamen[typ.rawValue] != nil ? Color.orange : Color.secondary)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                }
-            } header: {
-                Label("Standardfahrzeuge", systemImage: "car.fill")
-            } footer: {
-                Text("Antippen zum Umbenennen. Geänderte Namen werden im ganzen Protokoll verwendet. 'Zurücksetzen' stellt den Originalwert wieder her.")
                     .font(.footnote).foregroundStyle(.secondary)
             }
 
@@ -166,7 +128,7 @@ struct SettingsView: View {
             Button("Abbrechen", role: .cancel) {}
         }
         .alert("Fahrzeug hinzufügen", isPresented: $zeigeFahrzeugHinzufuegen) {
-            TextField("Bezeichnung (z.B. FR 10-58-01)", text: $neuesFahrzeug)
+            TextField("Bezeichnung", text: $neuesFahrzeug)
             Button("Hinzufügen") {
                 let name = neuesFahrzeug.trimmingCharacters(in: .whitespaces)
                 guard !name.isEmpty else { return }
@@ -188,31 +150,6 @@ struct SettingsView: View {
                 zuBearbeitenderIndex = nil
             }
             Button("Abbrechen", role: .cancel) { zuBearbeitenderIndex = nil }
-        }
-        .alert("Fahrzeug umbenennen", isPresented: $zeigeStandardBearbeiten) {
-            TextField("Name", text: $bearbeitungsStandardName)
-            Button("Speichern") {
-                guard let typ = zuBearbeitenderTyp else { return }
-                let name = bearbeitungsStandardName.trimmingCharacters(in: .whitespaces)
-                var dict = standardFahrzeugNamen
-                if name.isEmpty || name == typ.rawValue {
-                    dict.removeValue(forKey: typ.rawValue)
-                } else {
-                    dict[typ.rawValue] = name
-                }
-                standardFahrzeugNamenSpeichern(dict)
-                zuBearbeitenderTyp = nil
-            }
-            Button("Zurücksetzen", role: .destructive) {
-                guard let typ = zuBearbeitenderTyp else { return }
-                var dict = standardFahrzeugNamen
-                dict.removeValue(forKey: typ.rawValue)
-                standardFahrzeugNamenSpeichern(dict)
-                zuBearbeitenderTyp = nil
-            }
-            Button("Abbrechen", role: .cancel) { zuBearbeitenderTyp = nil }
-        } message: {
-            Text("Standard: \(zuBearbeitenderTyp?.rawValue ?? "")")
         }
     }
 }
