@@ -12,6 +12,9 @@ struct StartView: View {
     @State private var selectedPhoto: PhotosPickerItem? = nil
     @State private var isLoadingPhoto = false
 
+    @AppStorage("einheitenname") private var einheitenname: String = "First Responder Geesthacht"
+    @AppStorage("startseiteUntertitel") private var startseiteUntertitel: String = "Einsatzprotokollierung First Responder"
+
     var body: some View {
         ZStack {
             Color(.systemGroupedBackground).ignoresSafeArea()
@@ -24,11 +27,11 @@ struct StartView: View {
                         .font(.system(size: 72))
                         .foregroundColor(Color("RDOrange"))
 
-                    Text("First Responder\nGeesthacht")
+                    Text(einheitenname.isEmpty ? "First Responder Geesthacht" : einheitenname)
                         .font(.largeTitle).fontWeight(.bold)
                         .multilineTextAlignment(.center)
 
-                    Text("Einsatzprotokollierung\nFirst Responder")
+                    Text(startseiteUntertitel.isEmpty ? "Einsatzprotokollierung First Responder" : startseiteUntertitel)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
