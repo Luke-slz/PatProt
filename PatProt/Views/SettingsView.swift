@@ -6,6 +6,8 @@ struct SettingsView: View {
     @AppStorage("recipientEmail") private var recipientEmail: String = ""
     @AppStorage("gespeichertesPersonal") private var personalJSON: String = "[]"
     @AppStorage("customFahrzeuge") private var customFahrzeugeJSON: String = "[]"
+    @AppStorage("einheitenname") private var einheitenname: String = "First Responder Geesthacht"
+    @AppStorage("startseiteUntertitel") private var startseiteUntertitel: String = "Einsatzprotokollierung First Responder"
 
     @State private var zeigePersonalHinzufuegen = false
     @State private var zeigeFahrzeugHinzufuegen = false
@@ -21,7 +23,6 @@ struct SettingsView: View {
 
     private func personalSpeichern(_ liste: [String]) {
         personalJSON = (try? String(data: JSONEncoder().encode(liste), encoding: .utf8)) ?? "[]"
-        // AppState.pushSettingsToiCloud()  // Option A: einkommentieren wenn paid Developer Account
     }
 
     private var customFahrzeuge: [String] {
@@ -30,12 +31,23 @@ struct SettingsView: View {
 
     private func customFahrzeugeSpeichern(_ liste: [String]) {
         customFahrzeugeJSON = (try? String(data: JSONEncoder().encode(liste), encoding: .utf8)) ?? "[]"
-        // AppState.pushSettingsToiCloud()  // Option A: einkommentieren wenn paid Developer Account
     }
-
 
     var body: some View {
         Form {
+            // Startseite
+            Section {
+                TextField("Einheitenname", text: $einheitenname)
+                    .autocorrectionDisabled(true)
+                TextField("Untertitel", text: $startseiteUntertitel)
+                    .autocorrectionDisabled(true)
+            } header: {
+                Label("Startseite", systemImage: "house.fill")
+            } footer: {
+                Text("Name und Untertitel werden auf der Startseite angezeigt.")
+                    .font(.footnote).foregroundStyle(.secondary)
+            }
+
             // E-Mail
             Section(
                 footer: Text("Die E-Mail-Adresse wird ausschließlich zum Versand des Protokolls verwendet. Nach erfolgreichem Versand wird die PDF-Datei gelöscht.")
@@ -45,7 +57,6 @@ struct SettingsView: View {
                     .textInputAutocapitalization(.never)
                     .keyboardType(.emailAddress)
                     .autocorrectionDisabled(true)
-                    // .onChange(of: recipientEmail) { _, _ in AppState.pushSettingsToiCloud() }  // Option A
             }
 
             // Personal
@@ -113,6 +124,20 @@ struct SettingsView: View {
                 Text("Antippen zum Bearbeiten. Wischgeste zum Löschen. In Bearbeiten-Modus verschiebbar.")
                     .font(.footnote).foregroundStyle(.secondary)
             }
+
+            // Stichwörter
+            Section {
+                NavigationLink {
+                    StichwörtVerwaltungView()
+                } label: {
+                    Label("Stichwörter verwalten", systemImage: "list.bullet.rectangle")
+                }
+            } header: {
+                Label("Einsatzstichwörter", systemImage: "list.bullet.rectangle")
+            } footer: {
+                Text("Alle Stichwörter bearbeiten, löschen oder neue hinzufügen. Auf Standardwerte zurücksetzbar.")
+                    .font(.footnote).foregroundStyle(.secondary)
+            }
         }
         .navigationTitle("Einstellungen")
         .toolbar { EditButton() }
@@ -150,6 +175,178 @@ struct SettingsView: View {
                 zuBearbeitenderIndex = nil
             }
             Button("Abbrechen", role: .cancel) { zuBearbeitenderIndex = nil }
+        }
+    }
+}
+
+// MARK: - Stichwörter Verwaltung
+
+struct StichwörtVerwaltungView: View {
+    @AppStorage(StichwortStore.key) private var storeJSON: String = "[]"
+    @State private var einträge: [Stichwort] = []
+    @State private var zeigeHinzufuegen = false
+    @State private var zeigeBearbeiten = false
+    @State private var zeigeResetWarnung = false
+    @State private var ausgewählt: Stichwort? = nil
+    @State private var editStichwort = ""
+    @State private var editDiagnose = ""
+    @State private var editKategorie = ""
+
+    private var kategorien: [String] {
+        var seen = Set<String>()
+        return einträge.compactMap { seen.insert($0.kategorie).inserted ? $0.kategorie : nil }
+    }
+
+    var body: some View {
+        List {
+            ForEach($einträge) { $eintrag in
+                Button {
+                    ausgewählt = eintrag
+                    editStichwort = eintrag.stichwort
+                    editDiagnose = eintrag.diagnose
+                    editKategorie = eintrag.kategorie
+                    zeigeBearbeiten = true
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(eintrag.diagnose)
+                                .foregroundStyle(.primary)
+                            HStack(spacing: 4) {
+                                Text(eintrag.stichwort)
+                                    .font(.caption2.bold())
+                                    .padding(.horizontal, 5)
+                                    .padding(.vertical, 2)
+                                    .background(.blue.opacity(0.15))
+                                    .foregroundStyle(.blue)
+                                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                                Text(eintrag.kategorie)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        Spacer()
+                        Image(systemName: "pencil")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .foregroundStyle(.primary)
+            }
+            .onDelete { einträge.remove(atOffsets: $0) }
+            .onMove  { einträge.move(fromOffsets: $0, toOffset: $1) }
+        }
+        .navigationTitle("Stichwörter")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    editStichwort = ""
+                    editDiagnose = ""
+                    editKategorie = ""
+                    zeigeHinzufuegen = true
+                } label: {
+                    Image(systemName: "plus")
+                }
+            }
+            ToolbarItem(placement: .secondaryAction) {
+                Button("Auf Standard zurücksetzen", role: .destructive) {
+                    zeigeResetWarnung = true
+                }
+            }
+            ToolbarItem(placement: .secondaryAction) {
+                EditButton()
+            }
+        }
+        .onAppear { einträge = StichwortStore.laden() }
+        .onChange(of: einträge) { _, neu in StichwortStore.speichern(neu) }
+        .sheet(isPresented: $zeigeHinzufuegen) {
+            StichwortFormSheet(
+                titel: "Stichwort hinzufügen",
+                stichwort: $editStichwort,
+                diagnose: $editDiagnose,
+                kategorie: $editKategorie
+            ) {
+                let neu = Stichwort(
+                    stichwort: editStichwort.trimmingCharacters(in: .whitespaces),
+                    diagnose: editDiagnose.trimmingCharacters(in: .whitespaces),
+                    kategorie: editKategorie.trimmingCharacters(in: .whitespaces).isEmpty
+                        ? "Eigene" : editKategorie.trimmingCharacters(in: .whitespaces)
+                )
+                guard !neu.stichwort.isEmpty, !neu.diagnose.isEmpty else { return }
+                einträge.append(neu)
+            }
+        }
+        .sheet(isPresented: $zeigeBearbeiten) {
+            StichwortFormSheet(
+                titel: "Stichwort bearbeiten",
+                stichwort: $editStichwort,
+                diagnose: $editDiagnose,
+                kategorie: $editKategorie
+            ) {
+                guard let id = ausgewählt?.id,
+                      let idx = einträge.firstIndex(where: { $0.id == id }) else { return }
+                einträge[idx].stichwort = editStichwort.trimmingCharacters(in: .whitespaces)
+                einträge[idx].diagnose  = editDiagnose.trimmingCharacters(in: .whitespaces)
+                einträge[idx].kategorie = editKategorie.trimmingCharacters(in: .whitespaces)
+                ausgewählt = nil
+            }
+        }
+        .confirmationDialog(
+            "Alle Stichwörter auf Standardwerte zurücksetzen?",
+            isPresented: $zeigeResetWarnung,
+            titleVisibility: .visible
+        ) {
+            Button("Zurücksetzen", role: .destructive) {
+                einträge = StichwortStore.defaults
+            }
+            Button("Abbrechen", role: .cancel) {}
+        } message: {
+            Text("Alle eigenen Änderungen gehen verloren.")
+        }
+    }
+}
+
+// MARK: - Stichwort Formular Sheet
+
+struct StichwortFormSheet: View {
+    let titel: String
+    @Binding var stichwort: String
+    @Binding var diagnose: String
+    @Binding var kategorie: String
+    let onSpeichern: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Einsatzstichwort-Code") {
+                    TextField("z.B. NOTF 11", text: $stichwort)
+                        .autocorrectionDisabled(true)
+                        .textInputAutocapitalization(.characters)
+                }
+                Section("Verdachtsdiagnose / Beschreibung") {
+                    TextField("z.B. Bewusstlose Person", text: $diagnose)
+                }
+                Section("Kategorie") {
+                    TextField("z.B. Kritisch (NOTF 11)", text: $kategorie)
+                }
+            }
+            .navigationTitle(titel)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Speichern") {
+                        onSpeichern()
+                        dismiss()
+                    }
+                    .disabled(stichwort.trimmingCharacters(in: .whitespaces).isEmpty ||
+                              diagnose.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Abbrechen") { dismiss() }
+                }
+            }
         }
     }
 }
