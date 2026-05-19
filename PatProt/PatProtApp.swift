@@ -40,7 +40,6 @@ class AppState: ObservableObject {
                 kvs.set(val, forKey: key)
             }
         }
-        kvs.synchronize()
     }
 }
 
