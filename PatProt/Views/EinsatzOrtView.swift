@@ -96,8 +96,14 @@ struct EinsatzOrtView: View {
                 Toggle("Notarzt", isOn: $protokoll.einsatzOrt.notarzt)
 
                 Picker("Primärfahrzeug", selection: $protokoll.einsatzOrt.fahrzeugName) {
-                    ForEach(customFahrzeuge, id: \.self) { fz in
-                        Text(fz).tag(fz)
+                    if customFahrzeuge.isEmpty {
+                        ForEach(FahrzeugTyp.allCases, id: \.self) { typ in
+                            Text(anzeigeName(für: typ)).tag(anzeigeName(für: typ))
+                        }
+                    } else {
+                        ForEach(customFahrzeuge, id: \.self) { fz in
+                            Text(fz).tag(fz)
+                        }
                     }
                 }
 

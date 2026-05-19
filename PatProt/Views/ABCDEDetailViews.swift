@@ -132,6 +132,8 @@ struct BreathingView: View {
     @Binding var befund: BreathingBefund
     var onZurueck: () -> Void
 
+    @State private var andereAtemgeraeusche: String = ""
+
     private var afBg: Color {
         vitalBg(befund.atemFrequenz.map(Double.init), normal: 12...20, warning: 8...30)
     }
@@ -195,9 +197,17 @@ struct BreathingView: View {
                 }
 
                 if befund.atemgeraeusche == "Andere" {
-                    TextField("Atemgeräusch eingeben", text: $befund.atemgeraeusche)
+                    TextField("Atemgeräusch eingeben", text: $andereAtemgeraeusche)
+                        .onChange(of: andereAtemgeraeusche) { _, value in
+                            befund.atemgeraeusche = value.isEmpty ? "Andere" : value
+                        }
                 }
             } header: { Label("Vitalparameter", systemImage: "lungs") }
+            .onAppear {
+                if befund.atemgeraeusche != "Andere" && !["", "Vesikulär (normal)", "Giemen", "Rasseln", "Stridor", "Brummen", "Kein Atemgeräusch"].contains(befund.atemgeraeusche) {
+                    andereAtemgeraeusche = befund.atemgeraeusche
+                }
+            }
 
             Section {
                 Toggle("Dyspnoe", isOn: $befund.dyspnoe)

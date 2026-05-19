@@ -243,11 +243,9 @@ struct DINPDFGenerator {
             let sh: CGFloat = 11; y += sh
 
             // Vehicle checkboxes
-            let fz = p.einsatzOrt.fahrzeugTyp
+            let fz = p.einsatzOrt.fahrzeugName
             let cbW = w / 7
             let vItems: [(String,Bool)] = [
-                ("RTW", fz == .rtw), ("KTW", fz == .ktw), ("NEF", fz == .nef),
-                ("NAW", fz == .naw), ("BabyNAW", fz == .babyNaw), ("V-RTW", fz == .vrtw),
                 ("NKW", false)
             ]
             fillRect(CGRect(x:x,y:y,width:w,height:11), .white)
@@ -266,7 +264,7 @@ struct DINPDFGenerator {
             y += r2h
 
             // Dokumentations-RM
-            field("Dokumentations-Rettungsmittel", p.einsatzOrt.fahrzeugTyp.rawValue,
+            field("Dokumentations-Rettungsmittel", p.einsatzOrt.fahrzeugName,
                   x:x, y:y, w:w/2, h:11, lw:w*0.22)
             field("Weitere Rettungsmittel", p.einsatzOrt.weitereEinsatzmittel.joined(separator: ", "),
                   x:x+w/2, y:y, w:w/2, h:11, lw:w*0.22)
@@ -701,7 +699,7 @@ struct DINPDFGenerator {
         }
 
         // Footer
-        drawFooter()
+        drawFooter(erstelltAm: p.erstelltAm)
     }
 
     // ─────────────────────────────────────────────────────
@@ -1134,21 +1132,21 @@ struct DINPDFGenerator {
                 CGRect(x:lx+4,y:y+sigH-12,width:rx-lx-8,height:10), font:f7)
         }
 
-        drawFooter()
+        drawFooter(erstelltAm: p.erstelltAm)
     }
 
     // ─────────────────────────────────────────────────────
     // MARK: - Footer
     // ─────────────────────────────────────────────────────
 
-    private static func drawFooter() {
+    private static func drawFooter(erstelltAm: Date) {
         let fy = pageSize.height - 14
         fillRect(CGRect(x:0,y:fy,width:pageSize.width,height:14), UIColor(white:0.93,alpha:1))
         UIColor.lightGray.setStroke()
         UIBezierPath(rect: CGRect(x:0,y:fy,width:pageSize.width,height:0.4)).stroke()
         let fmt = DateFormatter(); fmt.dateFormat = "dd.MM.yyyy HH:mm"
         let attrs: [NSAttributedString.Key:Any] = [.font:f5, .foregroundColor:UIColor.gray]
-        ("Generiert: \(fmt.string(from: Date()))" as NSString).draw(
+        ("Einsatz vom: \(fmt.string(from: erstelltAm))" as NSString).draw(
             at: CGPoint(x:lx,y:fy+4), withAttributes:attrs)
         ("DLRG Einsatzprotokoll – Vertraulich" as NSString).draw(
             at: CGPoint(x:pageSize.width-175,y:fy+4), withAttributes:attrs)
