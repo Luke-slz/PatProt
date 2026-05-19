@@ -4,6 +4,7 @@ import Combine
 
 // MARK: - App-weiter State für Screenshot-Import
 
+@MainActor
 class AppState: ObservableObject {
     @Published var pendingImage: UIImage? = nil
     static let shared = AppState()
@@ -16,7 +17,6 @@ class AppState: ObservableObject {
             name: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
             object: NSUbiquitousKeyValueStore.default
         )
-        NSUbiquitousKeyValueStore.default.synchronize()
     }
 
     @objc private func iCloudDidChange() {
@@ -48,7 +48,7 @@ class AppState: ObservableObject {
 
 @main
 struct PatProtApp: App {
-    @StateObject private var appState = AppState.shared
+    @ObservedObject private var appState = AppState.shared
 
     var body: some Scene {
         WindowGroup {
