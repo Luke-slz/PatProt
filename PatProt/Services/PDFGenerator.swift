@@ -471,7 +471,7 @@ struct DINPDFGenerator {
         // D Neurologie / GCS
         let neAx = c2
         let gcs = p.disability
-        let neItems: [(String,String)] = [
+        var neItems: [(String,String)] = [
             ("Bewusstsein", p.patientDaten.ansprechbar ? "ansprechbar" : "nicht ansprechbar"),
             ("GCS gesamt", "\(gcs.gcsGesamt)/15"),
             ("Augen (E)", "\(gcs.gcsAugen)"),
@@ -482,6 +482,23 @@ struct DINPDFGenerator {
             ("Lichtreaktion", gcs.pupillenReaktion ? "+" : "–"),
             ("Schmerz NRS", "\(gcs.schmerz)/10"),
         ]
+        if gcs.befastAktiv {
+            let tf = DateFormatter()
+            tf.dateFormat = "HH:mm"
+            let zeitStr: String = {
+                if gcs.befastZeitUnbekannt { return "unbekannt" }
+                if let d = gcs.befastSymptombeginn { return tf.string(from: d) }
+                return "—"
+            }()
+            neItems += [
+                ("BEFAST B", gcs.befastBalance ? "+" : "–"),
+                ("BEFAST E", gcs.befastEyes    ? "+" : "–"),
+                ("BEFAST F", gcs.befastFace    ? "+" : "–"),
+                ("BEFAST A", gcs.befastArm     ? "+" : "–"),
+                ("BEFAST S", gcs.befastSpeech  ? "+" : "–"),
+                ("BEFAST T", zeitStr),
+            ]
+        }
         for (i,(label,value)) in neItems.enumerated() {
             let ry = mvColY + CGFloat(i)*mvH
             let hl2 = label == "GCS gesamt"
@@ -514,7 +531,7 @@ struct DINPDFGenerator {
             cb(label, checked, x:haAx+2, y:ry+2, bs:7, lw:bW5-12)
         }
 
-        y = mvColY + CGFloat(max(mvItems.count, atItems.count, ciItems.count))*mvH + 2
+        y = mvColY + CGFloat(max(mvItems.count, atItems.count, ciItems.count, neItems.count, haItems.count))*mvH + 2
 
         // Hautfarbe / Temp row
         field("Hautfarbe", p.exposure.hautfarbe, x:lx, y:y, w:(rx-lx)/3, h:11, lw:42)
