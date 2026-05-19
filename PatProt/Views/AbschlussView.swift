@@ -184,7 +184,7 @@ struct AbschlussView: View {
                 .tint(Color("RDOrange"))
                 .disabled(isGenerating || recipientEmail.isEmpty)
             } header: { Label("PDF Export", systemImage: "square.and.arrow.up") }
-              footer: { Text("Nach erfolgreichem Export wird das Protokoll automatisch vom Gerät gelöscht.").font(.footnote).foregroundStyle(.secondary) }
+              footer: { Text("Die temporäre PDF-Datei wird nach dem Export gelöscht.").font(.footnote).foregroundStyle(.secondary) }
         }
         .navigationTitle("Abschluss & Export")
         .navigationBarTitleDisplayMode(.inline)
