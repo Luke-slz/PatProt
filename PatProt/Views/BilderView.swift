@@ -186,7 +186,7 @@ struct BilderView: View {
         guard let data = bild.jpegData(compressionQuality: 0.7) else { return }
         let dateiname = UUID().uuidString + ".jpg"
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(dateiname)
-        guard (try? data.write(to: url)) != nil else { return }
+        guard (try? data.write(to: url, options: [.atomicWrite, .completeFileProtection])) != nil else { return }
         fotos.append(FotoEintrag(bildDateiname: dateiname))
     }
 }
