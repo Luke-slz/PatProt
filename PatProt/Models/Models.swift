@@ -283,6 +283,16 @@ struct DisabilityBefund: Codable {
     var schmerz: Int = 0
     var freitext = ""
 
+    // BEFAST
+    var befastAktiv: Bool = false
+    var befastBalance: Bool = false
+    var befastEyes: Bool = false
+    var befastFace: Bool = false
+    var befastArm: Bool = false
+    var befastSpeech: Bool = false
+    var befastZeitUnbekannt: Bool = false
+    var befastSymptombeginn: Date? = nil
+
     var gcsGesamt: Int { gcsAugen + gcsVerbal + gcsMotor }
 }
 
