@@ -7,6 +7,7 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     private let manager = CLLocationManager()
     @Published var address: String = ""
     @Published var isLoading = false
+    @Published var locationError: String? = nil
 
     override init() {
         super.init()
@@ -46,9 +47,26 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         }
     }
 
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        switch manager.authorizationStatus {
+        case .denied, .restricted:
+            DispatchQueue.main.async {
+                self.isLoading = false
+                self.locationError = "GPS nicht erlaubt. Bitte in Einstellungen > Datenschutz > Ortungsdienste freigeben."
+            }
+        case .authorizedWhenInUse, .authorizedAlways:
+            DispatchQueue.main.async {
+                self.locationError = nil
+            }
+        default:
+            break
+        }
+    }
+
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         DispatchQueue.main.async {
             self.isLoading = false
+            self.locationError = "GPS-Fehler: \(error.localizedDescription)"
         }
     }
 }
