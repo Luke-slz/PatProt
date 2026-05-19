@@ -179,7 +179,7 @@ struct iPhoneContentView: View {
             await MainActor.run {
                 applyToCurrentProtokoll(daten)
                 isParsing = false
-                path = [.einsatzOrt, .abcde]
+                path = [.einsatzOrt]
             }
         }
     }
