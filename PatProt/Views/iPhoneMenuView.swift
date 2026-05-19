@@ -6,6 +6,8 @@ struct iPhoneMenuView: View {
     @Binding var path: [iPhoneAppStep]
     @Binding var isPresented: Bool
 
+    @State private var pendingStep: iPhoneAppStep? = nil
+
     var body: some View {
         NavigationStack {
             List {
@@ -59,14 +61,18 @@ struct iPhoneMenuView: View {
         }
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
+        .onChange(of: isPresented) { _, presented in
+            if !presented, let step = pendingStep {
+                path = [step]
+                pendingStep = nil
+            }
+        }
     }
 
     private func menuRow(_ title: String, icon: String, farbe: Color, step: iPhoneAppStep) -> some View {
         Button {
+            pendingStep = step
             isPresented = false
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                path = [step]
-            }
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: icon)

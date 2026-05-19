@@ -4,6 +4,7 @@ import Combine
 
 // MARK: - App-weiter State für Screenshot-Import
 
+@MainActor
 class AppState: ObservableObject {
     @Published var pendingImage: UIImage? = nil
     static let shared = AppState()
@@ -16,7 +17,6 @@ class AppState: ObservableObject {
             name: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
             object: NSUbiquitousKeyValueStore.default
         )
-        NSUbiquitousKeyValueStore.default.synchronize()
     }
 
     @objc private func iCloudDidChange() {
@@ -25,21 +25,21 @@ class AppState: ObservableObject {
 
     private func syncFromiCloud() {
         let kvs = NSUbiquitousKeyValueStore.default
-        for key in ["recipientEmail", "gespeichertesPersonal", "customFahrzeuge", "standardFahrzeugNamen"] {
+        for key in ["recipientEmail", "customFahrzeuge", "standardFahrzeugNamen"] {
             if let val = kvs.string(forKey: key), !val.isEmpty {
                 UserDefaults.standard.set(val, forKey: key)
             }
         }
     }
 
+    // Personalnamen werden bewusst NICHT synchronisiert (DSGVO: bleiben lokal auf dem Gerät)
     static func pushSettingsToiCloud() {
         let kvs = NSUbiquitousKeyValueStore.default
-        for key in ["recipientEmail", "gespeichertesPersonal", "customFahrzeuge", "standardFahrzeugNamen"] {
+        for key in ["recipientEmail", "customFahrzeuge", "standardFahrzeugNamen"] {
             if let val = UserDefaults.standard.string(forKey: key) {
                 kvs.set(val, forKey: key)
             }
         }
-        kvs.synchronize()
     }
 }
 
@@ -47,7 +47,7 @@ class AppState: ObservableObject {
 
 @main
 struct PatProtApp: App {
-    @StateObject private var appState = AppState.shared
+    @ObservedObject private var appState = AppState.shared
 
     var body: some Scene {
         WindowGroup {

@@ -11,13 +11,9 @@ enum Geschlecht: String, CaseIterable, Codable {
 }
 
 enum FahrzeugTyp: String, CaseIterable, Codable {
-    case fr = "FR 10-58-01"
-    case ktw = "KTW 10-90-01"
+    case ktw = "KTW"
     case rtw = "RTW"
-    case naw = "NAW"
     case nef = "NEF"
-    case babyNaw = "Baby NAW"
-    case vrtw = "V-RTW"
 }
 
 enum ABCDEStatus: String, Codable {
@@ -195,7 +191,7 @@ struct EinsatzOrt: Codable {
     var zusatz = ""
     var einsatzArt = ""
     var stichwort = ""
-    var fahrzeugTyp: FahrzeugTyp = .rtw
+    var fahrzeugName: String = ""  // war: fahrzeugTyp + customFahrzeugName
     var weitereEinsatzmittel: [String] = []
     var alarmzeit: Date? = nil
     var ankunftzeit: Date? = nil
@@ -205,6 +201,7 @@ struct EinsatzOrt: Codable {
     var notarzt: Bool = false
     var sondersignal: Bool = false
 }
+
 
 struct PatientDaten: Codable {
     var vorname = ""
@@ -740,7 +737,7 @@ extension SINNHAFTBefund {
         if !protokoll.einsatzOrt.adresse.isEmpty { situationParts.append("Ort: \(protokoll.einsatzOrt.adresse)") }
         befund.situation = situationParts.joined(separator: "\n")
 
-        var idParts: [String] = [protokoll.einsatzOrt.fahrzeugTyp.rawValue]
+        var idParts: [String] = [protokoll.einsatzOrt.fahrzeugName]
         let san1 = protokoll.besatzung.sanitaeter1
         let san2 = protokoll.besatzung.sanitaeter2
         if !san1.isEmpty { idParts.append("Team: \(san1)\(san2.isEmpty ? "" : ", \(san2)")") }

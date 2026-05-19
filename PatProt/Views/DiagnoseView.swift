@@ -57,49 +57,52 @@ struct DiagnoseView: View {
     // MARK: - Trichter-Visualisierung
 
     private var trichterVisualisierung: some View {
-        VStack(spacing: 2) {
-            ForEach(Array(DiagnoseWahrscheinlichkeit.allCases.enumerated()), id: \.element) { index, stufe in
-                let anzahl = befund.verdachtsdiagnosen.filter { $0.wahrscheinlichkeit == stufe }.count
-                let breite = trichterBreite(fuer: index)
+        GeometryReader { geo in
+            VStack(spacing: 2) {
+                ForEach(Array(DiagnoseWahrscheinlichkeit.allCases.enumerated()), id: \.element) { index, stufe in
+                    let anzahl = befund.verdachtsdiagnosen.filter { $0.wahrscheinlichkeit == stufe }.count
+                    let breite = trichterBreite(fuer: index, containerWidth: geo.size.width)
 
-                HStack {
-                    Spacer()
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(anzahl > 0 ? stufe.farbe.opacity(0.18) : Color(.systemGray6))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(stufe.farbe.opacity(anzahl > 0 ? 0.5 : 0.2), lineWidth: 1)
-                            )
-                        HStack {
-                            Image(systemName: stufe.symbol)
-                                .foregroundColor(anzahl > 0 ? stufe.farbe : .secondary)
-                                .font(.caption)
-                            Text(stufe.rawValue)
-                                .font(.caption).fontWeight(.medium)
-                                .foregroundColor(anzahl > 0 ? stufe.farbe : .secondary)
-                            Spacer()
-                            if anzahl > 0 {
-                                Text("\(anzahl)")
-                                    .font(.caption).fontWeight(.bold)
-                                    .foregroundColor(.white)
-                                    .frame(width: 22, height: 22)
-                                    .background(stufe.farbe)
-                                    .clipShape(Circle())
+                    HStack {
+                        Spacer()
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(anzahl > 0 ? stufe.farbe.opacity(0.18) : Color(.systemGray6))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(stufe.farbe.opacity(anzahl > 0 ? 0.5 : 0.2), lineWidth: 1)
+                                )
+                            HStack {
+                                Image(systemName: stufe.symbol)
+                                    .foregroundColor(anzahl > 0 ? stufe.farbe : .secondary)
+                                    .font(.caption)
+                                Text(stufe.rawValue)
+                                    .font(.caption).fontWeight(.medium)
+                                    .foregroundColor(anzahl > 0 ? stufe.farbe : .secondary)
+                                Spacer()
+                                if anzahl > 0 {
+                                    Text("\(anzahl)")
+                                        .font(.caption).fontWeight(.bold)
+                                        .foregroundColor(.white)
+                                        .frame(width: 22, height: 22)
+                                        .background(stufe.farbe)
+                                        .clipShape(Circle())
+                                }
                             }
+                            .padding(.horizontal, 12)
                         }
-                        .padding(.horizontal, 12)
+                        .frame(width: breite, height: 38)
+                        Spacer()
                     }
-                    .frame(width: breite, height: 38)
-                    Spacer()
                 }
             }
         }
+        .frame(height: CGFloat(DiagnoseWahrscheinlichkeit.allCases.count) * 40)
         .padding(.vertical, 8)
     }
 
-    private func trichterBreite(fuer index: Int) -> CGFloat {
-        let maxBreite: CGFloat = UIScreen.main.bounds.width - 32
+    private func trichterBreite(fuer index: Int, containerWidth: CGFloat) -> CGFloat {
+        let maxBreite: CGFloat = containerWidth - 32
         let schrumpfung: CGFloat = 60
         return max(maxBreite - CGFloat(index) * schrumpfung, 160)
     }

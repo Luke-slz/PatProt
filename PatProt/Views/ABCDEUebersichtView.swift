@@ -298,7 +298,7 @@ struct ABCDEUebersichtView: View {
     func breathingSubtitel() -> String {
         var teile: [String] = []
         if let af = protokoll.breathing.atemFrequenz { teile.append("AF \(af)/min") }
-        if let spo2 = protokoll.breathing.spo2 { teile.append("SpO² \(spo2)%") }
+        if let spo2 = protokoll.breathing.spo2 { teile.append("SpO₂ \(spo2)%") }
         return teile.isEmpty ? "Noch nicht bewertet" : teile.joined(separator: " · ")
     }
 

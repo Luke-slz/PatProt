@@ -9,6 +9,7 @@ struct EinsatzOrtView: View {
     var onWeiter: () -> Void
     var onBack: () -> Void
     var onMenuOpen: (() -> Void)? = nil
+    
 
     @AppStorage("gespeichertesPersonal") private var personalJSON: String = "[]"
     @AppStorage("customFahrzeuge") private var customFahrzeugeJSON: String = "[]"
@@ -18,6 +19,7 @@ struct EinsatzOrtView: View {
     @State private var zeigeWeiteresEinsatzmittel = false
     @State private var neuesEinsatzmittel = ""
     @State private var zeigeStichwortPicker = false
+    @State private var primärfahrzeugName: String = ""
 
     private var zeitFehler: [String] {
         let alarm = protokoll.einsatzOrt.alarmzeit
@@ -71,6 +73,11 @@ struct EinsatzOrtView: View {
                     }
                 }
                 .disabled(locationManager.isLoading)
+                if let fehler = locationManager.locationError {
+                    Text(fehler)
+                        .font(.caption)
+                        .foregroundColor(.red)
+                }
             } header: {
                 Label("Einsatzort", systemImage: "mappin.circle")
             }
@@ -88,9 +95,15 @@ struct EinsatzOrtView: View {
                 Toggle("Sondersignal", isOn: $protokoll.einsatzOrt.sondersignal)
                 Toggle("Notarzt", isOn: $protokoll.einsatzOrt.notarzt)
 
-                Picker("Primärfahrzeug", selection: $protokoll.einsatzOrt.fahrzeugTyp) {
-                    ForEach(FahrzeugTyp.allCases, id: \.self) { typ in
-                        Text(anzeigeName(für: typ)).tag(typ)
+                Picker("Primärfahrzeug", selection: $protokoll.einsatzOrt.fahrzeugName) {
+                    if customFahrzeuge.isEmpty {
+                        ForEach(FahrzeugTyp.allCases, id: \.self) { typ in
+                            Text(anzeigeName(für: typ)).tag(anzeigeName(für: typ))
+                        }
+                    } else {
+                        ForEach(customFahrzeuge, id: \.self) { fz in
+                            Text(fz).tag(fz)
+                        }
                     }
                 }
 
@@ -419,39 +432,11 @@ struct StichwortPickerSheet: View {
     @State private var suche = ""
 
     static let stichwörter: [(String, String)] = [
-        ("NOTF01", "Bewusstlosigkeit / nicht ansprechbare Person"),
-        ("NOTF02", "Atem-/Kreislaufstillstand (Reanimation)"),
-        ("NOTF03", "Atemnot / Dyspnoe"),
-        ("NOTF04", "Brustschmerz / Verdacht auf Herzinfarkt (ACS)"),
-        ("NOTF05", "Schlaganfall / Apoplex (FAST-Symptomatik)"),
-        ("NOTF06", "Krampfanfall / Epilepsie"),
-        ("NOTF07", "Allergische Reaktion / Anaphylaxie"),
-        ("NOTF08", "Diabetischer Notfall (Hypo-/Hyperglykämie)"),
-        ("NOTF09", "Psychiatrischer Notfall / akute Krise"),
-        ("NOTF10", "Unterleibsschmerzen / abdomineller Notfall"),
-        ("NOTF11", "Geburtshilfe / Entbindung"),
-        ("NOTF12", "Pädiatrischer Notfall / Kind"),
-        ("NOTF13", "Intoxikation / Vergiftung"),
-        ("NOTF14", "Hyperthermie / Hitzschlag"),
-        ("NOTF15", "Hypothermie / Unterkühlung"),
-        ("NOTF16", "Schock (verschiedene Ursachen)"),
-        ("NOTF17", "Verletzung / Trauma"),
-        ("NOTF18", "Urogenitaler Notfall"),
-        ("UNFALL01", "Verkehrsunfall PKW"),
-        ("UNFALL02", "Verkehrsunfall LKW / schwerer VU"),
-        ("UNFALL03", "Verkehrsunfall mit eingeklemmter Person"),
-        ("UNFALL04", "Motorrad-/Fahrradunfall"),
-        ("UNFALL05", "Fußgänger angefahren"),
-        ("UNFALL06", "Arbeitsunfall"),
-        ("UNFALL07", "Sportunfall"),
-        ("UNFALL08", "Haushaltsunfall / Sturz"),
-        ("UNFALL09", "MANV – Massenanfall von Verletzten"),
-        ("WASSER01", "Person im Wasser / Ertrinkender"),
-        ("WASSER02", "Person ertrunken / Bergung"),
-        ("SUIZID",  "Suizid / Suizidversuch"),
-        ("HILFE",   "Hilflosigkeit / Person braucht Hilfe"),
-        ("ABSTURZ", "Absturz / Sturz aus großer Höhe"),
-        ("STROM",   "Stromunfall / Elektrounfall"),
+        ("NOTF01", "0 Notärzte, 1 RTW"),
+        ("NOTF11", "Bewusstlos – 1 Notarzt, 1 RTW"),
+        ("NOTF21", "2 Notärzte, 1 RTW"),
+        ("TH Y",   "Technische Hilfeleistung – Menschenleben in Gefahr"),
+        ("THXY",   "Technische Hilfeleistung Gefahrgut – Menschenleben in Gefahr"),
     ]
 
     private var gefiltert: [(String, String)] {
