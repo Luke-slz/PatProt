@@ -13,7 +13,6 @@ struct EinsatzOrtView: View {
 
     @AppStorage("gespeichertesPersonal") private var personalJSON: String = "[]"
     @AppStorage("customFahrzeuge") private var customFahrzeugeJSON: String = "[]"
-    @AppStorage("standardFahrzeugNamen") private var standardFahrzeugNamenJSON: String = "{}"
 
     @State private var geburtsdatumText: String = ""
     @State private var zeigeWeiteresEinsatzmittel = false
@@ -39,14 +38,6 @@ struct EinsatzOrtView: View {
 
     private var customFahrzeuge: [String] {
         (try? JSONDecoder().decode([String].self, from: Data(customFahrzeugeJSON.utf8))) ?? []
-    }
-
-    private var standardFahrzeugNamen: [String: String] {
-        (try? JSONDecoder().decode([String: String].self, from: Data(standardFahrzeugNamenJSON.utf8))) ?? [:]
-    }
-
-    private func anzeigeName(für typ: FahrzeugTyp) -> String {
-        standardFahrzeugNamen[typ.rawValue] ?? typ.rawValue
     }
 
     var body: some View {
@@ -96,14 +87,9 @@ struct EinsatzOrtView: View {
                 Toggle("Notarzt", isOn: $protokoll.einsatzOrt.notarzt)
 
                 Picker("Primärfahrzeug", selection: $protokoll.einsatzOrt.fahrzeugName) {
-                    if customFahrzeuge.isEmpty {
-                        ForEach(FahrzeugTyp.allCases, id: \.self) { typ in
-                            Text(anzeigeName(für: typ)).tag(anzeigeName(für: typ))
-                        }
-                    } else {
-                        ForEach(customFahrzeuge, id: \.self) { fz in
-                            Text(fz).tag(fz)
-                        }
+                    Text("—").tag("")
+                    ForEach(customFahrzeuge, id: \.self) { fz in
+                        Text(fz).tag(fz)
                     }
                 }
 
@@ -261,7 +247,6 @@ struct EinsatzOrtView: View {
         .sheet(isPresented: $zeigeWeiteresEinsatzmittel) {
             EinsatzmittelPickerSheet(
                 customFahrzeuge: customFahrzeuge,
-                standardFahrzeugNamen: standardFahrzeugNamen,
                 onAuswahl: { name in
                     if !protokoll.einsatzOrt.weitereEinsatzmittel.contains(name) {
                         protokoll.einsatzOrt.weitereEinsatzmittel.append(name)
@@ -368,7 +353,6 @@ struct PersonalPickerSheet: View {
 
 struct EinsatzmittelPickerSheet: View {
     let customFahrzeuge: [String]
-    let standardFahrzeugNamen: [String: String]
     let onAuswahl: (String) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var manuell = ""
@@ -376,16 +360,6 @@ struct EinsatzmittelPickerSheet: View {
     var body: some View {
         NavigationStack {
             List {
-                Section("Standardfahrzeuge") {
-                    ForEach(FahrzeugTyp.allCases, id: \.self) { typ in
-                        let name = standardFahrzeugNamen[typ.rawValue] ?? typ.rawValue
-                        Button(name) {
-                            onAuswahl(name)
-                            dismiss()
-                        }
-                        .foregroundStyle(.primary)
-                    }
-                }
                 if !customFahrzeuge.isEmpty {
                     Section("Eigene Fahrzeuge") {
                         ForEach(customFahrzeuge, id: \.self) { fz in
@@ -423,44 +397,261 @@ struct EinsatzmittelPickerSheet: View {
     }
 }
 
+// MARK: - Stichwort Datenmodell
+
+struct Stichwort: Codable, Identifiable, Equatable {
+    var id: UUID = UUID()
+    var stichwort: String
+    var diagnose: String
+    var kategorie: String
+}
+
+enum StichwortStore {
+    static let key = "alleStichworter"
+
+    static var defaults: [Stichwort] {
+        StichwortPickerSheet.defaultEinträge.map {
+            Stichwort(stichwort: $0.0, diagnose: $0.1, kategorie: $0.2)
+        }
+    }
+
+    static func laden() -> [Stichwort] {
+        guard let json = UserDefaults.standard.string(forKey: key),
+              let data = json.data(using: .utf8),
+              let liste = try? JSONDecoder().decode([Stichwort].self, from: data),
+              !liste.isEmpty
+        else { return defaults }
+        return liste
+    }
+
+    static func speichern(_ liste: [Stichwort]) {
+        let json = (try? String(data: JSONEncoder().encode(liste), encoding: .utf8)) ?? "[]"
+        UserDefaults.standard.set(json, forKey: key)
+    }
+}
+
 // MARK: - Stichwort-Picker Sheet
+
+private struct EinsatzEintrag: Identifiable {
+    let id = UUID()
+    let stichwort: String
+    let diagnose: String
+    let kategorie: String
+}
 
 struct StichwortPickerSheet: View {
     @Binding var code: String
     @Binding var beschreibung: String
     @Environment(\.dismiss) private var dismiss
     @State private var suche = ""
+    @AppStorage(StichwortStore.key) private var storeJSON: String = "[]"
 
-    static let stichwörter: [(String, String)] = [
-        ("NOTF01", "0 Notärzte, 1 RTW"),
-        ("NOTF11", "Bewusstlos – 1 Notarzt, 1 RTW"),
-        ("NOTF21", "2 Notärzte, 1 RTW"),
-        ("TH Y",   "Technische Hilfeleistung – Menschenleben in Gefahr"),
-        ("THXY",   "Technische Hilfeleistung Gefahrgut – Menschenleben in Gefahr"),
+    static let stichwörter: [(String, String)] = defaultEinträge.map { ($0.0, $0.1) }
+
+    static let defaultEinträge: [(String, String, String)] = [
+        // MARK: Reanimation
+        ("NOTF 11 Rea", "Reanimation",                              "Reanimation"),
+        ("NOTF 11 Rea", "Reanimation, telefonisch angeleitet",      "Reanimation"),
+        ("NOTF 11 Rea", "Reanimation, laufend / intermittierend",   "Reanimation"),
+        ("NOTF 11 Rea", "Rea ohne ROSC",                            "Reanimation"),
+
+        // MARK: Kritische Notfälle – NEF + RTW (NOTF 11)
+        ("NOTF 11", "Bewusstlose Person",                           "Kritisch (NOTF 11)"),
+        ("NOTF 11", "Päd. – Bewusstlos",                            "Kritisch (NOTF 11)"),
+        ("NOTF 11", "Vigilanzminderung / Koma",                     "Kritisch (NOTF 11)"),
+        ("NOTF 11", "Schlaganfall / Apoplex",                       "Kritisch (NOTF 11)"),
+        ("NOTF 11", "Krampfanfall, anhaltend",                      "Kritisch (NOTF 11)"),
+        ("NOTF 11", "Akute Atemnot",                                "Kritisch (NOTF 11)"),
+        ("NOTF 11", "pädiatrisch – Atemnot",                        "Kritisch (NOTF 11)"),
+        ("NOTF 11", "pädiatrisch – Fieberkrampf",                   "Kritisch (NOTF 11)"),
+        ("NOTF 11", "STEMI",                                        "Kritisch (NOTF 11)"),
+        ("NOTF 11", "NSTEMI / instabile AP",                        "Kritisch (NOTF 11)"),
+        ("NOTF 11", "Kardiogener Schock",                           "Kritisch (NOTF 11)"),
+        ("NOTF 11", "Herzinsuffizienz, akut",                       "Kritisch (NOTF 11)"),
+        ("NOTF 11", "Arrhythmie",                                   "Kritisch (NOTF 11)"),
+        ("NOTF 11", "Bradykardie",                                  "Kritisch (NOTF 11)"),
+        ("NOTF 11", "Tachykardie",                                  "Kritisch (NOTF 11)"),
+        ("NOTF 11", "Hypertensiver Notfall",                        "Kritisch (NOTF 11)"),
+        ("NOTF 11", "Lungenembolie",                                "Kritisch (NOTF 11)"),
+        ("NOTF 11", "Anaphylaktischer Schock",                      "Kritisch (NOTF 11)"),
+        ("NOTF 11", "Anaphylaxie / Unverträglichkeitsreaktion",     "Kritisch (NOTF 11)"),
+        ("NOTF 11", "Polytrauma mit SHT",                           "Kritisch (NOTF 11)"),
+        ("NOTF 11", "Polytrauma ohne SHT",                          "Kritisch (NOTF 11)"),
+        ("NOTF 11", "Trauma schwer",                                "Kritisch (NOTF 11)"),
+        ("NOTF 11", "Inhalationstrauma",                            "Kritisch (NOTF 11)"),
+        ("NOTF 11", "Kohlenmonoxid-Vergiftung",                     "Kritisch (NOTF 11)"),
+        ("NOTF 11", "Pflanzenschutzmittel-Vergiftung",              "Kritisch (NOTF 11)"),
+        ("NOTF 11", "Rauchgas / Reizgas",                           "Kritisch (NOTF 11)"),
+        ("NOTF 11", "Sepsis",                                       "Kritisch (NOTF 11)"),
+        ("NOTF 11", "Meningitis / Enzephalitis",                    "Kritisch (NOTF 11)"),
+        ("NOTF 11", "Ertrinkung / Badeunfall",                      "Kritisch (NOTF 11)"),
+        ("NOTF 11", "Mischintoxikation Alkohol / Drogen",           "Kritisch (NOTF 11)"),
+        ("NOTF 11", "Aortenaneurysma / Dissektion",                 "Kritisch (NOTF 11)"),
+        ("NOTF 11", "Geburt präklinisch",                           "Kritisch (NOTF 11)"),
+
+        // MARK: Notfall – RTW (NOTF 01)
+        ("NOTF 01", "Somnolente Person",                            "Notfall (NOTF 01)"),
+        ("NOTF 01", "Hilflose Person",                              "Notfall (NOTF 01)"),
+        ("NOTF 01", "unklarer Einsatzgrund",                        "Notfall (NOTF 01)"),
+        ("NOTF 01", "Krampfanfall, stattgefunden",                  "Notfall (NOTF 01)"),
+        ("NOTF 01", "Synkope / Kollaps",                            "Notfall (NOTF 01)"),
+        ("NOTF 01", "Hypoglycämie",                                 "Notfall (NOTF 01)"),
+        ("NOTF 01", "Hyperventilation",                             "Notfall (NOTF 01)"),
+        ("NOTF 01", "Obstruktion (Asthma / COPD)",                  "Notfall (NOTF 01)"),
+        ("NOTF 01", "Hypotonie",                                    "Notfall (NOTF 01)"),
+        ("NOTF 01", "unklarer Brust- / Thoraxschmerz",             "Notfall (NOTF 01)"),
+        ("NOTF 01", "Akutes Abdomen",                               "Notfall (NOTF 01)"),
+        ("NOTF 01", "Bauchschmerzen",                               "Notfall (NOTF 01)"),
+        ("NOTF 01", "unklares Fieber",                              "Notfall (NOTF 01)"),
+        ("NOTF 01", "Psychischer Ausnahmezustand",                  "Notfall (NOTF 01)"),
+        ("NOTF 01", "Suizid, angedroht",                            "Notfall (NOTF 01)"),
+        ("NOTF 01", "Exsikkose",                                    "Notfall (NOTF 01)"),
+        ("NOTF 01", "Alkoholentzug",                                "Notfall (NOTF 01)"),
+        ("NOTF 01", "Fruchtwasserabgang (ohne Wehen)",              "Notfall (NOTF 01)"),
+        ("NOTF 01", "Harnverhalt (akut)",                           "Notfall (NOTF 01)"),
+        ("NOTF 01", "Urologischer Notfall",                         "Notfall (NOTF 01)"),
+        ("NOTF 01", "Akute Augenerkrankung",                        "Notfall (NOTF 01)"),
+
+        // MARK: Trauma / Verletzung – RTW (NOTF 01)
+        ("NOTF 01", "Trauma allgemein",                             "Trauma (NOTF 01)"),
+        ("NOTF 01", "Verletzung unklar",                            "Trauma (NOTF 01)"),
+        ("NOTF 01", "Blutung leicht",                               "Trauma (NOTF 01)"),
+        ("NOTF 01", "Blutung stark",                                "Trauma (NOTF 01)"),
+        ("NOTF 01", "Stich- / Schnittverletzung",                   "Trauma (NOTF 01)"),
+        ("NOTF 01", "Verbrennung / Verbrühung leicht",              "Trauma (NOTF 01)"),
+        ("NOTF 11", "Verbrennung / Verbrühung schwer",              "Trauma (NOTF 01)"),
+        ("NOTF 01", "Kopfverletzung",                               "Trauma (NOTF 01)"),
+        ("NOTF 01", "Gesichtsverletzung",                           "Trauma (NOTF 01)"),
+        ("NOTF 01", "Augenverletzung",                              "Trauma (NOTF 01)"),
+        ("NOTF 01", "Rippenverletzung",                             "Trauma (NOTF 01)"),
+        ("NOTF 01", "Rückenschmerzen",                              "Trauma (NOTF 01)"),
+        ("NOTF 01", "Extremitätenverletzung",                       "Trauma (NOTF 01)"),
+        ("NOTF 01", "Handverletzung",                               "Trauma (NOTF 01)"),
+        ("NOTF 01", "Fußverletzung",                                "Trauma (NOTF 01)"),
+        ("NOTF 01", "Hüft- / Schenkelhalsfraktur",                  "Trauma (NOTF 01)"),
+        ("NOTF 01", "Hausunfall",                                   "Trauma (NOTF 01)"),
+        ("NOTF 01", "Schulunfall",                                  "Trauma (NOTF 01)"),
+        ("NOTF 01", "Sportunfall",                                  "Trauma (NOTF 01)"),
+        ("NOTF 01", "Reitunfall",                                   "Trauma (NOTF 01)"),
+        ("NOTF 01", "Treppensturz",                                 "Trauma (NOTF 01)"),
+        ("NOTF 01", "Tierbissverletzung",                           "Trauma (NOTF 01)"),
+        ("NOTF 01", "Körperverletzung",                             "Trauma (NOTF 01)"),
+        ("NOTF 01", "Hitzeerschöpfung / Hitzschlag",                "Trauma (NOTF 01)"),
+        ("NOTF 01", "Unterkühlung / Erfrierung",                    "Trauma (NOTF 01)"),
+
+        // MARK: Verkehrsunfall
+        ("NOTF 11", "VU mit Fußgänger",                            "Verkehrsunfall"),
+        ("NOTF 11", "VU mit Zweirad",                               "Verkehrsunfall"),
+        ("NOTF 11", "VU Verletzte Person",                          "Verkehrsunfall"),
+        ("NOTF 11", "VU mit PKW",                                   "Verkehrsunfall"),
+        ("NOTF 12", "VU mit LKW / Bus",                             "Verkehrsunfall"),
+        ("NOTF 11", "VU Hochgeschwindigkeit",                       "Verkehrsunfall"),
+        ("NOTF 02", "Unfall 2 bis 4 Verletzte",                     "Verkehrsunfall"),
+
+        // MARK: Wasser / DLRG
+        ("NOTF WASSER NA",  "Ertrinkungsunfall mit Notarzt",        "Wasser"),
+        ("NOTF WASSER",     "Ertrinkungsunfall",                    "Wasser"),
+        ("NOTF WASSER",     "Badeunfall",                           "Wasser"),
+        ("NOTF WASSER NA",  "Tauchunfall / Dekompressionskrankheit","Wasser"),
+
+        // MARK: Feuer (mit Rettungsdienst)
+        ("FEU Y",   "Feuer, Menschenleben in Gefahr",               "Feuer"),
+        ("FEU XY",  "Feuer, Gefahrstoffe, Menschenleben in Gefahr", "Feuer"),
+        ("FEU",     "Feuer, Standard",                              "Feuer"),
+        ("FEU G",   "Feuer, groß",                                  "Feuer"),
+        ("FEU X",   "Feuer, Gefahrstoffe",                          "Feuer"),
+        ("FEU K RWM","Feuer, Rauchwarnmelder",                      "Feuer"),
+        ("FEU K BMA","Feuer, Brandmeldeanlage",                     "Feuer"),
+        ("FEU BOOT","Feuer Wasserfahrzeug",                         "Feuer"),
+        ("FEU G WALD","Waldbrand",                                  "Feuer"),
+
+        // MARK: Technische Hilfeleistung
+        ("TH Y",    "TH – Menschenleben in Gefahr",                 "TH"),
+        ("TH X",    "TH – Gefahrstoffe (CBRN)",                    "TH"),
+        ("TH",      "TH – Person eingeklemmt",                      "TH"),
+        ("TH K TV", "TH – Tür verschlossen",                        "TH"),
+        ("TH K TV NA","TH – Tür verschlossen, Notarzt",             "TH"),
+        ("THGAS",   "TH – Gasgeruch / Gasaustritt",                 "TH"),
+        ("THDRZS",  "TH – Person droht zu springen",                "TH"),
+        ("THHÖHE",  "TH – Höhen- / Tiefenrettung",                  "TH"),
+        ("TH BAHN Y","TH Bahn – Menschenleben in Gefahr",           "TH"),
+        ("TH BAHN", "TH Bahnbereich",                               "TH"),
+
+        // MARK: Krankenbeförderung
+        ("KBF",         "Krankenbeförderung",                       "KBF"),
+        ("KBF TERMIN",  "KBF – Termin",                             "KBF"),
+        ("KBF VERL",    "KBF – Verlegung",                          "KBF"),
+        ("KBF VERL ARZT","KBF – Verlegung mit Arzt",               "KBF"),
+        ("KBF INF",     "KBF – Infektionstransport",                "KBF"),
+        ("KBF ADIP",    "KBF – Schwerlastpatient",                  "KBF"),
+        ("KBF ZWANG",   "KBF – Zwangseinweisung",                   "KBF"),
+        ("NOTF VERL",   "Notfallverlegung",                         "KBF"),
+        ("NOTF VERL NA","Notfallverlegung mit Notarzt",             "KBF"),
+
+        // MARK: Sonstiges
+        ("NIL",   "Nicht in der Liste",                             "Sonstiges"),
+        ("ORG",   "Organisationsfahrt",                             "Sonstiges"),
+        ("DF",    "Dienstfahrt",                                    "Sonstiges"),
     ]
 
-    private var gefiltert: [(String, String)] {
-        if suche.isEmpty { return Self.stichwörter }
-        return Self.stichwörter.filter { $0.0.localizedCaseInsensitiveContains(suche) || $0.1.localizedCaseInsensitiveContains(suche) }
+    private var alleEinträge: [EinsatzEintrag] {
+        StichwortStore.laden().map {
+            EinsatzEintrag(stichwort: $0.stichwort, diagnose: $0.diagnose, kategorie: $0.kategorie)
+        }
+    }
+
+    private var gefiltert: [EinsatzEintrag] {
+        let basis = alleEinträge
+        if suche.isEmpty { return basis }
+        let q = suche.lowercased()
+        return basis.filter {
+            $0.stichwort.lowercased().contains(q) ||
+            $0.diagnose.lowercased().contains(q) ||
+            $0.kategorie.lowercased().contains(q)
+        }
+    }
+
+    private var kategorien: [String] {
+        var seen = Set<String>()
+        return gefiltert.compactMap { seen.insert($0.kategorie).inserted ? $0.kategorie : nil }
     }
 
     var body: some View {
         NavigationStack {
             List {
-                ForEach(gefiltert, id: \.0) { kürzel, beschreibText in
-                    Button {
-                        code = kürzel
-                        beschreibung = beschreibText
-                        dismiss()
-                    } label: {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(kürzel).font(.headline).foregroundStyle(.primary)
-                            Text(beschreibText).font(.caption).foregroundStyle(.secondary)
+                ForEach(kategorien, id: \.self) { kat in
+                    Section(kat) {
+                        ForEach(gefiltert.filter { $0.kategorie == kat }) { eintrag in
+                            Button {
+                                code = eintrag.stichwort
+                                beschreibung = eintrag.diagnose
+                                dismiss()
+                            } label: {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text(eintrag.diagnose)
+                                            .font(.body)
+                                            .foregroundStyle(.primary)
+                                        Text(eintrag.stichwort)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    Spacer()
+                                    Text(eintrag.stichwort)
+                                        .font(.caption2.bold())
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 3)
+                                        .background(.blue.opacity(0.15))
+                                        .foregroundStyle(.blue)
+                                        .clipShape(RoundedRectangle(cornerRadius: 5))
+                                }
+                            }
+                            .foregroundStyle(.primary)
                         }
                     }
                 }
             }
-            .searchable(text: $suche, prompt: "Stichwort suchen")
+            .searchable(text: $suche, prompt: "Diagnose oder Stichwort suchen")
             .navigationTitle("Einsatzstichwort")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
