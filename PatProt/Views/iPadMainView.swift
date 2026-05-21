@@ -260,16 +260,12 @@ struct iPadMainView: View {
                                   section: .exposure)
             }
 
-            // Anamnese & Schemata
-            Section("Anamnese & Schemata") {
+            // Anamnese
+            Section("Anamnese") {
                 iPadNavRow(icon: "list.clipboard.fill", farbe: .teal,
                            titel: "SAMPLER",
                            untertitel: "Anamnese & Vorgeschichte",
                            section: .sampler)
-                iPadNavRow(icon: "bubble.left.and.bubble.right.fill", farbe: .indigo,
-                           titel: "SINNHAFT",
-                           untertitel: "Strukturiertes Übergabeschema",
-                           section: .sinnhaft)
             }
 
             // Diagnose & Verlauf
@@ -286,7 +282,7 @@ struct iPadMainView: View {
                            section: .verlauf)
             }
 
-            // Maßnahmen
+            // Therapie
             Section("Therapie") {
                 iPadNavRow(icon: "cross.circle.fill", farbe: Color("RDOrange"),
                            titel: "Maßnahmen",
@@ -300,16 +296,22 @@ struct iPadMainView: View {
                            section: .medikamente)
             }
 
-            // Bilder
+            // Übergabe
+            Section("Übergabe") {
+                iPadNavRow(icon: "bubble.left.and.bubble.right.fill", farbe: .indigo,
+                           titel: "SINNHAFT",
+                           untertitel: "Strukturiertes Übergabeschema",
+                           section: .sinnhaft)
+            }
+
+            // Dokumentation
             Section("Dokumentation") {
-                HStack {
-                    iPadNavRow(icon: "camera.fill", farbe: .purple,
-                               titel: "Bilder & Dateien",
-                               untertitel: protokoll.fotos.isEmpty
-                                   ? "Keine Fotos"
-                                   : "\(protokoll.fotos.count) Foto(s)",
-                               section: .bilder)
-                }
+                iPadNavRow(icon: "camera.fill", farbe: .purple,
+                           titel: "Bilder & Dateien",
+                           untertitel: protokoll.fotos.isEmpty
+                               ? "Keine Fotos"
+                               : "\(protokoll.fotos.count) Foto(s)",
+                           section: .bilder)
             }
 
             // Reanimation
