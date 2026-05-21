@@ -181,9 +181,9 @@ struct EinsatzOrtView: View {
             // MARK: Klinische Angaben
             Section {
                 HStack {
-                    Text("Gewicht (kg)")
+                    Text("Gewicht")
                     Spacer()
-                    Text(protokoll.patientDaten.gewicht.map { "\(Int($0)) kg" } ?? "—")
+                    Text(protokoll.patientDaten.gewicht.map { String(format: "%.1f kg", $0) } ?? "—")
                         .foregroundColor(protokoll.patientDaten.gewicht == nil ? .secondary : .primary)
                 }
                 .contentShape(Rectangle())
@@ -280,7 +280,7 @@ struct EinsatzOrtView: View {
         }
         .sheet(isPresented: $zeigeGewichtNumpad) {
             NumpadSheet(mode: .decimal(label: "Gewicht", unit: "kg"),
-                        initial: protokoll.patientDaten.gewicht.map { String($0) } ?? "") { val in
+                        initial: protokoll.patientDaten.gewicht.map { String(format: "%.1f", $0) } ?? "") { val in
                 protokoll.patientDaten.gewicht = Double(val.replacingOccurrences(of: ",", with: "."))
             }
         }
