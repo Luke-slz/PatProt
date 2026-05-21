@@ -261,6 +261,9 @@ struct CirculationView: View {
     @Binding var befund: CirculationBefund
     var onZurueck: () -> Void
 
+    @State private var zeigePulsNumpad = false
+    @State private var zeigeRrNumpad = false
+
     private var pulsBg: Color {
         if befund.pulslosigkeit { return Color.red.opacity(0.15) }
         return vitalBg(befund.puls.map(Double.init), normal: 60...100, warning: 40...120)
@@ -314,14 +317,22 @@ struct CirculationView: View {
                         HStack {
                             Text("Puls (/min)")
                             Spacer()
-                            TextField("z.B. 80", value: $befund.puls, format: .number)
-                                .keyboardType(.numberPad).multilineTextAlignment(.trailing).frame(width: 80)
+                            Text(befund.puls.map(String.init) ?? "—")
+                                .foregroundColor(befund.puls == nil ? .secondary : .primary)
                         }
                         if let (msg, crit) = pulsWarn {
                             Text(msg).font(.caption).foregroundColor(crit ? .red : .orange)
                         }
                     }
                     .listRowBackground(pulsBg)
+                    .contentShape(Rectangle())
+                    .onTapGesture { zeigePulsNumpad = true }
+                    .sheet(isPresented: $zeigePulsNumpad) {
+                        NumpadSheet(mode: .integer(label: "Puls", unit: "/min"),
+                                    initial: befund.puls.map(String.init) ?? "") { val in
+                            befund.puls = Int(val)
+                        }
+                    }
                     Picker("Rhythmus", selection: $befund.pulsRhythmus) {
                         Text("").tag("")
                         Text("Regelmäßig").tag("regelmäßig")
@@ -339,11 +350,8 @@ struct CirculationView: View {
                         HStack {
                             Text("Blutdruck")
                             Spacer()
-                            TextField("sys", value: $befund.blutdruckSystolisch, format: .number)
-                                .keyboardType(.numberPad).multilineTextAlignment(.trailing).frame(width: 52)
-                            Text("/").foregroundColor(.secondary)
-                            TextField("dia", value: $befund.blutdruckDiastolisch, format: .number)
-                                .keyboardType(.numberPad).multilineTextAlignment(.trailing).frame(width: 52)
+                            Text("\(befund.blutdruckSystolisch.map(String.init) ?? "—") / \(befund.blutdruckDiastolisch.map(String.init) ?? "—")")
+                                .foregroundColor(befund.blutdruckSystolisch == nil && befund.blutdruckDiastolisch == nil ? .secondary : .primary)
                             Text("mmHg").font(.caption).foregroundColor(.secondary)
                         }
                         if let (msg, crit) = rrWarn {
@@ -351,6 +359,17 @@ struct CirculationView: View {
                         }
                     }
                     .listRowBackground(rrBg)
+                    .contentShape(Rectangle())
+                    .onTapGesture { zeigeRrNumpad = true }
+                    .sheet(isPresented: $zeigeRrNumpad) {
+                        NumpadSheet(
+                            initialSys: befund.blutdruckSystolisch.map(String.init) ?? "",
+                            initialDia: befund.blutdruckDiastolisch.map(String.init) ?? ""
+                        ) { sys, dia in
+                            befund.blutdruckSystolisch = Int(sys)
+                            befund.blutdruckDiastolisch = Int(dia)
+                        }
+                    }
                 }
             } header: { Label("Kreislauf", systemImage: "heart.fill") }
 
