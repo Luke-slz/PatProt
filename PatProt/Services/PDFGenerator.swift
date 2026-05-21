@@ -338,10 +338,29 @@ struct DINPDFGenerator {
             y += 11
         }
         if !ng.patientGefunden.isEmpty || ng.manv {
-            let beteiligte = ng.manv ? "MANV · \(ng.anzahlBeteiligte) Beteiligte" : "\(ng.anzahlBeteiligte) Beteiligter"
+            let beteiligteLabel = ng.manv
+                ? "MANV\(ng.ersteEintreffendeKraft ? " · 1. Eintreffend" : "") · \(ng.anzahlBeteiligte) Bet."
+                : "\(ng.anzahlBeteiligte) Beteiligter"
             let halbW = (rx - lx) / 2
             field("Pat. vorgef.", ng.patientGefunden, x:lx, y:y, w:halbW, h:11, lw:52)
-            field("Beteiligte", beteiligte, x:lx + halbW, y:y, w:halbW, h:11, lw:45)
+            field("Beteiligte", beteiligteLabel, x:lx + halbW, y:y, w:halbW, h:11, lw:45)
+            y += 11
+        }
+        if ng.manv && ng.ersteEintreffendeKraft && ng.manvGesamtSK > 0 {
+            let tW = (rx - lx) / 5
+            labeledVal("SK I", "\(ng.manvSK1)",  x:lx,       y:y, w:tW, labelH:7, valH:11)
+            labeledVal("SK II", "\(ng.manvSK2)", x:lx+tW,    y:y, w:tW, labelH:7, valH:11)
+            labeledVal("SK III","\(ng.manvSK3)", x:lx+tW*2,  y:y, w:tW, labelH:7, valH:11)
+            labeledVal("SK IV", "\(ng.manvSK4)", x:lx+tW*3,  y:y, w:tW, labelH:7, valH:11)
+            labeledVal("✝",     "\(ng.manvVerstorben)", x:lx+tW*4, y:y, w:tW, labelH:7, valH:11)
+            y += 18
+        }
+        if !ng.manvLagemeldung.isEmpty {
+            field("Lagemeldung", ng.manvLagemeldung, x:lx, y:y, w:rx-lx, h:11, lw:55)
+            y += 11
+        }
+        if !ng.manvNachforderung.isEmpty {
+            field("Nachforderung", ng.manvNachforderung, x:lx, y:y, w:rx-lx, h:11, lw:60)
             y += 11
         }
         if !ng.ersthelferMassnahmen.isEmpty {

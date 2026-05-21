@@ -581,11 +581,21 @@ struct ErgebnisData: Codable {
 // MARK: - Notfallgeschehen
 
 struct NotfallgeschehenBefund: Codable {
-    var erstbefundVorOrt = ""       // Erstbefund bei Ankunft
-    var patientGefunden = ""        // Wie Patient vorgefunden
-    var ersthelferMassnahmen = ""   // Maßnahmen vor RD-Eintreffen
+    var erstbefundVorOrt = ""
+    var patientGefunden = ""
+    var ersthelferMassnahmen = ""
     var anzahlBeteiligte: Int = 1
     var manv: Bool = false
+    var ersteEintreffendeKraft: Bool = false
+    var manvSK1: Int = 0        // SK I  — Rot   — sofortige Behandlung
+    var manvSK2: Int = 0        // SK II — Gelb  — aufgeschobene Behandlung
+    var manvSK3: Int = 0        // SK III— Grün  — leicht verletzt
+    var manvSK4: Int = 0        // SK IV — Blau  — ohne realistische Überlebenschance
+    var manvVerstorben: Int = 0 // T    — Schwarz— verstorben
+    var manvLagemeldung: String = ""
+    var manvNachforderung: String = ""
+
+    var manvGesamtSK: Int { manvSK1 + manvSK2 + manvSK3 + manvSK4 + manvVerstorben }
 }
 
 // MARK: - Verdachtsdiagnose (Trichter)

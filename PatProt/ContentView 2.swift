@@ -94,15 +94,29 @@ struct iPhoneContentView: View {
                         onZurueck:     { path.removeLast() }
                     )
                 case .airway:
-                    AirwayView(befund: $protokoll.airway) { path.append(.breathing) }
+                    AirwayView(befund: $protokoll.airway) {
+                        path.removeAll { [.airway,.breathing,.circulation,.disability,.exposure].contains($0) }
+                        path.append(.breathing)
+                    }
                 case .breathing:
-                    BreathingView(befund: $protokoll.breathing) { path.append(.circulation) }
+                    BreathingView(befund: $protokoll.breathing) {
+                        path.removeAll { [.airway,.breathing,.circulation,.disability,.exposure].contains($0) }
+                        path.append(.circulation)
+                    }
                 case .circulation:
-                    CirculationView(befund: $protokoll.circulation) { path.append(.disability) }
+                    CirculationView(befund: $protokoll.circulation) {
+                        path.removeAll { [.airway,.breathing,.circulation,.disability,.exposure].contains($0) }
+                        path.append(.disability)
+                    }
                 case .disability:
-                    DisabilityView(befund: $protokoll.disability) { path.append(.exposure) }
+                    DisabilityView(befund: $protokoll.disability) {
+                        path.removeAll { [.airway,.breathing,.circulation,.disability,.exposure].contains($0) }
+                        path.append(.exposure)
+                    }
                 case .exposure:
-                    ExposureView(befund: $protokoll.exposure) { path.removeLast() }
+                    ExposureView(befund: $protokoll.exposure) {
+                        path.removeAll { [.airway,.breathing,.circulation,.disability,.exposure].contains($0) }
+                    }
                 case .sampler:
                     SAMPLERView(befund: $protokoll.sampler) { path.removeLast() }
                 case .sinnhaft:
