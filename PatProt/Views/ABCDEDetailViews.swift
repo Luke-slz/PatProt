@@ -412,6 +412,7 @@ struct CirculationView: View {
 struct DisabilityView: View {
     @Binding var befund: DisabilityBefund
     var onZurueck: () -> Void
+    @State private var zeigeBzNumpad = false
 
     private var bzWarn: (String, Bool)? {
         vitalWarnText(befund.blutzucker, normal: 3.9...7.8, warning: 3.0...10.0,
@@ -518,8 +519,16 @@ struct DisabilityView: View {
                     HStack {
                         Text("Blutzucker (mmol/L)")
                         Spacer()
-                        TextField("optional", value: $befund.blutzucker, format: .number)
-                            .keyboardType(.decimalPad).multilineTextAlignment(.trailing).frame(width: 80)
+                        Text(befund.blutzucker.map { String(format: "%.1f", $0) } ?? "—")
+                            .foregroundColor(befund.blutzucker == nil ? .secondary : .primary)
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture { zeigeBzNumpad = true }
+                    .sheet(isPresented: $zeigeBzNumpad) {
+                        NumpadSheet(mode: .decimal(label: "Blutzucker", unit: "mmol/L"),
+                                    initial: befund.blutzucker.map { String(format: "%.1f", $0) } ?? "") { val in
+                            befund.blutzucker = Double(val.replacingOccurrences(of: ",", with: "."))
+                        }
                     }
                     if let (msg, crit) = bzWarn {
                         Text(msg).font(.caption).foregroundColor(crit ? .red : .orange)
@@ -609,6 +618,7 @@ struct GCSStepper: View {
 struct ExposureView: View {
     @Binding var befund: ExposureBefund
     var onZurueck: () -> Void
+    @State private var zeigeTempNumpad = false
 
     private var tempBg: Color {
         vitalBg(befund.temperatur, normal: 36.0...37.5, warning: 35.0...38.5)
@@ -629,8 +639,16 @@ struct ExposureView: View {
                     HStack {
                         Text("Körpertemperatur (°C)")
                         Spacer()
-                        TextField("z.B. 37.0", value: $befund.temperatur, format: .number)
-                            .keyboardType(.decimalPad).multilineTextAlignment(.trailing).frame(width: 80)
+                        Text(befund.temperatur.map { String(format: "%.1f", $0) } ?? "—")
+                            .foregroundColor(befund.temperatur == nil ? .secondary : .primary)
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture { zeigeTempNumpad = true }
+                    .sheet(isPresented: $zeigeTempNumpad) {
+                        NumpadSheet(mode: .decimal(label: "Körpertemperatur", unit: "°C"),
+                                    initial: befund.temperatur.map { String(format: "%.1f", $0) } ?? "") { val in
+                            befund.temperatur = Double(val.replacingOccurrences(of: ",", with: "."))
+                        }
                     }
                     if let (msg, crit) = tempWarn {
                         Text(msg).font(.caption).foregroundColor(crit ? .red : .orange)
