@@ -19,6 +19,9 @@ struct EinsatzOrtView: View {
     @State private var neuesEinsatzmittel = ""
     @State private var zeigeStichwortPicker = false
     @State private var primärfahrzeugName: String = ""
+    @State private var zeigeEinsatzNrNumpad = false
+    @State private var zeigeGewichtNumpad = false
+    @State private var zeigeGeburtsdatumNumpad = false
 
     private var zeitFehler: [String] {
         let alarm = protokoll.einsatzOrt.alarmzeit
@@ -47,8 +50,14 @@ struct EinsatzOrtView: View {
             Section {
                 TextField("Straße und Hausnummer", text: $protokoll.einsatzOrt.adresse)
                 TextField("Zusatz (Stockwerk, Wohnung...)", text: $protokoll.einsatzOrt.zusatz)
-                TextField("Einsatz-Nr.", text: $protokoll.einsatzOrt.einsatzNummer)
-                    .keyboardType(.numberPad)
+                HStack {
+                    Text("Einsatz-Nr.")
+                    Spacer()
+                    Text(protokoll.einsatzOrt.einsatzNummer.isEmpty ? "—" : protokoll.einsatzOrt.einsatzNummer)
+                        .foregroundColor(protokoll.einsatzOrt.einsatzNummer.isEmpty ? .secondary : .primary)
+                }
+                .contentShape(Rectangle())
+                .onTapGesture { zeigeEinsatzNrNumpad = true }
                 Button {
                     locationManager.requestLocation()
                 } label: {
@@ -155,22 +164,14 @@ struct EinsatzOrtView: View {
                         Text(g.rawValue).tag(g)
                     }
                 }
-                TextField("Geburtsdatum (TT.MM.JJJJ)", text: $geburtsdatumText)
-                    .keyboardType(.numberPad)
-                    .onChange(of: geburtsdatumText) { _, value in
-                        let numbers = value.filter { $0.isNumber }
-                        var formatted = ""
-                        for (index, char) in numbers.enumerated() {
-                            if index == 2 || index == 4 { formatted.append(".") }
-                            if index < 8 { formatted.append(char) }
-                        }
-                        if formatted != geburtsdatumText { geburtsdatumText = formatted }
-                        let formatter = DateFormatter()
-                        formatter.dateFormat = "dd.MM.yyyy"
-                        if let date = formatter.date(from: formatted) {
-                            protokoll.patientDaten.geburtsDatum = date
-                        }
-                    }
+                HStack {
+                    Text("Geburtsdatum")
+                    Spacer()
+                    Text(geburtsdatumText.isEmpty ? "TT.MM.JJJJ" : geburtsdatumText)
+                        .foregroundColor(geburtsdatumText.isEmpty ? .secondary : .primary)
+                }
+                .contentShape(Rectangle())
+                .onTapGesture { zeigeGeburtsdatumNumpad = true }
                 TextField("Versicherungsnummer", text: $protokoll.patientDaten.versicherungsNummer)
                 TextField("Kostenträger / Krankenkasse", text: $protokoll.patientDaten.kostentraeger)
             } header: {
@@ -182,11 +183,11 @@ struct EinsatzOrtView: View {
                 HStack {
                     Text("Gewicht (kg)")
                     Spacer()
-                    TextField("optional", value: $protokoll.patientDaten.gewicht, format: .number)
-                        .keyboardType(.decimalPad)
-                        .multilineTextAlignment(.trailing)
-                        .frame(width: 80)
+                    Text(protokoll.patientDaten.gewicht.map { "\(Int($0)) kg" } ?? "—")
+                        .foregroundColor(protokoll.patientDaten.gewicht == nil ? .secondary : .primary)
                 }
+                .contentShape(Rectangle())
+                .onTapGesture { zeigeGewichtNumpad = true }
                 Toggle("Ansprechbar", isOn: $protokoll.patientDaten.ansprechbar)
             } header: {
                 Label("Klinische Angaben", systemImage: "stethoscope")
@@ -259,6 +260,29 @@ struct EinsatzOrtView: View {
                 code: $protokoll.einsatzOrt.stichwort,
                 beschreibung: $protokoll.einsatzOrt.einsatzArt
             )
+        }
+        .sheet(isPresented: $zeigeEinsatzNrNumpad) {
+            NumpadSheet(mode: .integer(label: "Einsatz-Nr.", unit: "", maxDigits: 10),
+                        initial: protokoll.einsatzOrt.einsatzNummer) { val in
+                protokoll.einsatzOrt.einsatzNummer = val
+            }
+        }
+        .sheet(isPresented: $zeigeGeburtsdatumNumpad) {
+            NumpadSheet(mode: .date(label: "Geburtsdatum"),
+                        initial: geburtsdatumText) { dateStr in
+                geburtsdatumText = dateStr
+                let formatter = DateFormatter()
+                formatter.dateFormat = "dd.MM.yyyy"
+                if let date = formatter.date(from: dateStr) {
+                    protokoll.patientDaten.geburtsDatum = date
+                }
+            }
+        }
+        .sheet(isPresented: $zeigeGewichtNumpad) {
+            NumpadSheet(mode: .decimal(label: "Gewicht", unit: "kg"),
+                        initial: protokoll.patientDaten.gewicht.map { String($0) } ?? "") { val in
+                protokoll.patientDaten.gewicht = Double(val.replacingOccurrences(of: ",", with: "."))
+            }
         }
     }
 }
