@@ -115,7 +115,7 @@ struct AirwayView: View {
         }
         .safeAreaInset(edge: .bottom) {
             Button(action: onZurueck) {
-                Label("Zurück zur Übersicht", systemImage: "checkmark.circle.fill")
+                Label("Weiter zu Breathing", systemImage: "arrow.right.circle.fill")
                     .frame(maxWidth: .infinity)
                     .padding()
             }
@@ -248,7 +248,7 @@ struct BreathingView: View {
         }
         .safeAreaInset(edge: .bottom) {
             Button(action: onZurueck) {
-                Label("Zurück zur Übersicht", systemImage: "checkmark.circle.fill")
+                Label("Weiter zu Circulation", systemImage: "arrow.right.circle.fill")
                     .frame(maxWidth: .infinity)
                     .padding()
             }
@@ -404,7 +404,7 @@ struct CirculationView: View {
         }
         .safeAreaInset(edge: .bottom) {
             Button(action: onZurueck) {
-                Label("Zurück zur Übersicht", systemImage: "checkmark.circle.fill")
+                Label("Weiter zu Disability", systemImage: "arrow.right.circle.fill")
                     .frame(maxWidth: .infinity)
                     .padding()
             }
@@ -564,7 +564,7 @@ struct DisabilityView: View {
         }
         .safeAreaInset(edge: .bottom) {
             Button(action: onZurueck) {
-                Label("Zurück zur Übersicht", systemImage: "checkmark.circle.fill")
+                Label("Weiter zu Exposure", systemImage: "arrow.right.circle.fill")
                     .frame(maxWidth: .infinity)
                     .padding()
             }

@@ -94,13 +94,13 @@ struct iPhoneContentView: View {
                         onZurueck:     { path.removeLast() }
                     )
                 case .airway:
-                    AirwayView(befund: $protokoll.airway) { path.removeLast() }
+                    AirwayView(befund: $protokoll.airway) { path.append(.breathing) }
                 case .breathing:
-                    BreathingView(befund: $protokoll.breathing) { path.removeLast() }
+                    BreathingView(befund: $protokoll.breathing) { path.append(.circulation) }
                 case .circulation:
-                    CirculationView(befund: $protokoll.circulation) { path.removeLast() }
+                    CirculationView(befund: $protokoll.circulation) { path.append(.disability) }
                 case .disability:
-                    DisabilityView(befund: $protokoll.disability) { path.removeLast() }
+                    DisabilityView(befund: $protokoll.disability) { path.append(.exposure) }
                 case .exposure:
                     ExposureView(befund: $protokoll.exposure) { path.removeLast() }
                 case .sampler:

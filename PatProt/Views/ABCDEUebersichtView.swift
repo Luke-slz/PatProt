@@ -438,39 +438,41 @@ struct ABCDEZeile: View {
             }
             .buttonStyle(.plain)
 
-            HStack(spacing: 8) {
+            HStack(spacing: 10) {
                 Button { status = .kritisch } label: {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 6) {
                         Image(systemName: "xmark.circle.fill")
-                        Text("Kritisch").fontWeight(.medium)
+                        Text("Kritisch").fontWeight(.semibold)
                     }
-                    .font(.caption)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
+                    .font(.subheadline)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 9)
+                    .frame(minWidth: 44, minHeight: 44)
                     .background(status == .kritisch ? Color.red : Color.red.opacity(0.10))
                     .foregroundColor(status == .kritisch ? .white : .red)
-                    .cornerRadius(8)
+                    .cornerRadius(10)
                 }
                 .buttonStyle(.plain)
 
                 Button { status = .nicht_kritisch } label: {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 6) {
                         Image(systemName: "checkmark.circle.fill")
-                        Text("Ohne Befund").fontWeight(.medium)
+                        Text("Ohne Befund").fontWeight(.semibold)
                     }
-                    .font(.caption)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
+                    .font(.subheadline)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 9)
+                    .frame(minWidth: 44, minHeight: 44)
                     .background(status == .nicht_kritisch ? Color.green : Color.green.opacity(0.10))
                     .foregroundColor(status == .nicht_kritisch ? .white : .green)
-                    .cornerRadius(8)
+                    .cornerRadius(10)
                 }
                 .buttonStyle(.plain)
 
                 Spacer()
             }
             .padding(.horizontal, 14)
-            .padding(.bottom, 10)
+            .padding(.bottom, 12)
             .background(rowBg)
         }
 
