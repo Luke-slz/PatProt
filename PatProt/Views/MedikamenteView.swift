@@ -30,35 +30,7 @@ struct MedikamenteView: View {
             }
 
             ForEach($medikamente) { $med in
-                Section {
-                    HStack {
-                        Image(systemName: "pills.fill")
-                            .foregroundColor(Color("RDOrange"))
-                        TextField("Medikament", text: $med.name)
-                            .font(.headline)
-                    }
-                    HStack(spacing: 12) {
-                        TextField("Dosis", text: $med.dosis)
-                            .keyboardType(.decimalPad)
-                            .frame(maxWidth: 80)
-                        Picker("Einheit", selection: $med.einheit) {
-                            ForEach(einheiten, id: \.self) { e in
-                                Text(e).tag(e)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .frame(maxWidth: 70)
-                        Spacer()
-                        Picker("Route", selection: $med.route) {
-                            Text("Route").tag("")
-                            ForEach(routen, id: \.self) { r in
-                                Text(r).tag(r)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                    }
-                    DatePicker("Uhrzeit", selection: $med.zeit, displayedComponents: .hourAndMinute)
-                }
+                MedikamentRow(med: $med, einheiten: einheiten, routen: routen)
             }
             .onDelete { indices in
                 medikamente.remove(atOffsets: indices)
@@ -90,6 +62,50 @@ struct MedikamenteView: View {
         }
         .toolbar {
             EditButton()
+        }
+    }
+}
+
+private struct MedikamentRow: View {
+    @Binding var med: MedikamentEintrag
+    let einheiten: [String]
+    let routen: [String]
+    @State private var zeigeDosisNumpad = false
+
+    var body: some View {
+        Section {
+            HStack {
+                Image(systemName: "pills.fill")
+                    .foregroundColor(Color("RDOrange"))
+                TextField("Medikament", text: $med.name)
+                    .font(.headline)
+            }
+            HStack(spacing: 12) {
+                Text(med.dosis.isEmpty ? "Dosis" : med.dosis)
+                    .foregroundColor(med.dosis.isEmpty ? .secondary : .primary)
+                    .contentShape(Rectangle())
+                    .onTapGesture { zeigeDosisNumpad = true }
+                    .sheet(isPresented: $zeigeDosisNumpad) {
+                        NumpadSheet(mode: .decimal(label: "Dosis", unit: med.einheit),
+                                    initial: med.dosis) { val in med.dosis = val }
+                    }
+                Picker("Einheit", selection: $med.einheit) {
+                    ForEach(einheiten, id: \.self) { e in
+                        Text(e).tag(e)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(maxWidth: 70)
+                Spacer()
+                Picker("Route", selection: $med.route) {
+                    Text("Route").tag("")
+                    ForEach(routen, id: \.self) { r in
+                        Text(r).tag(r)
+                    }
+                }
+                .pickerStyle(.menu)
+            }
+            DatePicker("Uhrzeit", selection: $med.zeit, displayedComponents: .hourAndMinute)
         }
     }
 }
