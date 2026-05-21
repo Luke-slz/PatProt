@@ -41,4 +41,28 @@ struct PatProtTests {
         #expect(diff < 5)  // innerhalb von 5 Sekunden gesetzt
     }
 
+    @Test func numpadFormatInteger() {
+        #expect(NumpadSheet.formatDisplay(digits: "80", mode: .integer(label: "", unit: "")) == "80")
+        #expect(NumpadSheet.formatDisplay(digits: "", mode: .integer(label: "", unit: "")) == "—")
+    }
+
+    @Test func numpadFormatTime() {
+        #expect(NumpadSheet.formatDisplay(digits: "1432", mode: .time(label: "")) == "14:32")
+        #expect(NumpadSheet.formatDisplay(digits: "14", mode: .time(label: "")) == "14")
+        #expect(NumpadSheet.formatDisplay(digits: "0", mode: .time(label: "")) == "0")
+        #expect(NumpadSheet.formatDisplay(digits: "", mode: .time(label: "")) == "—")
+    }
+
+    @Test func numpadFormatDate() {
+        #expect(NumpadSheet.formatDisplay(digits: "01021985", mode: .date(label: "")) == "01.02.1985")
+        #expect(NumpadSheet.formatDisplay(digits: "0102", mode: .date(label: "")) == "01.02")
+        #expect(NumpadSheet.formatDisplay(digits: "01", mode: .date(label: "")) == "01")
+        #expect(NumpadSheet.formatDisplay(digits: "", mode: .date(label: "")) == "—")
+    }
+
+    @Test func numpadFormatDecimal() {
+        #expect(NumpadSheet.formatDisplay(digits: "5.4", mode: .decimal(label: "", unit: "")) == "5.4")
+        #expect(NumpadSheet.formatDisplay(digits: "", mode: .decimal(label: "", unit: "")) == "—")
+    }
+
 }
