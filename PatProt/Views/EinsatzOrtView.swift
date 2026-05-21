@@ -140,8 +140,8 @@ struct EinsatzOrtView: View {
                 )
                 ZeitFeld(label: "Alarmzeit", datum: $protokoll.einsatzOrt.alarmzeit)
                 ZeitFeld(label: "Ankunft Patient", datum: $protokoll.einsatzOrt.ankunftzeit)
-                ZeitFeld(label: "Übergabe an RD", datum: $protokoll.einsatzOrt.abfahrtzeit)
-                ZeitFeld(label: "Abfahrt Einsatzstelle", datum: $protokoll.einsatzOrt.krankenHausAnkunft)
+                ZeitFeld(label: "Abfahrt Einsatzstelle", datum: $protokoll.einsatzOrt.abfahrtzeit)
+                ZeitFeld(label: "Übergabe an RD", datum: $protokoll.einsatzOrt.krankenHausAnkunft)
             } header: {
                 Label("Zeiten", systemImage: "clock")
             } footer: {

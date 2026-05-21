@@ -276,11 +276,11 @@ struct DINPDFGenerator {
                        x:x, y:y, w:tW, labelH:7, valH:11)
             labeledVal("Ankunft Einsatzort", t(p.einsatzOrt.ankunftzeit),
                        x:x+tW, y:y, w:tW, labelH:7, valH:11)
-            labeledVal("Abfahrt", t(p.einsatzOrt.abfahrtzeit),
+            labeledVal("Abfahrt Einsatzstelle", t(p.einsatzOrt.abfahrtzeit),
                        x:x+tW*2, y:y, w:tW, labelH:7, valH:11)
             y += 18
 
-            labeledVal("Ankunft Krankenhaus", t(p.einsatzOrt.krankenHausAnkunft),
+            labeledVal("Übergabe an RD", t(p.einsatzOrt.krankenHausAnkunft),
                        x:x, y:y, w:tW, labelH:7, valH:11)
             labeledVal("Einsatz-Nr.", p.einsatzOrt.einsatzNummer,
                        x:x+tW, y:y, w:tW, labelH:7, valH:11)
