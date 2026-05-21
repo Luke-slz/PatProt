@@ -112,13 +112,17 @@ struct AirwayView: View {
                     .font(.caption).foregroundColor(.secondary)
             }
 
-            Section {
-                Button(action: onZurueck) {
-                    Label("Zurück zur Übersicht", systemImage: "checkmark.circle.fill")
-                        .frame(maxWidth: .infinity).padding(.vertical, 4)
-                }
-                .buttonStyle(.borderedProminent).tint(Color("RDOrange"))
+        }
+        .safeAreaInset(edge: .bottom) {
+            Button(action: onZurueck) {
+                Label("Zurück zur Übersicht", systemImage: "checkmark.circle.fill")
+                    .frame(maxWidth: .infinity)
+                    .padding()
             }
+            .buttonStyle(.borderedProminent)
+            .tint(Color("RDOrange"))
+            .padding([.horizontal, .bottom])
+            .background(.bar)
         }
         .navigationTitle("A — Airway")
         .navigationBarBackButtonHidden(true)
@@ -241,13 +245,17 @@ struct BreathingView: View {
                 TextEditor(text: $befund.freitext).frame(minHeight: 80)
             } header: { Text("Freitext / Notizen") }
 
-            Section {
-                Button(action: onZurueck) {
-                    Label("Zurück zur Übersicht", systemImage: "checkmark.circle.fill")
-                        .frame(maxWidth: .infinity).padding(.vertical, 4)
-                }
-                .buttonStyle(.borderedProminent).tint(Color("RDOrange"))
+        }
+        .safeAreaInset(edge: .bottom) {
+            Button(action: onZurueck) {
+                Label("Zurück zur Übersicht", systemImage: "checkmark.circle.fill")
+                    .frame(maxWidth: .infinity)
+                    .padding()
             }
+            .buttonStyle(.borderedProminent)
+            .tint(Color("RDOrange"))
+            .padding([.horizontal, .bottom])
+            .background(.bar)
         }
         .navigationTitle("B — Breathing")
         .navigationBarBackButtonHidden(true)
@@ -393,13 +401,17 @@ struct CirculationView: View {
                 TextEditor(text: $befund.freitext).frame(minHeight: 80)
             } header: { Text("Freitext / Notizen") }
 
-            Section {
-                Button(action: onZurueck) {
-                    Label("Zurück zur Übersicht", systemImage: "checkmark.circle.fill")
-                        .frame(maxWidth: .infinity).padding(.vertical, 4)
-                }
-                .buttonStyle(.borderedProminent).tint(Color("RDOrange"))
+        }
+        .safeAreaInset(edge: .bottom) {
+            Button(action: onZurueck) {
+                Label("Zurück zur Übersicht", systemImage: "checkmark.circle.fill")
+                    .frame(maxWidth: .infinity)
+                    .padding()
             }
+            .buttonStyle(.borderedProminent)
+            .tint(Color("RDOrange"))
+            .padding([.horizontal, .bottom])
+            .background(.bar)
         }
         .navigationTitle("C — Circulation")
         .navigationBarBackButtonHidden(true)
@@ -549,13 +561,17 @@ struct DisabilityView: View {
                 TextEditor(text: $befund.freitext).frame(minHeight: 80)
             } header: { Text("Freitext / Notizen") }
 
-            Section {
-                Button(action: onZurueck) {
-                    Label("Zurück zur Übersicht", systemImage: "checkmark.circle.fill")
-                        .frame(maxWidth: .infinity).padding(.vertical, 4)
-                }
-                .buttonStyle(.borderedProminent).tint(Color("RDOrange"))
+        }
+        .safeAreaInset(edge: .bottom) {
+            Button(action: onZurueck) {
+                Label("Zurück zur Übersicht", systemImage: "checkmark.circle.fill")
+                    .frame(maxWidth: .infinity)
+                    .padding()
             }
+            .buttonStyle(.borderedProminent)
+            .tint(Color("RDOrange"))
+            .padding([.horizontal, .bottom])
+            .background(.bar)
         }
         .navigationTitle("D — Disability")
         .navigationBarBackButtonHidden(true)
@@ -684,13 +700,17 @@ struct ExposureView: View {
                 TextEditor(text: $befund.freitext).frame(minHeight: 80)
             } header: { Text("Freitext / Notizen") }
 
-            Section {
-                Button(action: onZurueck) {
-                    Label("Zurück zur Übersicht", systemImage: "checkmark.circle.fill")
-                        .frame(maxWidth: .infinity).padding(.vertical, 4)
-                }
-                .buttonStyle(.borderedProminent).tint(Color("RDOrange"))
+        }
+        .safeAreaInset(edge: .bottom) {
+            Button(action: onZurueck) {
+                Label("Zurück zur Übersicht", systemImage: "checkmark.circle.fill")
+                    .frame(maxWidth: .infinity)
+                    .padding()
             }
+            .buttonStyle(.borderedProminent)
+            .tint(Color("RDOrange"))
+            .padding([.horizontal, .bottom])
+            .background(.bar)
         }
         .navigationTitle("E — Exposure")
         .navigationBarBackButtonHidden(true)
