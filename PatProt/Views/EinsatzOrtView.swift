@@ -131,8 +131,8 @@ struct EinsatzOrtView: View {
                 )
                 ZeitFeld(label: "Alarmzeit", datum: $protokoll.einsatzOrt.alarmzeit)
                 ZeitFeld(label: "Ankunft Patient", datum: $protokoll.einsatzOrt.ankunftzeit)
-                ZeitFeld(label: "Abfahrt Einsatzstelle", datum: $protokoll.einsatzOrt.abfahrtzeit)
-                ZeitFeld(label: "Ankunft Krankenhaus", datum: $protokoll.einsatzOrt.krankenHausAnkunft)
+                ZeitFeld(label: "Übergabe an RD", datum: $protokoll.einsatzOrt.abfahrtzeit)
+                ZeitFeld(label: "Abfahrt Einsatzstelle", datum: $protokoll.einsatzOrt.krankenHausAnkunft)
             } header: {
                 Label("Zeiten", systemImage: "clock")
             } footer: {
@@ -669,41 +669,47 @@ struct StichwortPickerSheet: View {
 struct ZeitFeld: View {
     let label: String
     @Binding var datum: Date?
-    @State private var text: String = ""
+    @State private var zeigeNumpad = false
+
+    private var displayText: String {
+        guard let d = datum else { return "" }
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm"
+        return f.string(from: d)
+    }
 
     var body: some View {
         HStack {
             Text(label)
             Spacer()
-            TextField("HH:MM", text: $text)
-                .keyboardType(.numberPad)
-                .multilineTextAlignment(.trailing)
-                .frame(width: 65)
-                .foregroundColor(.primary)
+            Text(displayText.isEmpty ? "--:--" : displayText)
+                .foregroundColor(displayText.isEmpty ? .secondary : .primary)
+                .frame(width: 50, alignment: .trailing)
+            Button("Jetzt") { setzeJetzt() }
+                .buttonStyle(.bordered)
+                .tint(Color("RDOrange"))
+                .controlSize(.small)
         }
-        .onAppear { sync() }
-        .onChange(of: datum) { _, _ in sync() }
-        .onChange(of: text) { _, val in
-            let digits = val.filter { $0.isNumber }
-            var fmt = ""
-            for (i, c) in digits.prefix(4).enumerated() {
-                if i == 2 { fmt.append(":") }
-                fmt.append(c)
+        .contentShape(Rectangle())
+        .onTapGesture { zeigeNumpad = true }
+        .sheet(isPresented: $zeigeNumpad) {
+            NumpadSheet(mode: .time(label: label), initial: displayText) { timeStr in
+                applyTime(timeStr)
             }
-            if fmt != text { text = fmt }
-            applyTime(fmt)
         }
     }
 
-    private func sync() {
-        guard let d = datum else { text = ""; return }
-        let f = DateFormatter()
-        f.dateFormat = "HH:mm"
-        text = f.string(from: d)
+    private func setzeJetzt() {
+        let now = Date()
+        let cal = Calendar.current
+        let base = datum ?? now
+        var comps = cal.dateComponents([.year, .month, .day], from: base)
+        comps.hour = cal.component(.hour, from: now)
+        comps.minute = cal.component(.minute, from: now)
+        datum = cal.date(from: comps)
     }
 
     private func applyTime(_ fmt: String) {
-        if fmt.isEmpty { datum = nil; return }
         guard fmt.count == 5 else { return }
         let parts = fmt.split(separator: ":")
         guard parts.count == 2,
