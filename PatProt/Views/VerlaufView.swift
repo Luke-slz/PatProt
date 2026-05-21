@@ -469,15 +469,25 @@ private struct ZahlenFeld: View {
     @Binding var text: String
     let placeholder: String
     var istDezimal: Bool = false
+    @State private var zeigeNumpad = false
 
     var body: some View {
         HStack {
             Text(label)
             Spacer()
-            TextField(placeholder, text: $text)
-                .keyboardType(istDezimal ? .decimalPad : .numberPad)
-                .multilineTextAlignment(.trailing)
-                .frame(width: 90)
+            Text(text.isEmpty ? placeholder : text)
+                .foregroundColor(text.isEmpty ? .secondary : .primary)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture { zeigeNumpad = true }
+        .sheet(isPresented: $zeigeNumpad) {
+            if istDezimal {
+                NumpadSheet(mode: .decimal(label: label, unit: ""),
+                            initial: text) { val in text = val }
+            } else {
+                NumpadSheet(mode: .integer(label: label, unit: "", maxDigits: 4),
+                            initial: text) { val in text = val }
+            }
         }
     }
 }
