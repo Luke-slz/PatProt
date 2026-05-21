@@ -154,17 +154,20 @@ struct MassnahmenView: View {
                 TextField("Sonstige Medizintechnik", text: $befund.medtechSonstige)
             } header: { Label("Medizintechnik", systemImage: "gear.badge.questionmark") }
 
-            Section {
-                Button(action: onBack) {
-                    Label("Zurück zur Übersicht", systemImage: "checkmark.circle.fill")
-                        .frame(maxWidth: .infinity).padding(.vertical, 4)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(Color("RDOrange"))
-            }
         }
         .navigationTitle("Maßnahmen")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
+        .safeAreaInset(edge: .bottom) {
+            Button(action: onBack) {
+                Label("Zurück zur Übersicht", systemImage: "checkmark.circle.fill")
+                    .frame(maxWidth: .infinity)
+                    .padding()
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Color("RDOrange"))
+            .padding([.horizontal, .bottom])
+            .background(.bar)
+        }
     }
 }

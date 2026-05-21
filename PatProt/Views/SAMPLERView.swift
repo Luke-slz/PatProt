@@ -65,16 +65,21 @@ struct SAMPLERView: View {
                     TextEditor(text: $befund.risikofaktoren).frame(minHeight: 60)
                 }
             }
-            Section {
-                Button(action: onZurueck) {
-                    Label("Zurück zur Übersicht", systemImage: "checkmark.circle.fill")
-                        .frame(maxWidth: .infinity).padding(.vertical, 4)
-                }
-                .buttonStyle(.borderedProminent).tint(Color("RDOrange"))
-            }
         }
         .navigationTitle("SAMPLER")
         .navigationBarBackButtonHidden(true)
+        .safeAreaInset(edge: .bottom) {
+            HStack(spacing: 12) {
+                Button(action: onZurueck) {
+                    Label("Zurück", systemImage: "chevron.left.circle.fill")
+                        .frame(maxWidth: .infinity).padding()
+                }
+                .buttonStyle(.bordered)
+                .tint(Color("RDOrange"))
+            }
+            .padding([.horizontal, .bottom])
+            .background(.bar)
+        }
     }
 }
 

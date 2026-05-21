@@ -70,17 +70,21 @@ struct SINNHAFTView: View {
                                 text: $befund.transport, minHeight: 60)
             }
 
-            Section {
-                Button(action: onZurueck) {
-                    Label("Zurück zur Übersicht", systemImage: "checkmark.circle.fill")
-                        .frame(maxWidth: .infinity).padding(.vertical, 4)
-                }
-                .buttonStyle(.borderedProminent).tint(Color("RDOrange"))
-            }
         }
         .navigationTitle("SINNHAFT-Schema")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
+        .safeAreaInset(edge: .bottom) {
+            Button(action: onZurueck) {
+                Label("Zurück zur Übersicht", systemImage: "checkmark.circle.fill")
+                    .frame(maxWidth: .infinity)
+                    .padding()
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Color("RDOrange"))
+            .padding([.horizontal, .bottom])
+            .background(.bar)
+        }
         .onAppear {
             let leer = befund.situation.isEmpty && befund.identifikation.isEmpty &&
                        befund.notfall.isEmpty && befund.notwendigeMassnahmen.isEmpty &&
