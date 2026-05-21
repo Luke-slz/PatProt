@@ -26,7 +26,7 @@ struct NotfallgeschehenView: View {
                         .font(.subheadline).fontWeight(.semibold)
                     Text("z.B. bewusstlos am Boden, sitzend, stehend")
                         .font(.caption).foregroundColor(.secondary)
-                    TextField("z.B. bewusstlos, auf dem Rücken liegend", text: $befund.patientGefunden)
+                    TextField("", text: $befund.patientGefunden)
                 }
             }
 

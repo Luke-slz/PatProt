@@ -88,6 +88,17 @@ struct ABCDEUebersichtView: View {
                 .buttonStyle(.plain)
                 .padding(.horizontal)
 
+                // Notfallgeschehen
+                NavigationsButton(
+                    icon: "exclamationmark.bubble.fill",
+                    titel: "Notfallgeschehen",
+                    untertitel: protokoll.notfallGeschehen.erstbefundVorOrt.isEmpty
+                        ? "Erstbefund & Notfallgeschehen"
+                        : protokoll.notfallGeschehen.erstbefundVorOrt,
+                    action: onNotfall
+                )
+                .padding(.horizontal)
+
                 // ABCDE Karten
                 VStack(spacing: 1) {
                     ABCDEZeile(
@@ -134,32 +145,13 @@ struct ABCDEUebersichtView: View {
                 .cornerRadius(14)
                 .padding(.horizontal)
 
-                // Notfallgeschehen
+                // Anamnese
                 NavigationsButton(
-                    icon: "exclamationmark.bubble.fill",
-                    titel: "Notfallgeschehen",
-                    untertitel: protokoll.notfallGeschehen.erstbefundVorOrt.isEmpty
-                        ? "Erstbefund & Notfallgeschehen"
-                        : protokoll.notfallGeschehen.erstbefundVorOrt,
-                    action: onNotfall
+                    icon: "list.clipboard.fill",
+                    titel: "SAMPLER-Schema",
+                    untertitel: "Anamnese & Vorgeschichte",
+                    action: onSampler
                 )
-                .padding(.horizontal)
-
-                // Anamnese & Schemata
-                VStack(spacing: 8) {
-                    NavigationsButton(
-                        icon: "list.clipboard.fill",
-                        titel: "SAMPLER-Schema",
-                        untertitel: "Anamnese & Vorgeschichte",
-                        action: onSampler
-                    )
-                    NavigationsButton(
-                        icon: "bubble.left.and.bubble.right.fill",
-                        titel: "SINNHAFT-Schema",
-                        untertitel: "Strukturiertes Übergabeschema",
-                        action: onSinnhaft
-                    )
-                }
                 .padding(.horizontal)
 
                 // Diagnose & Verlauf
@@ -181,7 +173,7 @@ struct ABCDEUebersichtView: View {
                 }
                 .padding(.horizontal)
 
-                // Therapie
+                // Therapie & Maßnahmen
                 VStack(spacing: 8) {
                     NavigationsButton(
                         icon: "cross.circle.fill",
@@ -195,13 +187,25 @@ struct ABCDEUebersichtView: View {
                         untertitel: protokoll.medikamente.isEmpty ? "Keine erfasst" : "\(protokoll.medikamente.count) Eintrag/Einträge",
                         action: onMedikamente
                     )
-                    NavigationsButton(
-                        icon: "camera.fill",
-                        titel: "Bilder & Dateien",
-                        untertitel: protokoll.fotos.isEmpty ? "Keine Fotos" : "\(protokoll.fotos.count) Foto\(protokoll.fotos.count == 1 ? "" : "s")",
-                        action: onBilder
-                    )
                 }
+                .padding(.horizontal)
+
+                // SINNHAFT
+                NavigationsButton(
+                    icon: "bubble.left.and.bubble.right.fill",
+                    titel: "SINNHAFT-Schema",
+                    untertitel: "Strukturiertes Übergabeschema",
+                    action: onSinnhaft
+                )
+                .padding(.horizontal)
+
+                // Bilder
+                NavigationsButton(
+                    icon: "camera.fill",
+                    titel: "Bilder & Dateien",
+                    untertitel: protokoll.fotos.isEmpty ? "Keine Fotos" : "\(protokoll.fotos.count) Foto\(protokoll.fotos.count == 1 ? "" : "s")",
+                    action: onBilder
+                )
                 .padding(.horizontal)
 
                 // Reanimation
