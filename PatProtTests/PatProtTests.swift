@@ -5,6 +5,7 @@
 //  Created by Luke Schulz on 07.05.26.
 //
 
+import Foundation
 import Testing
 @testable import PatProt
 
