@@ -52,14 +52,17 @@ struct NotfallgeschehenView: View {
                 Label("Besonderheiten", systemImage: "exclamationmark.triangle.fill")
             }
 
-            // Navigation
-            Section {
-                Button(action: onWeiter) {
-                    Label("Weiter zur Befunderhebung", systemImage: "arrow.right.circle.fill")
-                        .frame(maxWidth: .infinity).padding(.vertical, 4)
-                }
-                .buttonStyle(.borderedProminent).tint(Color("RDOrange"))
+        }
+        .safeAreaInset(edge: .bottom) {
+            Button(action: onWeiter) {
+                Label("Weiter zur Befunderhebung", systemImage: "arrow.right.circle.fill")
+                    .frame(maxWidth: .infinity)
+                    .padding()
             }
+            .buttonStyle(.borderedProminent)
+            .tint(Color("RDOrange"))
+            .padding([.horizontal, .bottom])
+            .background(.bar)
         }
         .navigationTitle("Notfallgeschehen")
         .navigationBarTitleDisplayMode(.inline)
