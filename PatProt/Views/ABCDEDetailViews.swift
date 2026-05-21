@@ -133,6 +133,8 @@ struct BreathingView: View {
     var onZurueck: () -> Void
 
     @State private var andereAtemgeraeusche: String = ""
+    @State private var zeigeAfNumpad = false
+    @State private var zeigeSpo2Numpad = false
 
     private var afBg: Color {
         vitalBg(befund.atemFrequenz.map(Double.init), normal: 12...20, warning: 8...30)
@@ -165,26 +167,42 @@ struct BreathingView: View {
                     HStack {
                         Text("Atemfrequenz (/min)")
                         Spacer()
-                        TextField("z.B. 16", value: $befund.atemFrequenz, format: .number)
-                            .keyboardType(.numberPad).multilineTextAlignment(.trailing).frame(width: 80)
+                        Text(befund.atemFrequenz.map(String.init) ?? "—")
+                            .foregroundColor(befund.atemFrequenz == nil ? .secondary : .primary)
                     }
                     if let (msg, crit) = afWarn {
                         Text(msg).font(.caption).foregroundColor(crit ? .red : .orange)
                     }
                 }
                 .listRowBackground(afBg)
+                .contentShape(Rectangle())
+                .onTapGesture { zeigeAfNumpad = true }
+                .sheet(isPresented: $zeigeAfNumpad) {
+                    NumpadSheet(mode: .integer(label: "Atemfrequenz", unit: "/min"),
+                                initial: befund.atemFrequenz.map(String.init) ?? "") { val in
+                        befund.atemFrequenz = Int(val)
+                    }
+                }
                 VStack(alignment: .leading, spacing: 2) {
                     HStack {
                         Text("SpO₂ (%)")
                         Spacer()
-                        TextField("z.B. 98", value: $befund.spo2, format: .number)
-                            .keyboardType(.numberPad).multilineTextAlignment(.trailing).frame(width: 80)
+                        Text(befund.spo2.map(String.init) ?? "—")
+                            .foregroundColor(befund.spo2 == nil ? .secondary : .primary)
                     }
                     if let (msg, crit) = spo2Warn {
                         Text(msg).font(.caption).foregroundColor(crit ? .red : .orange)
                     }
                 }
                 .listRowBackground(spo2Bg)
+                .contentShape(Rectangle())
+                .onTapGesture { zeigeSpo2Numpad = true }
+                .sheet(isPresented: $zeigeSpo2Numpad) {
+                    NumpadSheet(mode: .integer(label: "SpO₂", unit: "%"),
+                                initial: befund.spo2.map(String.init) ?? "") { val in
+                        befund.spo2 = Int(val)
+                    }
+                }
                 Picker("Atemgeräusche", selection: $befund.atemgeraeusche) {
                     Text("").tag("")
                     Text("Vesikulär (normal)").tag("Vesikulär (normal)")
@@ -253,11 +271,33 @@ struct CirculationView: View {
                              lowWarn: "Bradykardie (< 60/min)", highWarn: "Tachykardie (> 100/min)")
     }
     private var rrBg: Color {
-        vitalBg(befund.blutdruckSystolisch.map(Double.init), normal: 100...139, warning: 80...179)
+        let sys = befund.blutdruckSystolisch.map(Double.init)
+        let dia = befund.blutdruckDiastolisch.map(Double.init)
+        guard sys != nil || dia != nil else { return .clear }
+        if let s = sys, !(80.0...179.0).contains(s) { return Color.red.opacity(0.15) }
+        if let d = dia, !(40.0...109.0).contains(d) { return Color.red.opacity(0.15) }
+        if let s = sys, !(100.0...139.0).contains(s) { return Color.yellow.opacity(0.18) }
+        if let d = dia, !(60.0...89.0).contains(d)  { return Color.yellow.opacity(0.18) }
+        return Color.green.opacity(0.12)
     }
     private var rrWarn: (String, Bool)? {
-        vitalWarnText(befund.blutdruckSystolisch.map(Double.init), normal: 100...139, warning: 80...179,
-                      lowWarn: "Hypotonie (sys < 100 mmHg)", highWarn: "Hypertonie (sys > 139 mmHg)")
+        let sys = befund.blutdruckSystolisch.map(Double.init)
+        let dia = befund.blutdruckDiastolisch.map(Double.init)
+        var msgs: [String] = []
+        var critical = false
+        if let s = sys {
+            if s < 80        { msgs.append("sys kritisch niedrig"); critical = true }
+            else if s < 100  { msgs.append("Hypotonie (sys)") }
+            else if s > 179  { msgs.append("sys kritisch hoch"); critical = true }
+            else if s > 139  { msgs.append("Hypertonie (sys)") }
+        }
+        if let d = dia {
+            if d < 40        { msgs.append("dia kritisch niedrig"); critical = true }
+            else if d < 60   { msgs.append("dia erniedrigt") }
+            else if d > 109  { msgs.append("dia kritisch hoch"); critical = true }
+            else if d > 89   { msgs.append("dia erhöht") }
+        }
+        return msgs.isEmpty ? nil : (msgs.joined(separator: " · "), critical)
     }
 
     var body: some View {
@@ -297,22 +337,20 @@ struct CirculationView: View {
                     }
                     VStack(alignment: .leading, spacing: 2) {
                         HStack {
-                            Text("Blutdruck systolisch")
+                            Text("Blutdruck")
                             Spacer()
-                            TextField("mmHg", value: $befund.blutdruckSystolisch, format: .number)
-                                .keyboardType(.numberPad).multilineTextAlignment(.trailing).frame(width: 80)
+                            TextField("sys", value: $befund.blutdruckSystolisch, format: .number)
+                                .keyboardType(.numberPad).multilineTextAlignment(.trailing).frame(width: 52)
+                            Text("/").foregroundColor(.secondary)
+                            TextField("dia", value: $befund.blutdruckDiastolisch, format: .number)
+                                .keyboardType(.numberPad).multilineTextAlignment(.trailing).frame(width: 52)
+                            Text("mmHg").font(.caption).foregroundColor(.secondary)
                         }
                         if let (msg, crit) = rrWarn {
                             Text(msg).font(.caption).foregroundColor(crit ? .red : .orange)
                         }
                     }
                     .listRowBackground(rrBg)
-                    HStack {
-                        Text("Blutdruck diastolisch")
-                        Spacer()
-                        TextField("mmHg", value: $befund.blutdruckDiastolisch, format: .number)
-                            .keyboardType(.numberPad).multilineTextAlignment(.trailing).frame(width: 80)
-                    }
                 }
             } header: { Label("Kreislauf", systemImage: "heart.fill") }
 
