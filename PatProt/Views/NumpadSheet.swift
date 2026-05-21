@@ -95,7 +95,7 @@ struct NumpadSheet: View {
     private var maxDigits: Int {
         switch mode {
         case .integer(_, _, let m): return m
-        case .decimal:              return 6
+        case .decimal:              return 4
         case .time:                 return 4
         case .date:                 return 8
         case .bloodPressure:        return 3
@@ -125,10 +125,12 @@ struct NumpadSheet: View {
         switch mode {
         case .bloodPressure:
             if bpStep == .sys {
+                guard !digits.isEmpty else { return }
                 sysDigits = digits
                 digits = initialDia.filter { $0.isNumber }
                 bpStep = .dia
             } else {
+                guard !sysDigits.isEmpty, !digits.isEmpty else { return }
                 onConfirmBP?(sysDigits, digits)
                 dismiss()
             }
@@ -182,7 +184,7 @@ struct NumpadSheet: View {
 
                 HStack(spacing: 10) {
                     if case .decimal = mode {
-                        NumpadKey(label: ",") { appendDecimalPoint() }
+                        NumpadKey(label: ".") { appendDecimalPoint() }
                     } else {
                         NumpadKey(label: "⌫", style: .secondary) { delete() }
                     }
@@ -196,7 +198,7 @@ struct NumpadSheet: View {
 
                 if case .decimal = mode {
                     HStack(spacing: 10) {
-                        NumpadKey(label: "⌫", style: .secondary) { delete() }  // duplicate for decimal row
+                        NumpadKey(label: "⌫", style: .secondary) { delete() }
                         NumpadKey(label: "Bestätigen", style: .primary, wide: true) { confirm() }
                     }
                 }
@@ -204,11 +206,18 @@ struct NumpadSheet: View {
             .padding(.horizontal, 10)
             .padding(.bottom, 24)
         }
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Abbrechen") { dismiss() }
+            }
+        }
         .presentationDetents([.medium])
         .onAppear {
             switch mode {
             case .bloodPressure:
                 digits = initialSys.filter { $0.isNumber }
+            case .decimal:
+                digits = initial.filter { $0.isNumber || $0 == "." }
             default:
                 digits = initial.filter { $0.isNumber }
             }
