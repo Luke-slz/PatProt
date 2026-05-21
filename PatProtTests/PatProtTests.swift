@@ -32,4 +32,12 @@ struct PatProtTests {
         #expect(result.geschlecht == .maennlich)
     }
 
+    @Test func neuesProtokollHatAlarmzeit() {
+        let p = EinsatzProtokoll()
+        p.reset()
+        #expect(p.einsatzOrt.alarmzeit != nil)
+        let diff = abs(p.einsatzOrt.alarmzeit!.timeIntervalSinceNow)
+        #expect(diff < 5)  // innerhalb von 5 Sekunden gesetzt
+    }
+
 }

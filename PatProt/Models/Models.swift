@@ -157,6 +157,7 @@ class EinsatzProtokoll: ObservableObject, Identifiable {
 
     func reset() {
         einsatzOrt = EinsatzOrt()
+        einsatzOrt.alarmzeit = Date()
         patientDaten = PatientDaten()
         besatzung = Besatzung()
         notfallGeschehen = NotfallgeschehenBefund()
