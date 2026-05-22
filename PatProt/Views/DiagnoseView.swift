@@ -1,369 +1,264 @@
 import SwiftUI
 
+// MARK: - Datenschicht
+
+struct DiagnoseKategorie: Identifiable {
+    let id = UUID()
+    let name: String
+    let diagnosen: [String]
+
+    static let alle: [DiagnoseKategorie] = [
+        DiagnoseKategorie(name: "ZNS Erkrankungen", diagnosen: [
+            "Schlaganfall / Apoplex", "TIA (transitorische ischämische Attacke)",
+            "Epilepsie / Krampfanfall", "Fieberkrampf", "Synkope",
+            "Bewusstlosigkeit unklarer Genese", "Meningitis / Enzephalitis",
+            "Migräne / Kopfschmerz", "Subarachnoidalblutung (SAB)"
+        ]),
+        DiagnoseKategorie(name: "Herz-Kreislauf Erkrankungen", diagnosen: [
+            "ACS / Herzinfarkt (STEMI)", "ACS / Herzinfarkt (NSTEMI)",
+            "Angina pectoris", "Herzrhythmusstörung", "Herzinsuffizienz / Dekompensation",
+            "Hypertensive Krise", "Hypotonie / Schock", "Lungenembolie",
+            "Synkope (kardial)", "Aortenaneurysma / Dissektion", "Perikarditis"
+        ]),
+        DiagnoseKategorie(name: "Atemwegserkrankungen", diagnosen: [
+            "COPD-Exazerbation", "Asthma-Anfall", "Pneumonie",
+            "Lungenödem (kardial)", "Lungenembolie", "Hyperventilation",
+            "Fremdkörperaspiration", "Epiglottitis", "Krupp-Syndrom"
+        ]),
+        DiagnoseKategorie(name: "Abdominelle Erkrankungen", diagnosen: [
+            "Akutes Abdomen", "Appendizitisverdacht", "Übelkeit / Erbrechen",
+            "GI-Blutung (obere)", "GI-Blutung (untere)", "Nierenkolik",
+            "Gallenkolik", "Ileus", "Ulkus-Perforation"
+        ]),
+        DiagnoseKategorie(name: "Psychiatrische Erkrankungen / Intoxikation", diagnosen: [
+            "Akute Psychose / Erregungszustand", "Suizidversuch",
+            "Alkoholintoxikation", "Medikamenten-Intoxikation",
+            "Drogenintoxikation", "Panikattacke",
+            "Psychiatrische Krise", "Manie", "Alkoholentzugsdelir"
+        ]),
+        DiagnoseKategorie(name: "Stoffwechsel Erkrankungen", diagnosen: [
+            "Hypoglykämie", "Hyperglykämie", "Diabetisches Koma",
+            "Elektrolytentgleisung", "Exsikkose / Dehydration",
+            "Schilddrüsenkrise", "Addison-Krise", "Urämie"
+        ]),
+        DiagnoseKategorie(name: "Gyn-/Geburtshilfe Notfälle", diagnosen: [
+            "Drohende / stattfindende Geburt", "Schwangerschaftskomplikation",
+            "Eklampsie / Präeklampsie", "Extrauteringravidität",
+            "Vaginale Blutung", "Fehlgeburt / Abort", "HELLP-Syndrom"
+        ]),
+        DiagnoseKategorie(name: "sonst. Erkrankungen", diagnosen: [
+            "Allergische Reaktion (leicht)", "Anaphylaxie (schwer)",
+            "Hitzeerschöpfung", "Hitzschlag", "Unterkühlung",
+            "Ertrinken / Beinaheertrinken", "SIDS-Verdacht", "Palliativversorgung"
+        ]),
+        DiagnoseKategorie(name: "Infektionen", diagnosen: [
+            "Sepsis / septischer Schock", "Fieber unklarer Genese",
+            "Meningitis (bakteriell)", "Gastroenteritis",
+            "Pneumonie (infektiös)", "COVID-19 / SARS",
+            "Harnwegsinfekt / Urosepsis"
+        ]),
+        DiagnoseKategorie(name: "Traumen und Verletzungen", diagnosen: [
+            "SHT leicht (Commotio)", "SHT mittel", "SHT schwer",
+            "Wirbelsäulenverletzung", "Thoraxtrauma",
+            "Abdominaltrauma", "Beckentrauma",
+            "Extremitätentrauma", "Polytrauma",
+            "Verbrennung / Verbrühung", "Stromunfall",
+            "Tauchunfall / Barotrauma", "Einzelverletzung (oberflächlich)"
+        ])
+    ]
+}
+
+// MARK: - Hauptliste
+
 struct DiagnoseView: View {
     @Binding var befund: DiagnoseBefund
-    var onBack: () -> Void
-
+    @State private var suche = ""
     @State private var zeigeNeuEingabe = false
     @State private var neuerName = ""
     @State private var neueWahrscheinlichkeit: DiagnoseWahrscheinlichkeit = .moeglich
-    @State private var neueBegruendung = ""
-    @State private var bearbeiteID: UUID? = nil
 
-    private var geordnet: [(DiagnoseWahrscheinlichkeit, [VerdachtsdiagnoseEintrag])] {
-        DiagnoseWahrscheinlichkeit.allCases.compactMap { stufe in
-            let eintraege = befund.verdachtsdiagnosen.filter { $0.wahrscheinlichkeit == stufe }
-            return eintraege.isEmpty ? nil : (stufe, eintraege)
+    private var gefilterteKategorien: [DiagnoseKategorie] {
+        guard !suche.isEmpty else { return DiagnoseKategorie.alle }
+        let q = suche.lowercased()
+        return DiagnoseKategorie.alle.compactMap { kat in
+            let passendeDiagnosen = kat.diagnosen.filter { $0.lowercased().contains(q) }
+            if kat.name.lowercased().contains(q) { return kat }
+            if !passendeDiagnosen.isEmpty { return DiagnoseKategorie(name: kat.name, diagnosen: passendeDiagnosen) }
+            return nil
         }
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                trichterVisualisierung
-                diagnoseEintraege
-                leitsymptomSection
-                hinzufuegenButton
-            }
-            .padding()
-        }
-        .background(Color(.systemGroupedBackground))
-        .navigationTitle("Diagnose")
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(true)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: onBack) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "chevron.left")
-                        Text("Zurück")
+        List {
+            if !befund.verdachtsdiagnosen.isEmpty {
+                Section("Ausgewählte Diagnosen") {
+                    ForEach(befund.verdachtsdiagnosen) { eintrag in
+                        HStack {
+                            Image(systemName: eintrag.wahrscheinlichkeit.symbol)
+                                .foregroundColor(eintrag.wahrscheinlichkeit.farbe)
+                                .frame(width: 22)
+                            Text(eintrag.name)
+                            Spacer()
+                            Button(role: .destructive) {
+                                befund.verdachtsdiagnosen.removeAll { $0.id == eintrag.id }
+                            } label: {
+                                Image(systemName: "minus.circle.fill").foregroundColor(.red)
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
                 }
             }
+
+            ForEach(gefilterteKategorien, id: \.name) { kat in
+                Section(kat.name) {
+                    NavigationLink {
+                        DiagnoseKategorieView(kategorie: kat, befund: $befund)
+                    } label: {
+                        HStack {
+                            Text(kat.name)
+                            Spacer()
+                            let anzahl = befund.verdachtsdiagnosen
+                                .filter { kat.diagnosen.contains($0.name) }.count
+                            if anzahl > 0 {
+                                Text("\(anzahl)")
+                                    .font(.caption.weight(.bold))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 7).padding(.vertical, 3)
+                                    .background(Color("RDOrange"))
+                                    .clipShape(Capsule())
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .searchable(text: $suche, prompt: "Diagnose suchen")
+        .navigationTitle("Diagnosen")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    resetEingabe()
-                    zeigeNeuEingabe = true
-                } label: {
+                Button { zeigeNeuEingabe = true } label: {
                     Image(systemName: "plus")
                 }
             }
         }
         .sheet(isPresented: $zeigeNeuEingabe) {
-            diagnoseEingabeSheet
-        }
-    }
-
-    // MARK: - Trichter-Visualisierung
-
-    private var trichterVisualisierung: some View {
-        GeometryReader { geo in
-            VStack(spacing: 2) {
-                ForEach(Array(DiagnoseWahrscheinlichkeit.allCases.enumerated()), id: \.element) { index, stufe in
-                    let anzahl = befund.verdachtsdiagnosen.filter { $0.wahrscheinlichkeit == stufe }.count
-                    let breite = trichterBreite(fuer: index, containerWidth: geo.size.width)
-
-                    HStack {
-                        Spacer()
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(anzahl > 0 ? stufe.farbe.opacity(0.18) : Color(.systemGray6))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .stroke(stufe.farbe.opacity(anzahl > 0 ? 0.5 : 0.2), lineWidth: 1)
-                                )
-                            HStack {
-                                Image(systemName: stufe.symbol)
-                                    .foregroundColor(anzahl > 0 ? stufe.farbe : .secondary)
-                                    .font(.caption)
-                                Text(stufe.rawValue)
-                                    .font(.caption).fontWeight(.medium)
-                                    .foregroundColor(anzahl > 0 ? stufe.farbe : .secondary)
-                                Spacer()
-                                if anzahl > 0 {
-                                    Text("\(anzahl)")
-                                        .font(.caption).fontWeight(.bold)
-                                        .foregroundColor(.white)
-                                        .frame(width: 22, height: 22)
-                                        .background(stufe.farbe)
-                                        .clipShape(Circle())
-                                }
+            NavigationStack {
+                Form {
+                    Section { TextField("Diagnose / Verdacht", text: $neuerName) } header: { Text("Bezeichnung") }
+                    Section {
+                        Picker("Wahrscheinlichkeit", selection: $neueWahrscheinlichkeit) {
+                            ForEach(DiagnoseWahrscheinlichkeit.allCases, id: \.self) { stufe in
+                                Label(stufe.rawValue, systemImage: stufe.symbol).tag(stufe)
                             }
-                            .padding(.horizontal, 12)
                         }
-                        .frame(width: breite, height: 38)
-                        Spacer()
-                    }
+                        .pickerStyle(.inline)
+                    } header: { Text("Einschätzung") }
                 }
-            }
-        }
-        .frame(height: CGFloat(DiagnoseWahrscheinlichkeit.allCases.count) * 40)
-        .padding(.vertical, 8)
-    }
-
-    private func trichterBreite(fuer index: Int, containerWidth: CGFloat) -> CGFloat {
-        let maxBreite: CGFloat = containerWidth - 32
-        let schrumpfung: CGFloat = 60
-        return max(maxBreite - CGFloat(index) * schrumpfung, 160)
-    }
-
-    // MARK: - Diagnose-Einträge pro Ebene
-
-    private var diagnoseEintraege: some View {
-        VStack(spacing: 12) {
-            ForEach(DiagnoseWahrscheinlichkeit.allCases, id: \.self) { stufe in
-                let eintraege = befund.verdachtsdiagnosen.filter { $0.wahrscheinlichkeit == stufe }
-                if !eintraege.isEmpty {
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack {
-                            Image(systemName: stufe.symbol)
-                                .foregroundColor(stufe.farbe)
-                                .font(.caption)
-                            Text(stufe.rawValue)
-                                .font(.caption).fontWeight(.semibold)
-                                .foregroundColor(stufe.farbe)
-                        }
-                        ForEach(eintraege) { eintrag in
-                            DiagnoseTrichterKarte(
-                                eintrag: eintrag,
-                                onEdit: { bearbeiteEintrag(eintrag) },
-                                onDelete: { loescheEintrag(eintrag) },
-                                onStufeAendern: { neueStufe in stufeAendern(eintrag, auf: neueStufe) }
+                .navigationTitle("Neue Diagnose")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Abbrechen") { zeigeNeuEingabe = false; neuerName = "" }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Speichern") {
+                            let name = neuerName.trimmingCharacters(in: .whitespaces)
+                            guard !name.isEmpty else { return }
+                            befund.verdachtsdiagnosen.append(
+                                VerdachtsdiagnoseEintrag(name: name, wahrscheinlichkeit: neueWahrscheinlichkeit, begruendung: "")
                             )
+                            if neueWahrscheinlichkeit == .fuehrend { befund.leitsymptom = name }
+                            zeigeNeuEingabe = false
+                            neuerName = ""
+                        }
+                        .disabled(neuerName.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
+                }
+            }
+            .presentationDetents([.medium])
+        }
+    }
+}
+
+// MARK: - Kategorie-Detailansicht
+
+struct DiagnoseKategorieView: View {
+    let kategorie: DiagnoseKategorie
+    @Binding var befund: DiagnoseBefund
+
+    @State private var zeigeWahrscheinlichkeit = false
+    @State private var gewaehlterName = ""
+
+    private func istGewaehlt(_ name: String) -> Bool {
+        befund.verdachtsdiagnosen.contains { $0.name == name }
+    }
+
+    var body: some View {
+        List {
+            ForEach(kategorie.diagnosen, id: \.self) { diagnose in
+                Button {
+                    if istGewaehlt(diagnose) {
+                        befund.verdachtsdiagnosen.removeAll { $0.name == diagnose }
+                    } else {
+                        gewaehlterName = diagnose
+                        zeigeWahrscheinlichkeit = true
+                    }
+                } label: {
+                    HStack {
+                        Text(diagnose).foregroundColor(.primary)
+                        Spacer()
+                        if istGewaehlt(diagnose) {
+                            let stufe = befund.verdachtsdiagnosen.first { $0.name == diagnose }?.wahrscheinlichkeit
+                            Image(systemName: stufe?.symbol ?? "checkmark")
+                                .foregroundColor(stufe?.farbe ?? Color("RDOrange"))
                         }
                     }
                 }
             }
-
-            if befund.verdachtsdiagnosen.isEmpty {
-                VStack(spacing: 12) {
-                    Image(systemName: "slider.horizontal.3")
-                        .font(.system(size: 40))
-                        .foregroundColor(.secondary.opacity(0.5))
-                    Text("Noch keine Verdachtsdiagnosen")
-                        .font(.subheadline).foregroundColor(.secondary)
-                    Text("Tippe auf + um eine Diagnose hinzuzufügen")
-                        .font(.caption).foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(32)
-                .background(Color(.secondarySystemGroupedBackground))
-                .cornerRadius(14)
-            }
         }
-    }
-
-    // MARK: - Leitsymptom & Freitext
-
-    private var leitsymptomSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Label("Leitsymptom / Diagnose (schriftlich)", systemImage: "stethoscope")
-                .font(.subheadline).fontWeight(.semibold)
-                .padding(.horizontal)
-
-            VStack(alignment: .leading, spacing: 8) {
-                TextField("Leitsymptom eingeben", text: $befund.leitsymptom)
-                    .padding(12)
-                    .background(Color(.secondarySystemGroupedBackground))
-                    .cornerRadius(10)
-
-                TextEditor(text: $befund.diagnoseFreitext)
-                    .frame(minHeight: 70)
-                    .padding(8)
-                    .background(Color(.secondarySystemGroupedBackground))
-                    .cornerRadius(10)
-                    .overlay(
-                        Group {
-                            if befund.diagnoseFreitext.isEmpty {
-                                Text("Ergänzende Anmerkungen…")
-                                    .foregroundColor(Color(.placeholderText))
-                                    .padding(12)
-                                    .allowsHitTesting(false)
-                            }
-                        }, alignment: .topLeading
-                    )
-            }
-            .padding(.horizontal)
-        }
-        .padding(.vertical, 12)
-        .background(Color(.secondarySystemGroupedBackground))
-        .cornerRadius(14)
-    }
-
-    private var hinzufuegenButton: some View {
-        Button {
-            resetEingabe()
-            zeigeNeuEingabe = true
-        } label: {
-            Label("Verdachtsdiagnose hinzufügen", systemImage: "plus.circle.fill")
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color("RDOrange"))
-                .foregroundColor(.white)
-                .cornerRadius(14)
-                .font(.headline)
-        }
-    }
-
-    // MARK: - Eingabe Sheet
-
-    private var diagnoseEingabeSheet: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    TextField("Diagnose / Verdacht", text: $neuerName)
-                } header: { Text("Bezeichnung") }
-
-                Section {
-                    Picker("Wahrscheinlichkeit", selection: $neueWahrscheinlichkeit) {
-                        ForEach(DiagnoseWahrscheinlichkeit.allCases, id: \.self) { stufe in
-                            Label(stufe.rawValue, systemImage: stufe.symbol)
-                                .tag(stufe)
-                        }
-                    }
-                    .pickerStyle(.inline)
-                } header: { Text("Einschätzung") }
-
-                Section {
-                    TextEditor(text: $neueBegruendung)
-                        .frame(minHeight: 80)
-                } header: { Text("Begründung / Zeichen") }
-            }
-            .navigationTitle(bearbeiteID == nil ? "Neue Diagnose" : "Diagnose bearbeiten")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Abbrechen") { zeigeNeuEingabe = false }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Speichern") {
-                        speichernEintrag()
-                        zeigeNeuEingabe = false
-                    }
-                    .disabled(neuerName.trimmingCharacters(in: .whitespaces).isEmpty)
-                }
-            }
-        }
-        .presentationDetents([.medium, .large])
-    }
-
-    // MARK: - Aktionen
-
-    private func resetEingabe() {
-        neuerName = ""
-        neueWahrscheinlichkeit = .moeglich
-        neueBegruendung = ""
-        bearbeiteID = nil
-    }
-
-    private func speichernEintrag() {
-        let name = neuerName.trimmingCharacters(in: .whitespaces)
-        guard !name.isEmpty else { return }
-
-        if let id = bearbeiteID,
-           let idx = befund.verdachtsdiagnosen.firstIndex(where: { $0.id == id }) {
-            befund.verdachtsdiagnosen[idx].name = name
-            befund.verdachtsdiagnosen[idx].wahrscheinlichkeit = neueWahrscheinlichkeit
-            befund.verdachtsdiagnosen[idx].begruendung = neueBegruendung
-        } else {
-            let neu = VerdachtsdiagnoseEintrag(
-                name: name,
-                wahrscheinlichkeit: neueWahrscheinlichkeit,
-                begruendung: neueBegruendung
-            )
-            befund.verdachtsdiagnosen.append(neu)
-        }
-
-        // Führende Diagnose als Leitsymptom übernehmen
-        if neueWahrscheinlichkeit == .fuehrend {
-            befund.leitsymptom = name
-        }
-    }
-
-    private func bearbeiteEintrag(_ eintrag: VerdachtsdiagnoseEintrag) {
-        bearbeiteID = eintrag.id
-        neuerName = eintrag.name
-        neueWahrscheinlichkeit = eintrag.wahrscheinlichkeit
-        neueBegruendung = eintrag.begruendung
-        zeigeNeuEingabe = true
-    }
-
-    private func loescheEintrag(_ eintrag: VerdachtsdiagnoseEintrag) {
-        befund.verdachtsdiagnosen.removeAll { $0.id == eintrag.id }
-    }
-
-    private func stufeAendern(_ eintrag: VerdachtsdiagnoseEintrag, auf neueStufe: DiagnoseWahrscheinlichkeit) {
-        if let idx = befund.verdachtsdiagnosen.firstIndex(where: { $0.id == eintrag.id }) {
-            befund.verdachtsdiagnosen[idx].wahrscheinlichkeit = neueStufe
-            if neueStufe == .fuehrend {
-                befund.leitsymptom = eintrag.name
+        .navigationTitle(kategorie.name)
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $zeigeWahrscheinlichkeit) {
+            WahrscheinlichkeitPickerSheet(name: gewaehlterName) { stufe in
+                befund.verdachtsdiagnosen.append(
+                    VerdachtsdiagnoseEintrag(name: gewaehlterName, wahrscheinlichkeit: stufe, begruendung: "")
+                )
+                if stufe == .fuehrend { befund.leitsymptom = gewaehlterName }
             }
         }
     }
 }
 
-// MARK: - Trichter-Karte
+// MARK: - Wahrscheinlichkeit Picker Sheet
 
-private struct DiagnoseTrichterKarte: View {
-    let eintrag: VerdachtsdiagnoseEintrag
-    let onEdit: () -> Void
-    let onDelete: () -> Void
-    let onStufeAendern: (DiagnoseWahrscheinlichkeit) -> Void
-
-    @State private var zeigeStufeMenu = false
+private struct WahrscheinlichkeitPickerSheet: View {
+    let name: String
+    let onAuswahl: (DiagnoseWahrscheinlichkeit) -> Void
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        HStack(spacing: 12) {
-            // Farb-Indikator
-            RoundedRectangle(cornerRadius: 4)
-                .fill(eintrag.wahrscheinlichkeit.farbe)
-                .frame(width: 4)
-                .frame(height: eintrag.begruendung.isEmpty ? 44 : 60)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(eintrag.name)
-                    .font(.subheadline).fontWeight(.semibold)
-                if !eintrag.begruendung.isEmpty {
-                    Text(eintrag.begruendung)
-                        .font(.caption).foregroundColor(.secondary)
-                        .lineLimit(2)
-                }
-            }
-
-            Spacer()
-
-            // Aktionen
-            Menu {
-                Button { onEdit() } label: {
-                    Label("Bearbeiten", systemImage: "pencil")
-                }
-                Menu("Stufe ändern") {
-                    ForEach(DiagnoseWahrscheinlichkeit.allCases, id: \.self) { stufe in
-                        Button {
-                            onStufeAendern(stufe)
-                        } label: {
-                            Label(stufe.rawValue, systemImage: stufe.symbol)
-                        }
+        NavigationStack {
+            List {
+                ForEach(DiagnoseWahrscheinlichkeit.allCases, id: \.self) { stufe in
+                    Button {
+                        onAuswahl(stufe)
+                        dismiss()
+                    } label: {
+                        Label(stufe.rawValue, systemImage: stufe.symbol)
+                            .foregroundColor(stufe.farbe)
                     }
                 }
-                Divider()
-                Button(role: .destructive) { onDelete() } label: {
-                    Label("Löschen", systemImage: "trash")
+            }
+            .navigationTitle(name)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Abbrechen") { dismiss() }
                 }
-            } label: {
-                Image(systemName: "ellipsis.circle")
-                    .foregroundColor(.secondary)
-                    .font(.title3)
             }
         }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color(.secondarySystemGroupedBackground))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(eintrag.wahrscheinlichkeit.farbe.opacity(0.3), lineWidth: 1)
-                )
-        )
+        .presentationDetents([.medium])
     }
 }
