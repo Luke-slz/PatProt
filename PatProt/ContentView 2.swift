@@ -118,7 +118,8 @@ struct iPhoneContentView: View {
                         path.removeAll { [.airway,.breathing,.circulation,.disability,.exposure].contains($0) }
                     }
                 case .sampler:
-                    SAMPLERView(befund: $protokoll.sampler) { path.removeLast() }
+                    SAMPLERView(befund: $protokoll.sampler,
+                                medikamentFotos: $protokoll.medikamentFotos) { path.removeLast() }
                 case .sinnhaft:
                     SINNHAFTView(befund: $protokoll.sinnhaft) { path.removeLast() }
                 case .diagnose:
@@ -200,8 +201,11 @@ struct iPhoneContentView: View {
 
     private func applyToCurrentProtokoll(_ daten: ParsedMeldungDaten) {
         protokoll.einsatzOrt.einsatzNummer = daten.einsatzNummer
-        protokoll.einsatzOrt.einsatzArt    = daten.einsatzArt
-        protokoll.einsatzOrt.stichwort     = daten.stichwort
+        // daten.einsatzArt enthält den Code ("NOTF 01"), daten.stichwort die OCR-Diagnose.
+        // Im Modell: .stichwort = Code, .einsatzArt = Diagnose (so speichert der Picker).
+        let code = daten.einsatzArt
+        protokoll.einsatzOrt.stichwort  = code
+        protokoll.einsatzOrt.einsatzArt = bestDiagnose(code: code, ocrDiagnose: daten.stichwort)
         protokoll.einsatzOrt.adresse       = daten.adresse
         protokoll.einsatzOrt.zusatz        = daten.zusatz
         protokoll.einsatzOrt.sondersignal  = daten.sondersignal
@@ -213,6 +217,39 @@ struct iPhoneContentView: View {
         }
         protokoll.patientDaten.geschlecht = daten.geschlecht
         protokoll.sampler.ereignis        = daten.ereignis
+    }
+
+    // Findet die beste Diagnose aus der Tabelle anhand OCR-Text.
+    // Code-Einträge wie "NOTF 11" kommen mehrfach vor → Fuzzy-Match auf Beschreibung.
+    private func bestDiagnose(code: String, ocrDiagnose: String) -> String {
+        let tabellen = StichwortStore.laden()
+        // Normalisierter Code-Prefix (Leerzeichen entfernt) für flexiblen Vergleich
+        let codeNorm = code.uppercased().replacingOccurrences(of: " ", with: "")
+        let kandidaten = tabellen.filter {
+            $0.stichwort.uppercased().replacingOccurrences(of: " ", with: "").hasPrefix(codeNorm)
+        }
+
+        guard !ocrDiagnose.isEmpty else {
+            // Kein OCR-Text: nur nehmen wenn eindeutig
+            return kandidaten.count == 1 ? kandidaten[0].diagnose : ocrDiagnose
+        }
+
+        // Wörter ≥3 Zeichen aus OCR als Suchbegriffe
+        let suchWörter = ocrDiagnose.lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { $0.count >= 3 }
+
+        var besteWertung = 0
+        var besteDiagnose: String? = nil
+        for eintrag in kandidaten {
+            let wertung = suchWörter.filter { eintrag.diagnose.lowercased().contains($0) }.count
+            if wertung > besteWertung {
+                besteWertung = wertung
+                besteDiagnose = eintrag.diagnose
+            }
+        }
+        // Mindestens 1 Wort muss übereinstimmen, sonst OCR-Text behalten
+        return besteWertung > 0 ? (besteDiagnose ?? ocrDiagnose) : ocrDiagnose
     }
 
 }

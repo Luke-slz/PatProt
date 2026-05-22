@@ -414,7 +414,8 @@ struct iPadMainView: View {
             }
         case .sampler:
             NavigationStack {
-                SAMPLERView(befund: $protokoll.sampler) { selectedSection = .sinnhaft }
+                SAMPLERView(befund: $protokoll.sampler,
+                            medikamentFotos: $protokoll.medikamentFotos) { selectedSection = .sinnhaft }
             }
         case .sinnhaft:
             NavigationStack {
