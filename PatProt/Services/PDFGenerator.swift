@@ -176,6 +176,10 @@ struct DINPDFGenerator {
                 drawPage1(p: protokoll)
                 ctx.beginPage()
                 drawPage2(p: protokoll)
+                drawFotoPages(ctx: ctx,
+                              mediFotos: protokoll.medikamentFotos,
+                              patFotos: protokoll.fotos,
+                              erstelltAm: protokoll.erstelltAm)
             }
             return url
         } catch {
@@ -1189,6 +1193,55 @@ struct DINPDFGenerator {
         }
 
         drawFooter(erstelltAm: p.erstelltAm)
+    }
+
+    // ─────────────────────────────────────────────────────
+    // MARK: - Foto-Anhang Seiten
+    // ─────────────────────────────────────────────────────
+
+    private static func drawFotoPages(ctx: UIGraphicsPDFRendererContext,
+                                       mediFotos: [FotoEintrag],
+                                       patFotos: [FotoEintrag],
+                                       erstelltAm: Date) {
+        let groups: [(String, [FotoEintrag])] = [
+            ("Medikamentenplan", mediFotos),
+            ("Patientenfoto",    patFotos),
+        ].filter { !$1.isEmpty }
+
+        for (label, fotos) in groups {
+            for (i, foto) in fotos.enumerated() {
+                guard let image = UIImage(contentsOfFile: foto.bildURL.path) else { continue }
+                ctx.beginPage()
+
+                let hh: CGFloat = 22
+                fillRect(CGRect(x: 0, y: 0, width: pageSize.width, height: hh), colBlue)
+                txt("\(label) – Foto \(i + 1) / \(fotos.count)",
+                    CGRect(x: lx, y: 3, width: pageSize.width - lx - 4, height: 16),
+                    font: f13b, color: .white)
+
+                let footerH: CGFloat = 14
+                let availW = rx - lx
+                let availH = pageSize.height - hh - footerH - 8
+                let imageArea = CGRect(x: lx, y: hh + 4, width: availW, height: availH)
+
+                let imgSize = image.size
+                guard imgSize.width > 0, imgSize.height > 0 else {
+                    drawFooter(erstelltAm: erstelltAm)
+                    continue
+                }
+                let scale = min(imageArea.width / imgSize.width, imageArea.height / imgSize.height)
+                let scaledW = imgSize.width * scale
+                let scaledH = imgSize.height * scale
+                let drawRect = CGRect(
+                    x: imageArea.midX - scaledW / 2,
+                    y: imageArea.midY - scaledH / 2,
+                    width: scaledW,
+                    height: scaledH
+                )
+                image.draw(in: drawRect)
+                drawFooter(erstelltAm: erstelltAm)
+            }
+        }
     }
 
     // ─────────────────────────────────────────────────────
