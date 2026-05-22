@@ -73,12 +73,24 @@ struct iPhoneContentView: View {
                     )
                 case .konfiguration:
                     KonfigurationView(protokoll: protokoll)
+                        .safeAreaInset(edge: .bottom) {
+                            WeiterButton { path = [.menu, .einsatzzeiten] }
+                        }
                 case .einsatzzeiten:
                     EinsatzzeitenView(protokoll: protokoll)
+                        .safeAreaInset(edge: .bottom) {
+                            WeiterButton { path = [.menu, .patient] }
+                        }
                 case .patient:
                     PatientView(protokoll: protokoll)
+                        .safeAreaInset(edge: .bottom) {
+                            WeiterButton { path = [.menu, .notfallGeschehen] }
+                        }
                 case .notfallGeschehen:
                     NotfallgeschehenView(befund: $protokoll.notfallGeschehen)
+                        .safeAreaInset(edge: .bottom) {
+                            WeiterButton { path = [.menu, .sampler] }
+                        }
                 case .abcde:
                     ABCDEUebersichtView(
                         protokoll: protokoll,
@@ -88,6 +100,9 @@ struct iPhoneContentView: View {
                         onDisability:  { path.append(.disability) },
                         onExposure:    { path.append(.exposure) }
                     )
+                    .safeAreaInset(edge: .bottom) {
+                        WeiterButton { path = [.menu, .verlauf] }
+                    }
                 case .airway:
                     AirwayView(befund: $protokoll.airway) {
                         path.removeAll { [.airway,.breathing,.circulation,.disability,.exposure].contains($0) }
@@ -115,18 +130,39 @@ struct iPhoneContentView: View {
                 case .sampler:
                     SAMPLERView(befund: $protokoll.sampler,
                                 medikamentFotos: $protokoll.medikamentFotos) { path.removeLast() }
+                        .safeAreaInset(edge: .bottom) {
+                            WeiterButton { path = [.menu, .diagnose] }
+                        }
                 case .sinnhaft:
                     SINNHAFTView(befund: $protokoll.sinnhaft) { path.removeLast() }
+                        .safeAreaInset(edge: .bottom) {
+                            WeiterButton { path = [.menu, .reanimation] }
+                        }
                 case .diagnose:
                     DiagnoseView(befund: $protokoll.diagnose)
+                        .safeAreaInset(edge: .bottom) {
+                            WeiterButton { path = [.menu, .abcde] }
+                        }
                 case .verlauf:
                     VerlaufView(messungen: $protokoll.verlaufMessungen) { path.removeLast() }
+                        .safeAreaInset(edge: .bottom) {
+                            WeiterButton { path = [.menu, .massnahmen] }
+                        }
                 case .massnahmen:
                     MassnahmenView(befund: $protokoll.massnahmen, onBack: { path.removeLast() })
+                        .safeAreaInset(edge: .bottom) {
+                            WeiterButton { path = [.menu, .sinnhaft] }
+                        }
                 case .reanimation:
                     ReanimationView(protokoll: $protokoll.reanimation) { path.append(.abschluss) }
+                        .safeAreaInset(edge: .bottom) {
+                            WeiterButton { path = [.menu, .bilder] }
+                        }
                 case .bilder:
                     BilderView(fotos: $protokoll.fotos) { path.removeLast() }
+                        .safeAreaInset(edge: .bottom) {
+                            WeiterButton(label: "Einsatz beenden") { path = [.menu, .abschluss] }
+                        }
                 case .abschluss:
                     AbschlussView(protokoll: protokoll, onBack: { path = [] })
                 case .settings:

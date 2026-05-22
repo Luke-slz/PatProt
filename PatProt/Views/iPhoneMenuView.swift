@@ -10,7 +10,7 @@ struct iPhoneMenuView: View {
     var body: some View {
         List {
             menuRow("Konfiguration",           icon: "gearshape",                       step: .konfiguration,    badge: konfigurationBadge)
-            menuRow("Einsatzzeiten",            icon: "clock",                           step: .einsatzzeiten,    badge: zeitenBadge)
+            menuRow("Einsatzzeiten",            icon: "clock",                           step: .einsatzzeiten,    badge: nil)
             menuRow("Patient",                  icon: "doc.on.clipboard",               step: .patient,          badge: patientBadge)
             menuRow("Notfallgeschehen",         icon: "bell.fill",                       step: .notfallGeschehen, badge: notfallBadge)
             menuRow("SAMPLER-Schema",           icon: "list.clipboard.fill",             step: .sampler,          badge: nil)
