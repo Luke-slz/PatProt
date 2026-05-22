@@ -24,6 +24,7 @@ struct ContentView: View {
 
 enum iPhoneAppStep: Hashable {
     case einsatzOrt
+    case menu
     case konfiguration
     case einsatzzeiten
     case patient
@@ -44,10 +45,8 @@ struct iPhoneContentView: View {
 
     @State private var isParsing = false
     @State private var parseError: String? = nil
-    @State private var showMenu = false
     @State private var zeigeArchiv = false
 
-    // AppStep kept as typealias for backward compatibility
     typealias AppStep = iPhoneAppStep
 
     var body: some View {
@@ -55,8 +54,7 @@ struct iPhoneContentView: View {
             StartView(
                 onNeu: {
                     protokoll.reset()
-                    path = [.einsatzOrt]
-                    showMenu = true
+                    path = [.menu]
                 },
                 onSettings: { path.append(.settings) },
                 onArchiv: { zeigeArchiv = true },
@@ -64,15 +62,17 @@ struct iPhoneContentView: View {
             )
             .navigationDestination(for: AppStep.self) { step in
                 switch step {
+                case .menu:
+                    iPhoneMenuView(path: $path)
+                        .environmentObject(protokoll)
                 case .einsatzOrt:
                     EinsatzOrtView(
                         protokoll: protokoll,
                         onWeiter: { path.append(.abcde) },
-                        onBack: { path.removeLast() },
-                        onMenuOpen: { showMenu = true }
+                        onBack: { path.removeLast() }
                     )
                 case .konfiguration:
-                    KonfigurationView(protokoll: protokoll, onMenuOpen: { showMenu = true })
+                    KonfigurationView(protokoll: protokoll)
                 case .einsatzzeiten:
                     EinsatzzeitenView(protokoll: protokoll)
                 case .patient:
@@ -136,23 +136,9 @@ struct iPhoneContentView: View {
         }
         .tint(Color("RDOrange"))
         .environmentObject(protokoll)
-        // iPhone-Menü
-        .sheet(isPresented: $showMenu) {
-            iPhoneMenuView(path: $path, isPresented: $showMenu, onEinsatzBeenden: {
-                protokoll.reset()
-                path = []
-            })
-            .environmentObject(protokoll)
-        }
         .sheet(isPresented: $zeigeArchiv) {
-            ArchivView(onLaden: { path = [.einsatzOrt] })
+            ArchivView(onLaden: { path = [.menu] })
                 .environmentObject(protokoll)
-        }
-        // Wenn user von einem Menü-Screen zurücknavigiert → Menü wieder zeigen
-        .onChange(of: path) { _, newPath in
-            if newPath == [.einsatzOrt] && !showMenu {
-                showMenu = true
-            }
         }
         // Bild aus Share-Sheet anderer Apps empfangen
         .onChange(of: appState.pendingImage) { _, image in
@@ -197,15 +183,13 @@ struct iPhoneContentView: View {
             await MainActor.run {
                 applyToCurrentProtokoll(daten)
                 isParsing = false
-                path = [.einsatzOrt]
+                path = [.menu]
             }
         }
     }
 
     private func applyToCurrentProtokoll(_ daten: ParsedMeldungDaten) {
         protokoll.einsatzOrt.einsatzNummer = daten.einsatzNummer
-        // daten.einsatzArt enthält den Code ("NOTF 01"), daten.stichwort die OCR-Diagnose.
-        // Im Modell: .stichwort = Code, .einsatzArt = Diagnose (so speichert der Picker).
         let code = daten.einsatzArt
         protokoll.einsatzOrt.stichwort  = code
         protokoll.einsatzOrt.einsatzArt = bestDiagnose(code: code, ocrDiagnose: daten.stichwort)
@@ -222,26 +206,18 @@ struct iPhoneContentView: View {
         protokoll.sampler.ereignis        = daten.ereignis
     }
 
-    // Findet die beste Diagnose aus der Tabelle anhand OCR-Text.
-    // Code-Einträge wie "NOTF 11" kommen mehrfach vor → Fuzzy-Match auf Beschreibung.
     private func bestDiagnose(code: String, ocrDiagnose: String) -> String {
         let tabellen = StichwortStore.laden()
-        // Normalisierter Code-Prefix (Leerzeichen entfernt) für flexiblen Vergleich
         let codeNorm = code.uppercased().replacingOccurrences(of: " ", with: "")
         let kandidaten = tabellen.filter {
             $0.stichwort.uppercased().replacingOccurrences(of: " ", with: "").hasPrefix(codeNorm)
         }
-
         guard !ocrDiagnose.isEmpty else {
-            // Kein OCR-Text: nur nehmen wenn eindeutig
             return kandidaten.count == 1 ? kandidaten[0].diagnose : ocrDiagnose
         }
-
-        // Wörter ≥3 Zeichen aus OCR als Suchbegriffe
         let suchWörter = ocrDiagnose.lowercased()
             .components(separatedBy: CharacterSet.alphanumerics.inverted)
             .filter { $0.count >= 3 }
-
         var besteWertung = 0
         var besteDiagnose: String? = nil
         for eintrag in kandidaten {
@@ -251,8 +227,6 @@ struct iPhoneContentView: View {
                 besteDiagnose = eintrag.diagnose
             }
         }
-        // Mindestens 1 Wort muss übereinstimmen, sonst OCR-Text behalten
         return besteWertung > 0 ? (besteDiagnose ?? ocrDiagnose) : ocrDiagnose
     }
-
 }

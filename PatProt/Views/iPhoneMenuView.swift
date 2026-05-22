@@ -1,78 +1,61 @@
 import SwiftUI
 
-// MARK: - iPhone Navigation Menu Sheet
+// MARK: - iPhone Navigation Menu (eigenständiger View im NavigationStack)
 
 struct iPhoneMenuView: View {
     @EnvironmentObject private var protokoll: EinsatzProtokoll
     @Binding var path: [iPhoneAppStep]
-    @Binding var isPresented: Bool
     var onEinsatzBeenden: (() -> Void)? = nil
 
-    @State private var pendingStep: iPhoneAppStep? = nil
-
     var body: some View {
-        NavigationStack {
-            List {
-                menuRow("Konfiguration",           icon: "gearshape",                     step: .konfiguration,    badge: konfigurationBadge)
-                menuRow("Einsatzzeiten",            icon: "clock",                         step: .einsatzzeiten,    badge: zeitenBadge)
-                menuRow("Rettungstechnische Daten", icon: "doc.on.clipboard",              step: .patient,          badge: patientBadge)
-                menuRow("Notfallgeschehen",         icon: "bell.fill",                     step: .notfallGeschehen, badge: notfallBadge)
-                menuRow("Diagnosen",                icon: "eye.fill",                      step: .diagnose,         badge: diagnoseBadge)
-                menuRow("ABCDE",                    icon: "message.fill",                  step: .abcde,            badge: befundeBadge)
-                menuRow("Verlauf und Therapie",     icon: "waveform.path.ecg",             step: .verlauf,          badge: verlaufBadge)
-                menuRow("Reanimation und Tod",      icon: "heart.fill",                    step: .reanimation,      badge: nil)
-                menuRow("Module",                   icon: "square.grid.2x2.fill",          step: .massnahmen,       badge: moduleBadge)
-                menuRow("Bilder & Dateien",         icon: "photo.stack",                   step: .bilder,           badge: bilderBadge)
+        List {
+            menuRow("Konfiguration",           icon: "gearshape",                       step: .konfiguration,    badge: konfigurationBadge)
+            menuRow("Einsatzzeiten",            icon: "clock",                           step: .einsatzzeiten,    badge: zeitenBadge)
+            menuRow("Rettungstechnische Daten", icon: "doc.on.clipboard",               step: .patient,          badge: patientBadge)
+            menuRow("Notfallgeschehen",         icon: "bell.fill",                       step: .notfallGeschehen, badge: notfallBadge)
+            menuRow("SAMPLER-Schema",           icon: "list.clipboard.fill",             step: .sampler,          badge: nil)
+            menuRow("Diagnosen",                icon: "eye.fill",                        step: .diagnose,         badge: diagnoseBadge)
+            menuRow("ABCDE",                    icon: "message.fill",                    step: .abcde,            badge: befundeBadge)
+            menuRow("Verlauf und Therapie",     icon: "waveform.path.ecg",              step: .verlauf,          badge: verlaufBadge)
+            menuRow("Maßnahmen",                icon: "square.grid.2x2.fill",           step: .massnahmen,       badge: moduleBadge)
+            menuRow("SINNHAFT-Schema",          icon: "bubble.left.and.bubble.right.fill", step: .sinnhaft,      badge: nil)
+            menuRow("Reanimation und Tod",      icon: "heart.fill",                      step: .reanimation,     badge: nil)
+            menuRow("Bilder & Dateien",         icon: "photo.stack",                     step: .bilder,          badge: bilderBadge)
 
-                Button {
-                    pendingStep = .abschluss
-                    isPresented = false
-                } label: {
-                    HStack(spacing: 14) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 7)
-                                .fill(Color.red.opacity(0.12))
-                                .frame(width: 34, height: 34)
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(.red)
-                                .font(.body)
-                        }
-                        Text("Einsatz beenden")
+            Button {
+                path.append(.abschluss)
+            } label: {
+                HStack(spacing: 14) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 7)
+                            .fill(Color.red.opacity(0.12))
+                            .frame(width: 34, height: 34)
+                        Image(systemName: "checkmark.circle.fill")
                             .foregroundColor(.red)
-                            .fontWeight(.medium)
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .foregroundColor(.secondary)
-                            .font(.caption)
+                            .font(.body)
                     }
-                    .padding(.vertical, 3)
+                    Text("Einsatz beenden")
+                        .foregroundColor(.red)
+                        .fontWeight(.medium)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .foregroundColor(.secondary)
+                        .font(.caption)
                 }
-            }
-            .listStyle(.plain)
-            .navigationTitle("Menü")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Schließen") { isPresented = false }
-                }
+                .padding(.vertical, 3)
             }
         }
-        .presentationDetents([.large])
-        .presentationDragIndicator(.visible)
-        .onChange(of: isPresented) { _, presented in
-            if !presented, let step = pendingStep {
-                path = [.einsatzOrt, step]
-                pendingStep = nil
-            }
-        }
+        .listStyle(.plain)
+        .navigationTitle("Menü")
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(false)
     }
 
     // MARK: - Menu Row
 
     private func menuRow(_ title: String, icon: String, step: iPhoneAppStep, badge: Int?) -> some View {
         Button {
-            pendingStep = step
-            isPresented = false
+            path.append(step)
         } label: {
             HStack(spacing: 14) {
                 ZStack {

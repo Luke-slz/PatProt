@@ -2,8 +2,6 @@ import SwiftUI
 
 struct KonfigurationView: View {
     @ObservedObject var protokoll: EinsatzProtokoll
-    var onMenuOpen: (() -> Void)? = nil
-
     @StateObject private var locationManager = LocationManager()
     @AppStorage("customFahrzeuge") private var customFahrzeugeJSON: String = "[]"
     @State private var zeigeStichwortPicker = false
@@ -92,15 +90,6 @@ struct KonfigurationView: View {
         }
         .navigationTitle("Konfiguration")
         .navigationBarTitleDisplayMode(.large)
-        .toolbar {
-            if let openMenu = onMenuOpen {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: openMenu) {
-                        Image(systemName: "line.3.horizontal").font(.title3)
-                    }
-                }
-            }
-        }
         .onChange(of: locationManager.address) { _, newAddress in
             if !newAddress.isEmpty { protokoll.einsatzOrt.adresse = newAddress }
         }
