@@ -24,10 +24,13 @@ struct ContentView: View {
 
 enum iPhoneAppStep: Hashable {
     case einsatzOrt
+    case konfiguration
+    case einsatzzeiten
+    case patient
     case notfallGeschehen
     case abcde
     case airway, breathing, circulation, disability, exposure
-    case sampler, sinnhaft, diagnose, verlauf, massnahmen, medikamente, reanimation
+    case sampler, sinnhaft, diagnose, verlauf, massnahmen, reanimation
     case bilder
     case abschluss, settings
 }
@@ -67,31 +70,22 @@ struct iPhoneContentView: View {
                         onBack: { path.removeLast() },
                         onMenuOpen: { showMenu = true }
                     )
+                case .konfiguration:
+                    KonfigurationView(protokoll: protokoll, onMenuOpen: { showMenu = true })
+                case .einsatzzeiten:
+                    EinsatzzeitenView(protokoll: protokoll)
+                case .patient:
+                    PatientView(protokoll: protokoll)
                 case .notfallGeschehen:
-                    NotfallgeschehenView(
-                        befund: $protokoll.notfallGeschehen,
-                        onWeiter: { path.append(.abcde) },
-                        onBack: { path.removeLast() }
-                    )
+                    NotfallgeschehenView(befund: $protokoll.notfallGeschehen)
                 case .abcde:
                     ABCDEUebersichtView(
                         protokoll: protokoll,
-                        onWeiter:      { path.append(.abschluss) },
                         onAirway:      { path.append(.airway) },
                         onBreathing:   { path.append(.breathing) },
                         onCirculation: { path.append(.circulation) },
                         onDisability:  { path.append(.disability) },
-                        onExposure:    { path.append(.exposure) },
-                        onNotfall:     { path.append(.notfallGeschehen) },
-                        onSampler:     { path.append(.sampler) },
-                        onSinnhaft:    { path.append(.sinnhaft) },
-                        onDiagnose:    { path.append(.diagnose) },
-                        onVerlauf:     { path.append(.verlauf) },
-                        onMassnahmen:  { path.append(.massnahmen) },
-                        onMedikamente: { path.append(.medikamente) },
-                        onReanimation: { path.append(.reanimation) },
-                        onBilder:      { path.append(.bilder) },
-                        onZurueck:     { path.removeLast() }
+                        onExposure:    { path.append(.exposure) }
                     )
                 case .airway:
                     AirwayView(befund: $protokoll.airway) {
@@ -123,13 +117,11 @@ struct iPhoneContentView: View {
                 case .sinnhaft:
                     SINNHAFTView(befund: $protokoll.sinnhaft) { path.removeLast() }
                 case .diagnose:
-                    DiagnoseView(befund: $protokoll.diagnose, onBack: { path.removeLast() })
+                    DiagnoseView(befund: $protokoll.diagnose)
                 case .verlauf:
                     VerlaufView(messungen: $protokoll.verlaufMessungen) { path.removeLast() }
                 case .massnahmen:
                     MassnahmenView(befund: $protokoll.massnahmen, onBack: { path.removeLast() })
-                case .medikamente:
-                    MedikamenteView(medikamente: $protokoll.medikamente, onBack: { path.removeLast() })
                 case .reanimation:
                     ReanimationView(protokoll: $protokoll.reanimation) { path.append(.abschluss) }
                 case .bilder:
@@ -145,7 +137,11 @@ struct iPhoneContentView: View {
         .environmentObject(protokoll)
         // iPhone-Menü
         .sheet(isPresented: $showMenu) {
-            iPhoneMenuView(path: $path, isPresented: $showMenu)
+            iPhoneMenuView(path: $path, isPresented: $showMenu, onEinsatzBeenden: {
+                protokoll.reset()
+                path = []
+            })
+            .environmentObject(protokoll)
         }
         .sheet(isPresented: $zeigeArchiv) {
             ArchivView(onLaden: { path = [.einsatzOrt] })
