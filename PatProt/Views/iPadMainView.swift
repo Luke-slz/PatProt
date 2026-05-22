@@ -28,7 +28,6 @@ struct iPadMainView: View {
         case diagnose
         case verlauf
         case massnahmen
-        case medikamente
         case reanimation
         case bilder
         case abschluss
@@ -222,13 +221,17 @@ struct iPadMainView: View {
 
             // Einsatzdaten
             Section("Einsatzdaten") {
-                iPadNavRow(icon: "map.fill", farbe: Color("RDOrange"),
+                iPadNavRow(icon: "clock", farbe: .primary,
+                           titel: "Einsatzzeiten",
+                           untertitel: einsatzzeitenUntertitel(),
+                           section: .einsatzOrt)
+                iPadNavRow(icon: "doc.on.clipboard", farbe: .primary,
                            titel: "Rettungstechnische Daten",
                            untertitel: protokoll.einsatzOrt.adresse.isEmpty
                                ? "Einsatzort & Patient"
                                : protokoll.einsatzOrt.adresse,
                            section: .einsatzOrt)
-                iPadNavRow(icon: "exclamationmark.bubble.fill", farbe: .red,
+                iPadNavRow(icon: "bell.fill", farbe: .primary,
                            titel: "Notfallgeschehen",
                            untertitel: protokoll.notfallGeschehen.erstbefundVorOrt.isEmpty
                                ? "Erstbefund & Notfallgeschehen"
@@ -236,8 +239,8 @@ struct iPadMainView: View {
                            section: .notfallGeschehen)
             }
 
-            // Befunderhebung
-            Section("Befunderhebung") {
+            // Befunde (ABCDE)
+            Section("Befunde") {
                 ABCDESidebarZeile(buchstabe: "A", farbe: .orange,
                                   titel: "Airway",
                                   status: protokoll.airway.status,
@@ -260,53 +263,35 @@ struct iPadMainView: View {
                                   section: .exposure)
             }
 
-            // Anamnese
-            Section("Anamnese") {
-                iPadNavRow(icon: "list.clipboard.fill", farbe: .teal,
-                           titel: "SAMPLER",
-                           untertitel: "Anamnese & Vorgeschichte",
-                           section: .sampler)
-            }
-
             // Diagnose & Verlauf
-            Section("Diagnose & Verlauf") {
-                iPadNavRow(icon: "slider.horizontal.3", farbe: .blue,
-                           titel: "Diagnose (Trichter)",
+            Section("Diagnose") {
+                iPadNavRow(icon: "eye.fill", farbe: .primary,
+                           titel: "Diagnosen",
                            untertitel: diagnoseUntertitel(),
                            section: .diagnose)
-                iPadNavRow(icon: "waveform.path.ecg", farbe: .orange,
-                           titel: "Verlauf & Therapie",
+                iPadNavRow(icon: "waveform.path.ecg", farbe: .primary,
+                           titel: "Verlauf und Therapie",
                            untertitel: protokoll.verlaufMessungen.isEmpty
                                ? "Noch keine Messungen"
                                : "\(protokoll.verlaufMessungen.count) Messung(en)",
                            section: .verlauf)
             }
 
-            // Therapie
-            Section("Therapie") {
-                iPadNavRow(icon: "cross.circle.fill", farbe: Color("RDOrange"),
-                           titel: "Maßnahmen",
-                           untertitel: massnahmenUntertitel(),
-                           section: .massnahmen)
-                iPadNavRow(icon: "pills.fill", farbe: .green,
-                           titel: "Medikamente",
-                           untertitel: protokoll.medikamente.isEmpty
-                               ? "Keine erfasst"
-                               : "\(protokoll.medikamente.count) Eintrag/Einträge",
-                           section: .medikamente)
-            }
-
-            // Übergabe
-            Section("Übergabe") {
+            // Module & Therapie
+            Section("Module") {
+                iPadNavRow(icon: "list.clipboard.fill", farbe: .teal,
+                           titel: "SAMPLER",
+                           untertitel: "Anamnese & Vorgeschichte",
+                           section: .sampler)
                 iPadNavRow(icon: "bubble.left.and.bubble.right.fill", farbe: .indigo,
                            titel: "SINNHAFT",
                            untertitel: "Strukturiertes Übergabeschema",
                            section: .sinnhaft)
-            }
-
-            // Dokumentation
-            Section("Dokumentation") {
-                iPadNavRow(icon: "camera.fill", farbe: .purple,
+                iPadNavRow(icon: "square.grid.2x2.fill", farbe: .primary,
+                           titel: "Maßnahmen",
+                           untertitel: massnahmenUntertitel(),
+                           section: .massnahmen)
+                iPadNavRow(icon: "photo.stack", farbe: .primary,
                            titel: "Bilder & Dateien",
                            untertitel: protokoll.fotos.isEmpty
                                ? "Keine Fotos"
@@ -314,25 +299,21 @@ struct iPadMainView: View {
                            section: .bilder)
             }
 
-            // Reanimation
-            Section("Reanimation") {
-                iPadNavRow(icon: "heart.slash.fill",
-                           farbe: protokoll.reanimationAktiv ? .red : .secondary,
-                           titel: "Reanimation",
+            // Abschluss
+            Section("Abschluss") {
+                iPadNavRow(icon: "heart.fill",
+                           farbe: protokoll.reanimationAktiv ? .red : .primary,
+                           titel: "Reanimation und Tod",
                            untertitel: protokoll.reanimationAktiv
                                ? "Protokoll aktiv"
                                : "Nicht durchgeführt",
                            section: .reanimation)
-            }
-
-            // Abschluss
-            Section("Abschluss") {
-                iPadNavRow(icon: "checkmark.seal.fill", farbe: .green,
-                           titel: "Abschluss & PDF",
+                iPadNavRow(icon: "list.bullet.rectangle.portrait", farbe: .primary,
+                           titel: "Ergebnis",
                            untertitel: "Einsatz abschließen und exportieren",
                            section: .abschluss)
-                iPadNavRow(icon: "gearshape.fill", farbe: .gray,
-                           titel: "Einstellungen",
+                iPadNavRow(icon: "gearshape.fill", farbe: .secondary,
+                           titel: "Konfiguration",
                            untertitel: "",
                            section: .settings)
             }
@@ -386,11 +367,7 @@ struct iPadMainView: View {
             }
         case .notfallGeschehen:
             NavigationStack {
-                NotfallgeschehenView(
-                    befund: $protokoll.notfallGeschehen,
-                    onWeiter: { selectedSection = .airway },
-                    onBack: { selectedSection = .einsatzOrt }
-                )
+                NotfallgeschehenView(befund: $protokoll.notfallGeschehen)
             }
         case .airway:
             NavigationStack {
@@ -424,7 +401,7 @@ struct iPadMainView: View {
             }
         case .diagnose:
             NavigationStack {
-                DiagnoseView(befund: $protokoll.diagnose, onBack: { selectedSection = .sinnhaft })
+                DiagnoseView(befund: $protokoll.diagnose)
             }
         case .verlauf:
             NavigationStack {
@@ -433,10 +410,6 @@ struct iPadMainView: View {
         case .massnahmen:
             NavigationStack {
                 MassnahmenView(befund: $protokoll.massnahmen, onBack: { selectedSection = .diagnose })
-            }
-        case .medikamente:
-            NavigationStack {
-                MedikamenteView(medikamente: $protokoll.medikamente, onBack: { selectedSection = .massnahmen })
             }
         case .reanimation:
             NavigationStack {
@@ -448,7 +421,7 @@ struct iPadMainView: View {
             }
         case .abschluss:
             NavigationStack {
-                AbschlussView(protokoll: protokoll, onBack: { selectedSection = .medikamente })
+                AbschlussView(protokoll: protokoll, onBack: { selectedSection = .massnahmen })
             }
         case .settings:
             NavigationStack {
@@ -504,6 +477,17 @@ struct iPadMainView: View {
 
     // MARK: - Hilfsfunktionen
 
+    private func einsatzzeitenUntertitel() -> String {
+        let eo = protokoll.einsatzOrt
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        formatter.dateStyle = .none
+        if let alarm = eo.alarmzeit {
+            return "Alarm \(formatter.string(from: alarm))"
+        }
+        return "Zeiten noch nicht erfasst"
+    }
+
     private func diagnoseUntertitel() -> String {
         let fuehrend = protokoll.diagnose.verdachtsdiagnosen.first { $0.wahrscheinlichkeit == .fuehrend }
         if let f = fuehrend { return "V.a. \(f.name)" }
@@ -515,12 +499,12 @@ struct iPadMainView: View {
     private func massnahmenUntertitel() -> String {
         let m = protokoll.massnahmen
         var aktive: [String] = []
-        if m.intubationRD    { aktive.append("Intubation") }
+        if m.sauerstoffgabe  { aktive.append("O₂") }
+        if m.maskenbeatmung  { aktive.append("Maskenbeatmung") }
+        if m.supraglottisch  { aktive.append("Supraglottisch") }
         if m.peripherVenoes  { aktive.append("IV-Zugang") }
-        if m.intraossaer     { aktive.append("IO") }
-        if m.cpapNiv         { aktive.append("CPAP/NIV") }
-        if m.kardioversion   { aktive.append("Kardioversion") }
         if m.vakuummatratze  { aktive.append("Vakuummatratze") }
+        if m.tourniquet      { aktive.append("Tourniquet") }
         return aktive.isEmpty ? "Noch nicht erfasst" : aktive.joined(separator: ", ")
     }
 }
