@@ -12,6 +12,7 @@ import SwiftUI
 
 struct SAMPLERView: View {
     @Binding var befund: SAMPLERBefund
+    @Binding var medikamentFotos: [FotoEintrag]
     var onZurueck: () -> Void
 
     var body: some View {
@@ -21,6 +22,7 @@ struct SAMPLERView: View {
                     Text("S — Symptome").font(.subheadline.bold())
                     Text("Hauptbeschwerde des Patienten").font(.caption).foregroundColor(.secondary)
                     TextEditor(text: $befund.symptome).frame(minHeight: 70)
+                    Text("→ PDF S. 1 · SAMPLER · S").font(.caption2).foregroundColor(.secondary)
                 }
             }
             Section {
@@ -28,13 +30,14 @@ struct SAMPLERView: View {
                     Text("A — Allergien").font(.subheadline.bold())
                     Text("Bekannte Allergien und Unverträglichkeiten").font(.caption).foregroundColor(.secondary)
                     TextEditor(text: $befund.allergien).frame(minHeight: 60)
+                    Text("→ PDF S. 1 · SAMPLER · A").font(.caption2).foregroundColor(.secondary)
                 }
             }
             Section {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("M — Medikamente").font(.subheadline.bold())
-                    Text("Aktuelle Medikation").font(.caption).foregroundColor(.secondary)
-                    TextEditor(text: $befund.medikamente).frame(minHeight: 70)
+                    Text("M — Medikamente (Foto)").font(.subheadline.bold())
+                    Text("Aktuelle Medikation als Foto dokumentieren").font(.caption).foregroundColor(.secondary)
+                    MedikamentFotoSektion(fotos: $medikamentFotos)
                 }
             }
             Section {
@@ -42,6 +45,7 @@ struct SAMPLERView: View {
                     Text("P — Patientenvorgeschichte").font(.subheadline.bold())
                     Text("Relevante Vorerkrankungen und Operationen").font(.caption).foregroundColor(.secondary)
                     TextEditor(text: $befund.patientenVorgeschichte).frame(minHeight: 70)
+                    Text("→ PDF S. 1 · SAMPLER · P").font(.caption2).foregroundColor(.secondary)
                 }
             }
             Section {
@@ -49,6 +53,7 @@ struct SAMPLERView: View {
                     Text("L — Letzte Mahlzeit").font(.subheadline.bold())
                     Text("Wann und was zuletzt gegessen/getrunken").font(.caption).foregroundColor(.secondary)
                     TextField("z.B. heute Morgen, Brot und Kaffee", text: $befund.letztesMahl)
+                    Text("→ PDF S. 1 · SAMPLER · L").font(.caption2).foregroundColor(.secondary)
                 }
             }
             Section {
@@ -56,6 +61,7 @@ struct SAMPLERView: View {
                     Text("E — Ereignis").font(.subheadline.bold())
                     Text("Was hat zum Notfall geführt?").font(.caption).foregroundColor(.secondary)
                     TextEditor(text: $befund.ereignis).frame(minHeight: 70)
+                    Text("→ PDF S. 1 · SAMPLER · E").font(.caption2).foregroundColor(.secondary)
                 }
             }
             Section {
@@ -63,6 +69,7 @@ struct SAMPLERView: View {
                     Text("R — Risikofaktoren").font(.subheadline.bold())
                     Text("Bekannte Risikofaktoren").font(.caption).foregroundColor(.secondary)
                     TextEditor(text: $befund.risikofaktoren).frame(minHeight: 60)
+                    Text("→ PDF S. 1 · SAMPLER · R").font(.caption2).foregroundColor(.secondary)
                 }
             }
         }
