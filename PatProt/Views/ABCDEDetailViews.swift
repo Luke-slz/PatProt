@@ -105,6 +105,9 @@ struct AirwayView: View {
             Section {
                 TextEditor(text: $befund.freitext)
                     .frame(minHeight: 80)
+                Text("→ PDF S. 1 · ABCDE · A")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
             } header: { Text("Freitext / Notizen") }
 
             Section {
@@ -243,6 +246,9 @@ struct BreathingView: View {
 
             Section {
                 TextEditor(text: $befund.freitext).frame(minHeight: 80)
+                Text("→ PDF S. 1 · ABCDE · B")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
             } header: { Text("Freitext / Notizen") }
 
         }
@@ -399,6 +405,9 @@ struct CirculationView: View {
 
             Section {
                 TextEditor(text: $befund.freitext).frame(minHeight: 80)
+                Text("→ PDF S. 1 · ABCDE · C")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
             } header: { Text("Freitext / Notizen") }
 
         }
@@ -559,6 +568,9 @@ struct DisabilityView: View {
 
             Section {
                 TextEditor(text: $befund.freitext).frame(minHeight: 80)
+                Text("→ PDF S. 1 · ABCDE · D")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
             } header: { Text("Freitext / Notizen") }
 
         }
@@ -698,6 +710,9 @@ struct ExposureView: View {
 
             Section {
                 TextEditor(text: $befund.freitext).frame(minHeight: 80)
+                Text("→ PDF S. 1 · ABCDE · E")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
             } header: { Text("Freitext / Notizen") }
 
         }
