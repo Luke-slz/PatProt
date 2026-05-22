@@ -5,65 +5,76 @@ import SwiftUI
 struct iPhoneMenuView: View {
     @EnvironmentObject private var protokoll: EinsatzProtokoll
     @Binding var path: [iPhoneAppStep]
-    var onEinsatzBeenden: (() -> Void)? = nil
 
     var body: some View {
         List {
-            menuRow("Konfiguration",           icon: "gearshape",                       step: .konfiguration,    badge: konfigurationBadge)
-            menuRow("Einsatzzeiten",            icon: "clock",                           step: .einsatzzeiten,    badge: nil)
-            menuRow("Patient",                  icon: "doc.on.clipboard",               step: .patient,          badge: patientBadge)
-            menuRow("Notfallgeschehen",         icon: "bell.fill",                       step: .notfallGeschehen, badge: notfallBadge)
-            menuRow("SAMPLER-Schema",           icon: "list.clipboard.fill",             step: .sampler,          badge: nil)
-            menuRow("Diagnosen",                icon: "eye.fill",                        step: .diagnose,         badge: diagnoseBadge)
-            menuRow("ABCDE",                    icon: "message.fill",                    step: .abcde,            badge: befundeBadge)
-            menuRow("Verlauf und Therapie",     icon: "waveform.path.ecg",              step: .verlauf,          badge: verlaufBadge)
-            menuRow("Maßnahmen",                icon: "square.grid.2x2.fill",           step: .massnahmen,       badge: moduleBadge)
-            menuRow("SINNHAFT-Schema",          icon: "bubble.left.and.bubble.right.fill", step: .sinnhaft,      badge: nil)
-            menuRow("Reanimation und Tod",      icon: "heart.fill",                      step: .reanimation,     badge: nil)
-            menuRow("Bilder & Dateien",         icon: "photo.stack",                     step: .bilder,          badge: bilderBadge)
+            // Einsatz-Basisdaten
+            Section {
+                menuRow("Konfiguration",    icon: "gearshape.fill",         color: .gray,   step: .konfiguration,    badge: konfigurationBadge)
+                menuRow("Einsatzzeiten",    icon: "clock.fill",              color: .blue,   step: .einsatzzeiten,    badge: nil)
+                menuRow("Patient",          icon: "person.fill",             color: .teal,   step: .patient,          badge: patientBadge)
+            }
 
-            Button {
-                path.append(.abschluss)
-            } label: {
-                HStack(spacing: 14) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 7)
-                            .fill(Color.red.opacity(0.12))
-                            .frame(width: 34, height: 34)
-                        Image(systemName: "checkmark.circle.fill")
+            // Klinische Erfassung
+            Section {
+                menuRow("Notfallgeschehen", icon: "bell.fill",               color: .orange, step: .notfallGeschehen, badge: notfallBadge)
+                menuRow("ABCDE",            icon: "staroflife.fill",         color: .red,    step: .abcde,            badge: befundeBadge)
+                menuRow("SAMPLER-Schema",   icon: "list.clipboard.fill",     color: .indigo, step: .sampler,          badge: nil)
+                menuRow("Diagnosen",        icon: "eye.fill",                color: .purple, step: .diagnose,         badge: diagnoseBadge)
+            }
+
+            // Verlauf & Therapie
+            Section {
+                menuRow("Verlauf und Therapie",  icon: "waveform.path.ecg",              color: Color(.systemGreen),  step: .verlauf,    badge: verlaufBadge)
+                menuRow("Maßnahmen",             icon: "cross.fill",                      color: .green,               step: .massnahmen, badge: moduleBadge)
+                menuRow("SINNHAFT-Schema",       icon: "bubble.left.and.bubble.right.fill", color: .cyan,             step: .sinnhaft,   badge: nil)
+                menuRow("Reanimation und Tod",   icon: "heart.fill",                      color: .red,                 step: .reanimation,badge: nil)
+                menuRow("Bilder & Dateien",      icon: "photo.stack.fill",               color: .brown,               step: .bilder,     badge: bilderBadge)
+            }
+
+            // Abschluss
+            Section {
+                Button {
+                    path.append(.abschluss)
+                } label: {
+                    HStack(spacing: 14) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.red.opacity(0.15))
+                                .frame(width: 36, height: 36)
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.red)
+                                .font(.body)
+                        }
+                        Text("Einsatz beenden")
                             .foregroundColor(.red)
-                            .font(.body)
+                            .fontWeight(.semibold)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(Color(.systemGray3))
+                            .font(.caption)
                     }
-                    Text("Einsatz beenden")
-                        .foregroundColor(.red)
-                        .fontWeight(.medium)
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .foregroundColor(.secondary)
-                        .font(.caption)
                 }
-                .padding(.vertical, 3)
             }
         }
-        .listStyle(.plain)
+        .listStyle(.insetGrouped)
         .navigationTitle("Menü")
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(false)
+        .navigationBarTitleDisplayMode(.large)
     }
 
     // MARK: - Menu Row
 
-    private func menuRow(_ title: String, icon: String, step: iPhoneAppStep, badge: Int?) -> some View {
+    private func menuRow(_ title: String, icon: String, color: Color, step: iPhoneAppStep, badge: Int?) -> some View {
         Button {
             path.append(step)
         } label: {
             HStack(spacing: 14) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 7)
-                        .fill(Color(.systemGray5))
-                        .frame(width: 34, height: 34)
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(color.opacity(0.15))
+                        .frame(width: 36, height: 36)
                     Image(systemName: icon)
-                        .foregroundColor(.primary)
+                        .foregroundColor(color)
                         .font(.body)
                 }
                 Text(title)
@@ -76,7 +87,7 @@ struct iPhoneMenuView: View {
                         .foregroundColor(.white)
                         .padding(.horizontal, 7)
                         .padding(.vertical, 3)
-                        .background(Color.red)
+                        .background(Color("RDOrange"))
                         .clipShape(Capsule())
                 } else {
                     Image(systemName: "chevron.right")
@@ -84,21 +95,10 @@ struct iPhoneMenuView: View {
                         .font(.caption)
                 }
             }
-            .padding(.vertical, 3)
         }
     }
 
     // MARK: - Badge Berechnungen
-
-    private var zeitenBadge: Int? {
-        let eo = protokoll.einsatzOrt
-        var count = 0
-        if eo.alarmzeit != nil          { count += 1 }
-        if eo.abfahrtzeit != nil        { count += 1 }
-        if eo.ankunftzeit != nil        { count += 1 }
-        if eo.krankenHausAnkunft != nil { count += 1 }
-        return count > 0 ? count : nil
-    }
 
     private var konfigurationBadge: Int? {
         let eo = protokoll.einsatzOrt

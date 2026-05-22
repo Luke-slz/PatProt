@@ -195,14 +195,10 @@ struct EinsatzOrtView: View {
 
             // MARK: Besatzung
             Section {
-                BesatzungsFeld(label: "Sanitäter 1", text: $protokoll.besatzung.sanitaeter1,
-                               personal: gespeichertesPersonal)
-                BesatzungsFeld(label: "Sanitäter 2", text: $protokoll.besatzung.sanitaeter2,
-                               personal: gespeichertesPersonal)
-                BesatzungsFeld(label: "Sanitäter 3", text: $protokoll.besatzung.sanitaeter3,
-                               personal: gespeichertesPersonal)
-                BesatzungsFeld(label: "Sanitäter 4", text: $protokoll.besatzung.sanitaeter4,
-                               personal: gespeichertesPersonal)
+                BesatzungsFeld(label: "Sanitäter 1", text: $protokoll.besatzung.sanitaeter1)
+                BesatzungsFeld(label: "Sanitäter 2", text: $protokoll.besatzung.sanitaeter2)
+                BesatzungsFeld(label: "Sanitäter 3", text: $protokoll.besatzung.sanitaeter3)
+                BesatzungsFeld(label: "Sanitäter 4", text: $protokoll.besatzung.sanitaeter4)
             } header: {
                 Label("Besatzung", systemImage: "person.2")
             } footer: {
@@ -294,8 +290,12 @@ struct EinsatzOrtView: View {
 struct BesatzungsFeld: View {
     let label: String
     @Binding var text: String
-    let personal: [String]
+    @AppStorage("gespeichertesPersonal") private var personalJSON: String = "[]"
     @State private var zeigePickerSheet = false
+
+    private var personal: [String] {
+        (try? JSONDecoder().decode([String].self, from: Data(personalJSON.utf8))) ?? []
+    }
 
     var body: some View {
         HStack {

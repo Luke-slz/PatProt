@@ -15,6 +15,9 @@ struct SAMPLERView: View {
     @Binding var medikamentFotos: [FotoEintrag]
     var onZurueck: () -> Void
 
+    @State private var zeigeBMPScanner = false
+    @State private var scanFehler: String? = nil
+
     var body: some View {
         Form {
             Section {
@@ -35,8 +38,32 @@ struct SAMPLERView: View {
             }
             Section {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("M — Medikamente (Foto)").font(.subheadline.bold())
-                    Text("Aktuelle Medikation als Foto dokumentieren").font(.caption).foregroundColor(.secondary)
+                    Text("M — Medikamente").font(.subheadline.bold())
+                    Text("Aktuelle Medikation (Text und/oder Foto)").font(.caption).foregroundColor(.secondary)
+                    TextField("z.B. Metoprolol 50mg, ASS 100mg", text: $befund.medikamente, axis: .vertical)
+                        .lineLimit(3...6)
+                    if let fehler = scanFehler {
+                        Text(fehler).font(.caption).foregroundColor(.red)
+                    }
+                    Button {
+                        zeigeBMPScanner = true
+                    } label: {
+                        Label("Medikationsplan QR scannen", systemImage: "qrcode.viewfinder")
+                            .font(.subheadline)
+                    }
+                    .sheet(isPresented: $zeigeBMPScanner) {
+                        BMPScannerSheet { payload in
+                            if let text = BMPParser.medikamenteText(payload) {
+                                befund.medikamente = text
+                                scanFehler = nil
+                            } else {
+                                scanFehler = "Kein gültiger BMP-Medikationsplan erkannt."
+                            }
+                        }
+                    }
+                    Text("→ PDF S. 1 · SAMPLER · M").font(.caption2).foregroundColor(.secondary)
+                    Divider()
+                    Text("Medikamentenplan als Foto").font(.caption).foregroundColor(.secondary)
                     MedikamentFotoSektion(fotos: $medikamentFotos)
                 }
             }
@@ -73,20 +100,9 @@ struct SAMPLERView: View {
                 }
             }
         }
+        .keyboardDismissToolbar()
         .navigationTitle("SAMPLER")
-        .navigationBarBackButtonHidden(true)
-        .safeAreaInset(edge: .bottom) {
-            HStack(spacing: 12) {
-                Button(action: onZurueck) {
-                    Label("Zurück", systemImage: "chevron.left.circle.fill")
-                        .frame(maxWidth: .infinity).padding()
-                }
-                .buttonStyle(.bordered)
-                .tint(Color("RDOrange"))
-            }
-            .padding([.horizontal, .bottom])
-            .background(.bar)
-        }
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

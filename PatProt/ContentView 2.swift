@@ -89,7 +89,7 @@ struct iPhoneContentView: View {
                 case .notfallGeschehen:
                     NotfallgeschehenView(befund: $protokoll.notfallGeschehen)
                         .safeAreaInset(edge: .bottom) {
-                            WeiterButton { path = [.menu, .sampler] }
+                            WeiterButton { path = [.menu, .abcde] }
                         }
                 case .abcde:
                     ABCDEUebersichtView(
@@ -101,7 +101,7 @@ struct iPhoneContentView: View {
                         onExposure:    { path.append(.exposure) }
                     )
                     .safeAreaInset(edge: .bottom) {
-                        WeiterButton { path = [.menu, .verlauf] }
+                        WeiterButton { path = [.menu, .sampler] }
                     }
                 case .airway:
                     AirwayView(befund: $protokoll.airway) {
@@ -133,6 +133,7 @@ struct iPhoneContentView: View {
                         .safeAreaInset(edge: .bottom) {
                             WeiterButton { path = [.menu, .diagnose] }
                         }
+
                 case .sinnhaft:
                     SINNHAFTView(befund: $protokoll.sinnhaft) { path.removeLast() }
                         .safeAreaInset(edge: .bottom) {
@@ -141,7 +142,7 @@ struct iPhoneContentView: View {
                 case .diagnose:
                     DiagnoseView(befund: $protokoll.diagnose)
                         .safeAreaInset(edge: .bottom) {
-                            WeiterButton { path = [.menu, .abcde] }
+                            WeiterButton { path = [.menu, .verlauf] }
                         }
                 case .verlauf:
                     VerlaufView(messungen: $protokoll.verlaufMessungen) { path.removeLast() }
