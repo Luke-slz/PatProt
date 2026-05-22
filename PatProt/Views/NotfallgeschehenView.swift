@@ -39,14 +39,6 @@ struct NotfallgeschehenView: View {
                         wert: befund.preEmergencyStatus.isEmpty ? nil : befund.preEmergencyStatus
                     )
                 }
-                NavigationLink {
-                    NacaScoreView(score: $befund.nacaScoreWert)
-                } label: {
-                    NfgZeile(
-                        titel: "NACA-Score",
-                        wert: befund.nacaScoreWert.map { "NACA \($0.rawValue)" }
-                    )
-                }
             }
 
             Section {
@@ -226,37 +218,6 @@ struct PreEmergencyStatusView: View {
             }
         }
         .navigationTitle("Pre Emergency Status")
-        .navigationBarTitleDisplayMode(.inline)
-    }
-}
-
-// MARK: - NACA-Score
-
-struct NacaScoreView: View {
-    @Binding var score: NacaScore?
-
-    var body: some View {
-        Form {
-            Section {
-                ForEach(NacaScore.allCases, id: \.self) { naca in
-                    Button {
-                        score = (score == naca) ? nil : naca
-                    } label: {
-                        HStack {
-                            Text(naca.beschreibung).foregroundColor(.primary)
-                            Spacer()
-                            if score == naca {
-                                Image(systemName: "checkmark").foregroundColor(Color("RDOrange"))
-                            }
-                        }
-                    }
-                }
-            } footer: {
-                Text("Tippe erneut um die Auswahl aufzuheben.")
-                    .font(.caption)
-            }
-        }
-        .navigationTitle("NACA-Score")
         .navigationBarTitleDisplayMode(.inline)
     }
 }

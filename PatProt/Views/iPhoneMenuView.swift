@@ -9,32 +9,31 @@ struct iPhoneMenuView: View {
     var onEinsatzBeenden: (() -> Void)? = nil
 
     @State private var pendingStep: iPhoneAppStep? = nil
-    @State private var zeigeBeendenAlert = false
 
     var body: some View {
         NavigationStack {
             List {
-                menuRow("Konfiguration",           icon: "gearshape",                     step: .konfiguration,   badge: konfigurationBadge)
-                menuRow("Einsatzzeiten",            icon: "clock",                         step: .einsatzzeiten,   badge: zeitenBadge)
-                menuRow("Rettungstechnische Daten", icon: "doc.on.clipboard",              step: .patient,         badge: patientBadge)
+                menuRow("Konfiguration",           icon: "gearshape",                     step: .konfiguration,    badge: konfigurationBadge)
+                menuRow("Einsatzzeiten",            icon: "clock",                         step: .einsatzzeiten,    badge: zeitenBadge)
+                menuRow("Rettungstechnische Daten", icon: "doc.on.clipboard",              step: .patient,          badge: patientBadge)
                 menuRow("Notfallgeschehen",         icon: "bell.fill",                     step: .notfallGeschehen, badge: notfallBadge)
-                menuRow("Diagnosen",                icon: "eye.fill",                      step: .diagnose,        badge: diagnoseBadge)
-                menuRow("Befunde",                  icon: "message.fill",                  step: .abcde,           badge: befundeBadge)
-                menuRow("Verlauf und Therapie",     icon: "waveform.path.ecg",             step: .verlauf,         badge: verlaufBadge)
-                menuRow("Reanimation und Tod",      icon: "heart.fill",                    step: .reanimation,     badge: nil)
-                menuRow("Ergebnis",                 icon: "list.bullet.rectangle.portrait", step: .abschluss,      badge: nil)
-                menuRow("Module",                   icon: "square.grid.2x2.fill",          step: .massnahmen,      badge: moduleBadge)
-                menuRow("Bilder & Dateien",         icon: "photo.stack",                   step: .bilder,          badge: bilderBadge)
+                menuRow("Diagnosen",                icon: "eye.fill",                      step: .diagnose,         badge: diagnoseBadge)
+                menuRow("ABCDE",                    icon: "message.fill",                  step: .abcde,            badge: befundeBadge)
+                menuRow("Verlauf und Therapie",     icon: "waveform.path.ecg",             step: .verlauf,          badge: verlaufBadge)
+                menuRow("Reanimation und Tod",      icon: "heart.fill",                    step: .reanimation,      badge: nil)
+                menuRow("Module",                   icon: "square.grid.2x2.fill",          step: .massnahmen,       badge: moduleBadge)
+                menuRow("Bilder & Dateien",         icon: "photo.stack",                   step: .bilder,           badge: bilderBadge)
 
                 Button {
-                    zeigeBeendenAlert = true
+                    pendingStep = .abschluss
+                    isPresented = false
                 } label: {
                     HStack(spacing: 14) {
                         ZStack {
                             RoundedRectangle(cornerRadius: 7)
                                 .fill(Color.red.opacity(0.12))
                                 .frame(width: 34, height: 34)
-                            Image(systemName: "xmark.circle.fill")
+                            Image(systemName: "checkmark.circle.fill")
                                 .foregroundColor(.red)
                                 .font(.body)
                         }
@@ -57,22 +56,12 @@ struct iPhoneMenuView: View {
                     Button("Schließen") { isPresented = false }
                 }
             }
-            .alert("Einsatz beenden?", isPresented: $zeigeBeendenAlert) {
-                Button("Beenden", role: .destructive) {
-                    pendingStep = nil
-                    isPresented = false
-                    onEinsatzBeenden?()
-                }
-                Button("Abbrechen", role: .cancel) {}
-            } message: {
-                Text("Der aktuelle Einsatz wird beendet. Nicht archivierte Daten gehen verloren.")
-            }
         }
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
         .onChange(of: isPresented) { _, presented in
             if !presented, let step = pendingStep {
-                path = [step]
+                path = [.einsatzOrt, step]
                 pendingStep = nil
             }
         }
@@ -121,9 +110,9 @@ struct iPhoneMenuView: View {
     private var zeitenBadge: Int? {
         let eo = protokoll.einsatzOrt
         var count = 0
-        if eo.alarmzeit != nil        { count += 1 }
-        if eo.abfahrtzeit != nil      { count += 1 }
-        if eo.ankunftzeit != nil      { count += 1 }
+        if eo.alarmzeit != nil          { count += 1 }
+        if eo.abfahrtzeit != nil        { count += 1 }
+        if eo.ankunftzeit != nil        { count += 1 }
         if eo.krankenHausAnkunft != nil { count += 1 }
         return count > 0 ? count : nil
     }
@@ -154,7 +143,6 @@ struct iPhoneMenuView: View {
         if !b.unfallhergangAuswahl.isEmpty                              { count += 1 }
         if !b.unfallmechanismus.isEmpty                                  { count += 1 }
         if !b.preEmergencyStatus.isEmpty                                 { count += 1 }
-        if b.nacaScoreWert != nil                                        { count += 1 }
         if !b.erstbefundAuswahl.isEmpty || !b.erstbefundVorOrt.isEmpty  { count += 1 }
         if !b.verlaufsbemerkungen.isEmpty                                { count += 1 }
         return count > 0 ? count : nil

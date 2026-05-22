@@ -56,6 +56,7 @@ struct iPhoneContentView: View {
                 onNeu: {
                     protokoll.reset()
                     path = [.einsatzOrt]
+                    showMenu = true
                 },
                 onSettings: { path.append(.settings) },
                 onArchiv: { zeigeArchiv = true },
@@ -127,7 +128,7 @@ struct iPhoneContentView: View {
                 case .bilder:
                     BilderView(fotos: $protokoll.fotos) { path.removeLast() }
                 case .abschluss:
-                    AbschlussView(protokoll: protokoll, onBack: { path.removeLast() })
+                    AbschlussView(protokoll: protokoll, onBack: { path = [] })
                 case .settings:
                     SettingsView(onBack: { path.removeLast() })
                 }
@@ -146,6 +147,12 @@ struct iPhoneContentView: View {
         .sheet(isPresented: $zeigeArchiv) {
             ArchivView(onLaden: { path = [.einsatzOrt] })
                 .environmentObject(protokoll)
+        }
+        // Wenn user von einem Menü-Screen zurücknavigiert → Menü wieder zeigen
+        .onChange(of: path) { _, newPath in
+            if newPath == [.einsatzOrt] && !showMenu {
+                showMenu = true
+            }
         }
         // Bild aus Share-Sheet anderer Apps empfangen
         .onChange(of: appState.pendingImage) { _, image in
