@@ -73,6 +73,27 @@ struct NotfallgeschehenView: View {
                     )
                 }
             }
+
+            Section {
+                Picker("NACA-Score", selection: Binding(
+                    get: { befund.nacaScoreWert ?? NacaScore.naca3 },
+                    set: { befund.nacaScoreWert = $0 }
+                )) {
+                    ForEach(NacaScore.allCases, id: \.self) { score in
+                        Text(score.beschreibung).tag(score as NacaScore)
+                    }
+                }
+                .pickerStyle(.inline)
+                if befund.nacaScoreWert != nil {
+                    Button(role: .destructive) {
+                        befund.nacaScoreWert = nil
+                    } label: {
+                        Label("Auswahl aufheben", systemImage: "xmark.circle")
+                    }
+                }
+            } header: {
+                Label("NACA-Score", systemImage: "chart.bar.fill")
+            }
         }
         .navigationTitle("Notfallgeschehen")
         .navigationBarTitleDisplayMode(.large)

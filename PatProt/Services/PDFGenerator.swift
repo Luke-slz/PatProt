@@ -1164,7 +1164,7 @@ struct DINPDFGenerator {
 
         // NACA Score (right side)
         let nacaRows: [(String,Bool)] = NacaScore.allCases.map {
-            ($0.beschreibung, $0 == p.ergebnis.nacaScore)
+            ($0.beschreibung, p.notfallGeschehen.nacaScoreWert == $0)
         }
         let nacaH: CGFloat = r7H
         for (i,(label,active)) in nacaRows.enumerated() {

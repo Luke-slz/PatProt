@@ -48,18 +48,6 @@ struct AbschlussView: View {
                 Label("Protokoll geschrieben von", systemImage: "person.text.rectangle")
             }
 
-            // NACA Score
-            Section {
-                Picker("NACA-Score", selection: $protokoll.ergebnis.nacaScore) {
-                    ForEach(NacaScore.allCases, id: \.self) { score in
-                        Text(score.beschreibung).tag(score as NacaScore)
-                    }
-                }
-                .pickerStyle(.inline)
-            } header: {
-                Label("NACA-Score", systemImage: "chart.bar.fill")
-            }
-
             // Transportziel
             Section {
                 TextField("Rettungsmittel / Kennung (z.B. RTW 10/83-2)", text: $protokoll.uebergabeAn)
