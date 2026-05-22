@@ -82,17 +82,7 @@ enum ProtokollVerfasser: String, CaseIterable, Codable {
 }
 
 enum TransportZiel: String, CaseIterable, Codable {
-    case zna = "ZNA / INA"
-    case herzkatheterlabor = "Herzkatheterlabor HKL"
-    case intensiv = "Intensivstation"
-    case schockraum = "Schockraum"
-    case cpu = "CPU"
-    case allgemeinstation = "Allgemeinstation"
-    case dpDirekt = "DP direkt"
-    case fachambulanz = "Fachambulanz"
-    case arztraum = "Arztraum"
-    case einsatzstelle = "Einsatzstelle"
-    case sonstige = "Sonstige"
+    case anderesRettungsmittel = "Anderes Rettungsmittel"
 }
 
 // MARK: - Models
@@ -150,10 +140,8 @@ class EinsatzProtokoll: ObservableObject, Identifiable {
     @Published var ergebnis = ErgebnisData()
 
     // Abschluss
-    @Published var zielKlinik = ""
     @Published var uebergabeAn = ""
     @Published var zustandBeiUebergabe = ""
-    @Published var freitext = ""
     @Published var verfasser: ProtokollVerfasser = .notfallsanitaeter
 
     var erstelltAm: Date = Date()
@@ -183,10 +171,8 @@ class EinsatzProtokoll: ObservableObject, Identifiable {
         medikamentFotos.forEach { $0.loeschen() }
         medikamentFotos = []
         ergebnis = ErgebnisData()
-        zielKlinik = ""
         uebergabeAn = ""
         zustandBeiUebergabe = ""
-        freitext = ""
         verfasser = .notfallsanitaeter
         erstelltAm = Date()
     }
@@ -477,36 +463,16 @@ struct MassnahmenBefund: Codable {
     var maskenbeatmung: Bool = false
     var maskenbeatmungUnmoeglich: Bool = false
     var supraglottisch: Bool = false
-    var supraglottischTyp: String = ""   // Larynxmaske / Larynxtubus / sonst.
+    var supraglottischTyp: String = ""
     var supraglottischGr: String = ""
     var atemwegErschwert: Bool = false
-    var intubationRD: Bool = false
-    var tracheotomie: Bool = false
     var airwaySonstige: String = ""
 
-    // Atmung – RD / NA Spalte
-    var thoraxdrainage: Bool = false
-    var cpapNiv: Bool = false
-    var entlastungspunktionRe: Bool = false
-    var entlastungspunktionLi: Bool = false
-    var kontrollierteBeatmung: Bool = false
-    var beatmungFiO2: String = ""
-    var beatmungCpapPeep: String = ""
-    var beatmungIE: String = ""
-    var beatmungAF: String = ""
-    var atmungSonstige: String = ""
-
-    // Cirkulation / Zugänge
+    // Kreislauf / Zugänge
     var peripherVenoes: Bool = false
     var peripherVenoesOrt: String = ""
     var peripherVenoesGroesse: String = ""
     var peripherVenoesAnz: Int = 1
-    var zentralVenoes: Bool = false
-    var zentralVenoesOrt: String = ""
-    var intraossaer: Bool = false
-    var intraossaerOrt: String = ""
-    var artKanule: Bool = false
-    var intraossaleApplikation: Bool = false
     var circSonstige: String = ""
 
     // Weitere Maßnahmen
@@ -514,10 +480,8 @@ struct MassnahmenBefund: Codable {
     var waermeerhalt: Bool = false
     var entbindung: Bool = false
     var krisenintervention: Bool = false
-    var kardioversion: Bool = false
     var tourniquet: Bool = false
     var tourniquetZeit: Date? = nil
-    var narkoseAnalgesedierung: Bool = false
     var weitereSonstige: String = ""
 
     // Lagerung / Transport
@@ -530,38 +494,23 @@ struct MassnahmenBefund: Codable {
     var vakuummatratze: Bool = false
     var schaufeltrage: Bool = false
     var extremitaetenschienung: Bool = false
-    var reposition: Bool = false
     var verband: Bool = false
     var beckenschlinge: Bool = false
     var lagerungSonstige: String = ""
 
     // Monitoring
     var monEkg: Bool = false
-    var mon12KanalEkg: Bool = false
     var monNibp: Bool = false
     var monBz: Bool = false
-    var monInvaRR: Bool = false
     var monSpo2: Bool = false
     var monTemperatur: Bool = false
-    var monKapnografie: Bool = false
-
-    // Medizintechnik
-    var ultraschall: Bool = false
-    var funkEkgUebermittlung: Bool = false
-    var notfallpager: Bool = false
-    var spritzenpumpe: Bool = false
-    var videoLaryngoskop: Bool = false
-    var transportinkubator: Bool = false
-    var mechanischeThorax: Bool = false
-    var medtechSonstige: String = ""
 }
 
 // MARK: - Ergebnis / Transportziel (Sektion 8 + 9)
 
 struct ErgebnisData: Codable {
     var nacaScore: NacaScore = .naca3
-    var transportZiel: TransportZiel = .zna
-    var transportZielSonstige: String = ""
+    var transportZiel: TransportZiel = .anderesRettungsmittel
 
     // Einsatzbesonderheiten
     var ambulantVorOrt: Bool = false
@@ -599,6 +548,17 @@ struct NotfallgeschehenBefund: Codable {
     var manvVerstorben: Int = 0 // T    — Schwarz— verstorben
     var manvLagemeldung: String = ""
     var manvNachforderung: String = ""
+
+    // Neue Felder
+    var unfallhergangAuswahl: [String] = []
+    var unfallhergangFreitext: String = ""
+    var unfallmechanismus: String = ""
+    var unfallmechanismusFreitext: String = ""
+    var preEmergencyStatus: String = ""
+    var nacaScoreWert: NacaScore? = nil
+    var erstbefundAuswahl: [String] = []
+    var verlaufsbemerkungen: String = ""
+    var dynamischeErweiterung: String = ""
 
     var manvGesamtSK: Int { manvSK1 + manvSK2 + manvSK3 + manvSK4 + manvVerstorben }
 }
@@ -709,10 +669,8 @@ struct ProtokollDaten: Codable, Identifiable {
     var reanimationAktiv: Bool
     var reanimation: ReanimationsProtokoll
     var ergebnis: ErgebnisData
-    var zielKlinik: String
     var uebergabeAn: String
     var zustandBeiUebergabe: String
-    var freitext: String
     var verfasser: ProtokollVerfasser?
 }
 
@@ -728,8 +686,8 @@ extension EinsatzProtokoll {
             verlaufMessungen: verlaufMessungen, massnahmen: massnahmen,
             medikamente: medikamente, reanimationAktiv: reanimationAktiv,
             reanimation: reanimation, ergebnis: ergebnis,
-            zielKlinik: zielKlinik, uebergabeAn: uebergabeAn,
-            zustandBeiUebergabe: zustandBeiUebergabe, freitext: freitext,
+            uebergabeAn: uebergabeAn,
+            zustandBeiUebergabe: zustandBeiUebergabe,
             verfasser: verfasser
         )
     }
@@ -743,8 +701,8 @@ extension EinsatzProtokoll {
         verlaufMessungen = d.verlaufMessungen; massnahmen = d.massnahmen
         medikamente = d.medikamente; reanimationAktiv = d.reanimationAktiv
         reanimation = d.reanimation; ergebnis = d.ergebnis
-        zielKlinik = d.zielKlinik; uebergabeAn = d.uebergabeAn
-        zustandBeiUebergabe = d.zustandBeiUebergabe; freitext = d.freitext
+        uebergabeAn = d.uebergabeAn
+        zustandBeiUebergabe = d.zustandBeiUebergabe
         verfasser = d.verfasser ?? .notfallsanitaeter
         erstelltAm = d.erstelltAm
     }
@@ -763,11 +721,13 @@ extension SINNHAFTBefund {
         if !protokoll.einsatzOrt.adresse.isEmpty { situationParts.append("Ort: \(protokoll.einsatzOrt.adresse)") }
         befund.situation = situationParts.joined(separator: "\n")
 
-        var idParts: [String] = [protokoll.einsatzOrt.fahrzeugName]
-        let san1 = protokoll.besatzung.sanitaeter1
-        let san2 = protokoll.besatzung.sanitaeter2
-        if !san1.isEmpty { idParts.append("Team: \(san1)\(san2.isEmpty ? "" : ", \(san2)")") }
-        befund.identifikation = idParts.joined(separator: "\n")
+        let pat = protokoll.patientDaten
+        var patParts: [String] = []
+        let name = "\(pat.vorname) \(pat.nachname)".trimmingCharacters(in: .whitespaces)
+        if !name.isEmpty { patParts.append(name) }
+        if let alter = pat.alter { patParts.append("\(alter) J.") }
+        if pat.geschlecht != .unbekannt { patParts.append(pat.geschlecht.rawValue) }
+        befund.identifikation = patParts.joined(separator: ", ")
 
         var notfallParts: [String] = []
         if !protokoll.notfallGeschehen.erstbefundVorOrt.isEmpty { notfallParts.append(protokoll.notfallGeschehen.erstbefundVorOrt) }
@@ -791,52 +751,21 @@ extension SINNHAFTBefund {
 
         // Atemweg
         if m.atemwegFreimachen  { massnahmenList.append("Atemweg freimachen") }
+        if m.atemwegFreimachen  { massnahmenList.append("Atemweg freimachen") }
         if m.absaugung          { massnahmenList.append("Absaugung") }
         if m.cervikalStuetze    { massnahmenList.append("Cervikalstütze") }
         if m.sauerstoffgabe     { massnahmenList.append("O₂-Gabe\(m.sauerstoffLitMin.isEmpty ? "" : " \(m.sauerstoffLitMin) l/min")") }
         if m.maskenbeatmung     { massnahmenList.append("Maskenbeatmung") }
         if m.supraglottisch     { massnahmenList.append("Supraglottischer Atemweg\(m.supraglottischTyp.isEmpty ? "" : " (\(m.supraglottischTyp))")") }
-        if m.intubationRD       { massnahmenList.append("Intubation") }
         if protokoll.airway.konikotomie { massnahmenList.append("Konikotomie") }
-        if m.tracheotomie       { massnahmenList.append("Tracheotomie") }
         if m.atemwegErschwert   { massnahmenList.append("Erschwerter Atemweg") }
-
-        // Atmung
-        if m.cpapNiv            { massnahmenList.append("CPAP/NIV") }
-        if m.thoraxdrainage     { massnahmenList.append("Thoraxdrainage") }
-        var entlPunkt: [String] = []
-        if m.entlastungspunktionRe { entlPunkt.append("re") }
-        if m.entlastungspunktionLi { entlPunkt.append("li") }
-        if !entlPunkt.isEmpty   { massnahmenList.append("Entlastungspunktion \(entlPunkt.joined(separator: "/"))") }
-        if m.kontrollierteBeatmung {
-            var beatParts = ["Kontrollierte Beatmung"]
-            if !m.beatmungFiO2.isEmpty      { beatParts.append("FiO₂ \(m.beatmungFiO2)") }
-            if !m.beatmungCpapPeep.isEmpty  { beatParts.append("PEEP \(m.beatmungCpapPeep)") }
-            if !m.beatmungAF.isEmpty        { beatParts.append("AF \(m.beatmungAF)") }
-            massnahmenList.append(beatParts.joined(separator: ", "))
-        }
-
-        // Kreislauf / Zugänge
-        if m.peripherVenoes     { massnahmenList.append("Periphervenöser Zugang\(m.peripherVenoesOrt.isEmpty ? "" : " (\(m.peripherVenoesOrt))")") }
-        if m.zentralVenoes      { massnahmenList.append("Zentralvenöser Zugang\(m.zentralVenoesOrt.isEmpty ? "" : " (\(m.zentralVenoesOrt))")") }
-        if m.intraossaer        { massnahmenList.append("Intraossärer Zugang\(m.intraossaerOrt.isEmpty ? "" : " (\(m.intraossaerOrt))")") }
-        if m.intraossaleApplikation { massnahmenList.append("IO-Applikation") }
-        if m.artKanule          { massnahmenList.append("Arterielle Kanüle") }
-        if m.kardioversion      { massnahmenList.append("Kardioversion") }
+        if m.peripherVenoes     { massnahmenList.append("Peripher-venöser Zugang\(m.peripherVenoesOrt.isEmpty ? "" : " (\(m.peripherVenoesOrt))")") }
         if m.tourniquet         { massnahmenList.append("Tourniquet") }
-
-        // Weitere Maßnahmen
-        if m.narkoseAnalgesedierung { massnahmenList.append("Narkose/Analgesedierung") }
         if m.krisenintervention { massnahmenList.append("Krisenintervention") }
         if m.vakuummatratze     { massnahmenList.append("Vakuummatratze") }
         if m.beckenschlinge     { massnahmenList.append("Beckenschlinge") }
         if m.extremitaetenschienung { massnahmenList.append("Extremitätenschienung") }
-
-        // Medikamente
-        if !protokoll.medikamente.isEmpty {
-            let medNames = protokoll.medikamente.map { "\($0.name) \($0.dosis)\($0.einheit)" }.joined(separator: ", ")
-            massnahmenList.append("Medikamente: \(medNames)")
-        }
+        if m.verband            { massnahmenList.append("Verband") }
         befund.notwendigeMassnahmen = massnahmenList.joined(separator: "\n")
 
         var hintParts: [String] = []
@@ -887,12 +816,9 @@ extension SINNHAFTBefund {
         if !wahrscheinlich.isEmpty { forderungParts.append("DD: \(wahrscheinlich.map(\.name).joined(separator: ", "))") }
         befund.forderung = forderungParts.joined(separator: "\n")
 
-        var transportParts: [String] = []
-        if !protokoll.zielKlinik.isEmpty { transportParts.append("Ziel: \(protokoll.zielKlinik)") }
-        if !protokoll.uebergabeAn.isEmpty { transportParts.append("Übergabe an: \(protokoll.uebergabeAn)") }
-        if protokoll.ergebnis.voranmeldung { transportParts.append("Voranmeldung erfolgt") }
-        if protokoll.ergebnis.rotAlarm { transportParts.append("Rot-Alarm") }
-        befund.transport = transportParts.joined(separator: "\n")
+        var transportParts: [String] = ["Anderes Rettungsmittel"]
+        if !protokoll.uebergabeAn.isEmpty { transportParts.append(protokoll.uebergabeAn) }
+        befund.transport = transportParts.joined(separator: ": ")
 
         return befund
     }
