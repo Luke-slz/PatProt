@@ -235,7 +235,8 @@ struct DINPDFGenerator {
             field("Versicherten-Nr.", p.patientDaten.versicherungsNummer,
                   x:x+fw3, y:y+52, w:fw3, h:12, lw:fw3*0.5)
             field("Status", "", x:x+fw3*2, y:y+52, w:fw3, h:12, lw:fw3*0.4)
-            field("Betriebsstätten-Nr.", "", x:x, y:y+64, w:fw3, h:12, lw:fw3*0.55)
+            let gewStr = p.patientDaten.gewicht.map { String(format: "%.0f kg", $0) } ?? ""
+            field("Gewicht", gewStr, x:x, y:y+64, w:fw3, h:12, lw:fw3*0.55)
             field("Arzt-Nr.", "", x:x+fw3, y:y+64, w:fw3, h:12, lw:fw3*0.4)
             field("Datum", d(p.einsatzOrt.alarmzeit), x:x+fw3*2, y:y+64, w:fw3, h:12, lw:fw3*0.35)
         }
@@ -372,16 +373,69 @@ struct DINPDFGenerator {
             y += 11
         }
 
+        // Neue Notfallgeschehen-Felder
+        let unfallHergangText = (ng.unfallhergangAuswahl + (ng.unfallhergangFreitext.isEmpty ? [] : [ng.unfallhergangFreitext])).joined(separator: ", ")
+        if !unfallHergangText.isEmpty {
+            field("Unfallhergang", unfallHergangText, x:lx, y:y, w:rx-lx, h:11, lw:65)
+            y += 11
+        }
+        let unfallMechText = [ng.unfallmechanismus, ng.unfallmechanismusFreitext].filter{!$0.isEmpty}.joined(separator: " – ")
+        if !unfallMechText.isEmpty {
+            field("Unfallmechanismus", unfallMechText, x:lx, y:y, w:rx-lx, h:11, lw:72)
+            y += 11
+        }
+        if !ng.preEmergencyStatus.isEmpty {
+            field("Pre-Emergency Status", ng.preEmergencyStatus, x:lx, y:y, w:rx-lx, h:11, lw:85)
+            y += 11
+        }
+        let erstbefundAuswahlText = ng.erstbefundAuswahl.joined(separator: ", ")
+        if !erstbefundAuswahlText.isEmpty {
+            field("Erstbefund (Auswahl)", erstbefundAuswahlText, x:lx, y:y, w:rx-lx, h:11, lw:85)
+            y += 11
+        }
+        if !ng.verlaufsbemerkungen.isEmpty {
+            field("Verlaufsbemerkungen", ng.verlaufsbemerkungen, x:lx, y:y, w:rx-lx, h:11, lw:85)
+            y += 11
+        }
+
         // ABCDE + SAMPLER grid
         let abcdeLetters = ["A","B","C","D","E"]
         let samplerLetters = ["S","M","P","L","R"]
-        let abcdeRaw = [
-            p.airway.freitext,
-            p.breathing.freitext,
-            p.circulation.freitext,
-            p.disability.freitext,
-            p.exposure.freitext,
-        ]
+        func buildAirwayDetail() -> String {
+            var parts = [p.airway.freitext]
+            if p.airway.verlegung && !p.airway.verlegungsUrsache.isEmpty { parts.append("Ursache: \(p.airway.verlegungsUrsache)") }
+            return parts.filter { !$0.isEmpty }.joined(separator: " · ")
+        }
+        func buildBreathingDetail() -> String {
+            var parts = [p.breathing.freitext]
+            if !p.breathing.atemgeraeusche.isEmpty { parts.append("Atemger.: \(p.breathing.atemgeraeusche)") }
+            if p.breathing.sauerstoffGabe, let lit = p.breathing.sauerstoffLiter { parts.append("O₂: \(String(format: "%.0f", lit))l/min") }
+            if p.breathing.beatmung && !p.breathing.beatmungsform.isEmpty { parts.append("Beatm.: \(p.breathing.beatmungsform)") }
+            return parts.filter { !$0.isEmpty }.joined(separator: " · ")
+        }
+        func buildCirculationDetail() -> String {
+            var parts = [p.circulation.freitext]
+            if !p.circulation.ekgBefund.isEmpty { parts.append("EKG: \(p.circulation.ekgBefund)") }
+            if p.circulation.blutung && !p.circulation.blutungLokalisation.isEmpty { parts.append("Blutung: \(p.circulation.blutungLokalisation)") }
+            if p.circulation.ivZugang && !p.circulation.ivLokalisation.isEmpty { parts.append("IV: \(p.circulation.ivLokalisation)") }
+            return parts.filter { !$0.isEmpty }.joined(separator: " · ")
+        }
+        func buildExposureDetail() -> String {
+            var parts = [p.exposure.freitext]
+            if p.exposure.trauma && !p.exposure.traumaMechanismus.isEmpty { parts.append("Mech.: \(p.exposure.traumaMechanismus)") }
+            if !p.exposure.sichtbareDeformitaeten.isEmpty { parts.append("Deform.: \(p.exposure.sichtbareDeformitaeten)") }
+            if !p.exposure.schmerzLokalisation.isEmpty { parts.append("Schmerz: \(p.exposure.schmerzLokalisation)") }
+            var flags: [String] = []
+            if p.exposure.helmGetragen { flags.append("Helm getragen") }
+            if p.exposure.gurtGetragen { flags.append("Gurt getragen") }
+            if p.exposure.frakturVerdacht { flags.append("Frakturverdacht") }
+            if p.exposure.blutungExtern { flags.append("Blutung extern") }
+            if p.exposure.rueckenNackenSchmerz { flags.append("Rücken/Nackenschmerz") }
+            if p.exposure.bewegungseinschraenkung { flags.append("Bewegungseinschr.") }
+            if !flags.isEmpty { parts.append(flags.joined(separator: ", ")) }
+            return parts.filter { !$0.isEmpty }.joined(separator: " · ")
+        }
+        let abcdeRaw = [buildAirwayDetail(), buildBreathingDetail(), buildCirculationDetail(), p.disability.freitext, buildExposureDetail()]
         let abcdeVals   = abcdeRaw.map { $0.isEmpty ? "o.B." : $0 }
         let abcdeColors = abcdeRaw.map { $0.isEmpty ? UIColor.lightGray : UIColor.black }
         let rowH: CGFloat = 15
@@ -625,6 +679,9 @@ struct DINPDFGenerator {
             ("Dekomp. Herzinsuff.", p.diagnose.herzDekomp),
             ("Synkope", p.diagnose.herzSynkope),
             ("Thrombose / Embolie", p.diagnose.herzThromboseEmbolie),
+            ("Schock unkl. Genese", p.diagnose.herzSchockUnklarGenese),
+            ("Orthostatisch", p.diagnose.herzOrthostatisch),
+            ("Unkl. Thoraxschmerz", p.diagnose.herzUnklarerThoraxschmerz),
         ]
 
         let col3Items: [(String,Bool)] = [
@@ -693,6 +750,7 @@ struct DINPDFGenerator {
             ("Hypoglykämie", p.diagnose.stoffHypoglykämie),
             ("Hyperglykämie", p.diagnose.stoffHyperglykämie),
             ("Urämie / ARI", p.diagnose.stoffUremie),
+            ("Diabetes", p.diagnose.stoffDia),
             ("Akutes Abdomen", p.diagnose.abdoAkutes),
             ("Kolik", p.diagnose.abdoKoliken),
             ("GIB oben", p.diagnose.abdoGibOben),
@@ -845,7 +903,7 @@ struct DINPDFGenerator {
             ("Maschinenunfall", p.diagnose.spezMaschine),
             ("Gewaltvergehen", p.diagnose.spezGewalt),
             ("Anderer Unfall", p.diagnose.spezAndererUnfall),
-            ("Nicht bekannt", false),
+            ("Nicht bekannt", p.diagnose.verletzungNichtBekannt),
         ]
         let spezH: CGFloat = 10
         let spezY0 = y
@@ -881,6 +939,7 @@ struct DINPDFGenerator {
                     if let bz = m.blutzucker { parts.append("BZ \(String(format:"%.1f",bz))") }
                     if let tmp = m.temperatur { parts.append("T \(String(format:"%.1f",tmp))°C") }
                     if !m.massnahmen.isEmpty { parts.append(m.massnahmen) }
+                    if !m.freitext.isEmpty { parts.append(m.freitext) }
                     return parts.joined(separator: " | ")
                 }
                 .joined(separator: "\n")
@@ -898,7 +957,7 @@ struct DINPDFGenerator {
 
         // Sub-headers
         subHeader("Airway / Stabilisation", x:m6x1, y:y, w:m6W)
-        subHeader("Atmung / Beatmung", x:m6x2, y:y, w:m6W)
+        subHeader("Kreislauf / Zugänge", x:m6x2, y:y, w:m6W)
         subHeader("Lagerung / Transport", x:m6x3, y:y, w:m6W)
         y += 9.5
 
@@ -912,20 +971,16 @@ struct DINPDFGenerator {
             ("Mask.beat. unmöglich", p.massnahmen.maskenbeatmungUnmoeglich),
             ("EGA supraglottisch", p.massnahmen.supraglottisch),
             ("Atemweg erschwert", p.massnahmen.atemwegErschwert),
-            ("Intubation", p.massnahmen.intubationRD),
-            ("Tracheotomie", p.massnahmen.tracheotomie),
         ]
         let maItems2: [(String,Bool)] = [
-            ("Thoraxdrainage", p.massnahmen.thoraxdrainage),
-            ("CPAP / NIV", p.massnahmen.cpapNiv),
-            ("Entlastungspunkt. re", p.massnahmen.entlastungspunktionRe),
-            ("Entlastungspunkt. li", p.massnahmen.entlastungspunktionLi),
-            ("Kontroll. Beatmung", p.massnahmen.kontrollierteBeatmung),
             ("Peripher-venös", p.massnahmen.peripherVenoes),
-            ("Zentral-venös", p.massnahmen.zentralVenoes),
-            ("Intraossär", p.massnahmen.intraossaer),
-            ("Art. Kanüle", p.massnahmen.artKanule),
-            ("IO-Applikation", p.massnahmen.intraossaleApplikation),
+            ("Tourniquet", p.massnahmen.tourniquet),
+            ("Verband / Wundvers.", p.massnahmen.verband),
+            ("Beckenschlinge", p.massnahmen.beckenschlinge),
+            ("Wärmeerhalt", p.massnahmen.waermeerhalt),
+            ("Kühlung", p.massnahmen.kuehlung),
+            ("Krisenintervention", p.massnahmen.krisenintervention),
+            ("Entbindung", p.massnahmen.entbindung),
         ]
         let maItems3: [(String,Bool)] = [
             ("OK-Hochlagerung", p.massnahmen.okHochlagerung),
@@ -937,7 +992,6 @@ struct DINPDFGenerator {
             ("Vakuummatratze", p.massnahmen.vakuummatratze),
             ("Schaufeltrage", p.massnahmen.schaufeltrage),
             ("Extremit.schienung", p.massnahmen.extremitaetenschienung),
-            ("Beckenschlinge", p.massnahmen.beckenschlinge),
         ]
         let maY0 = y
         for (i,(label,checked)) in maItems1.enumerated() {
@@ -963,93 +1017,89 @@ struct DINPDFGenerator {
         }
         y = maY0 + CGFloat(max(maItems1.count, maItems2.count, maItems3.count))*maH + 1
 
-        // Monitoring + Weitere + Medizintechnik row
+        // Monitoring row
         subHeader("Monitoring", x:m6x1, y:y, w:m6W)
-        subHeader("Weitere Maßnahmen", x:m6x2, y:y, w:m6W)
-        subHeader("Medizintechnik", x:m6x3, y:y, w:m6W)
         y += 9.5
 
         let monItems: [(String,Bool)] = [
-            ("EKG", p.massnahmen.monEkg),
-            ("12-Kanal-EKG", p.massnahmen.mon12KanalEkg),
+            ("SpO₂", p.massnahmen.monSpo2),
             ("NIBP", p.massnahmen.monNibp),
             ("BZ", p.massnahmen.monBz),
-            ("Invasive RR", p.massnahmen.monInvaRR),
-            ("SpO₂", p.massnahmen.monSpo2),
+            ("EKG / AED-Monitor", p.massnahmen.monEkg),
             ("Temperatur", p.massnahmen.monTemperatur),
-            ("Kapnografie", p.massnahmen.monKapnografie),
-        ]
-        let weiItems: [(String,Bool)] = [
-            ("Kühlung", p.massnahmen.kuehlung),
-            ("Wärmeerhalt", p.massnahmen.waermeerhalt),
-            ("Entbindung", p.massnahmen.entbindung),
-            ("Krisenintervention", p.massnahmen.krisenintervention),
-            ("Kardioversion", p.massnahmen.kardioversion),
-            ("Tourniquet", p.massnahmen.tourniquet),
-            ("Narkose/Analgesed.", p.massnahmen.narkoseAnalgesedierung),
-            ("Reposition/Verband", p.massnahmen.reposition || p.massnahmen.verband),
-        ]
-        let techItems: [(String,Bool)] = [
-            ("Ultraschall / Sono", p.massnahmen.ultraschall),
-            ("Funk-EKG", p.massnahmen.funkEkgUebermittlung),
-            ("Notfallpager", p.massnahmen.notfallpager),
-            ("Spritzenpumpe", p.massnahmen.spritzenpumpe),
-            ("Video-Laryngoskop", p.massnahmen.videoLaryngoskop),
-            ("Transportinkubator", p.massnahmen.transportinkubator),
-            ("Mech. Thoraxkompr.", p.massnahmen.mechanischeThorax),
         ]
         let maY1 = y
-        for (col, items) in [(m6x1, monItems),(m6x2, weiItems),(m6x3, techItems)] {
-            for (i,(label,checked)) in items.enumerated() {
-                let ry = maY1 + CGFloat(i)*maH
-                let bg: UIColor = i%2==0 ? .white : UIColor(white:0.97,alpha:1)
-                fillRect(CGRect(x:col,y:ry,width:m6W,height:maH), bg)
-                strokeRect(CGRect(x:col,y:ry,width:m6W,height:maH))
-                cb(label, checked, x:col+2, y:ry+1, bs:7, lw:m6W-12)
+        let monColW = (rx - lx) / CGFloat(monItems.count > 3 ? 3 : 2)
+        for (i,(label,checked)) in monItems.enumerated() {
+            let col = lx + CGFloat(i) * monColW
+            fillRect(CGRect(x:col,y:maY1,width:monColW,height:maH), i%2==0 ? .white : UIColor(white:0.97,alpha:1))
+            strokeRect(CGRect(x:col,y:maY1,width:monColW,height:maH))
+            cb(label, checked, x:col+2, y:maY1+1, bs:7, lw:monColW-12)
+        }
+        y = maY1 + maH + 2
+
+        // Maßnahmen-Details (nicht-leere Textfelder)
+        var maDetails: [(String,String)] = []
+        if p.massnahmen.supraglottisch && !p.massnahmen.supraglottischTyp.isEmpty {
+            let gr = p.massnahmen.supraglottischGr.isEmpty ? "" : " Gr.\(p.massnahmen.supraglottischGr)"
+            maDetails.append(("EGA-Typ", "\(p.massnahmen.supraglottischTyp)\(gr)"))
+        }
+        if p.massnahmen.peripherVenoes && !p.massnahmen.peripherVenoesOrt.isEmpty {
+            var iv = p.massnahmen.peripherVenoesOrt
+            if !p.massnahmen.peripherVenoesGroesse.isEmpty { iv += " \(p.massnahmen.peripherVenoesGroesse)" }
+            if p.massnahmen.peripherVenoesAnz > 1 { iv += " (\(p.massnahmen.peripherVenoesAnz)×)" }
+            maDetails.append(("IV-Zugang", iv))
+        }
+        if p.massnahmen.tourniquet, let tz = p.massnahmen.tourniquetZeit {
+            maDetails.append(("Tourniquet Zeit", t(tz)))
+        }
+        if !p.massnahmen.sauerstoffLitMin.isEmpty { maDetails.append(("O₂ (l/min)", p.massnahmen.sauerstoffLitMin)) }
+        if !p.massnahmen.airwaySonstige.isEmpty  { maDetails.append(("Airway sonstige", p.massnahmen.airwaySonstige)) }
+        if !p.massnahmen.circSonstige.isEmpty    { maDetails.append(("Kreislauf sonstige", p.massnahmen.circSonstige)) }
+        if !p.massnahmen.weitereSonstige.isEmpty { maDetails.append(("Weitere sonstige", p.massnahmen.weitereSonstige)) }
+        if !p.massnahmen.lagerungSonstige.isEmpty { maDetails.append(("Lagerung sonstige", p.massnahmen.lagerungSonstige)) }
+        for (lbl, val) in maDetails {
+            if y + 10 > pageSize.height - 15 { break }
+            field(lbl, val, x:lx, y:y, w:rx-lx, h:10, lw:80)
+            y += 10
+        }
+
+        // ── SECTION 6.5 Medikamente ────────────────────────
+        if !p.medikamente.isEmpty {
+            if y + 11 < pageSize.height - 15 {
+                secHeader("6.5 Medikamente", x:lx, y:y, w:rx-lx)
+                y += 11
             }
-        }
-        y = maY1 + CGFloat(max(monItems.count,weiItems.count,techItems.count))*maH + 2
-
-        // ── SECTION 6.5 Medikamente ───────────────────────
-        secHeader("6.5 Medikamente", x:lx, y:y, w:rx-lx)
-        y += 11
-
-        let medCols: [(String,CGFloat)] = [
-            ("Uhrzeit",43), ("Medikament",140), ("Dosis",60), ("Einheit",38), ("Route",50), ("Bemerkung",rx-lx-343)
-        ]
-        // Header row
-        fillRect(CGRect(x:lx,y:y,width:rx-lx,height:9), vLightB)
-        strokeRect(CGRect(x:lx,y:y,width:rx-lx,height:9))
-        var xOff = lx
-        for (header,colW) in medCols {
-            txt(header, CGRect(x:xOff+1.5,y:y+1,width:colW-3,height:7), font:f6b, color:colBlue)
-            vline(xOff+colW, y, 9)
-            xOff += colW
-        }
-        y += 9
-
-        let medH: CGFloat = 10
-        if p.medikamente.isEmpty {
-            fillRect(CGRect(x:lx,y:y,width:rx-lx,height:medH*2), .white)
-            strokeRect(CGRect(x:lx,y:y,width:rx-lx,height:medH*2))
-            txt("– keine Medikamente verabreicht –",
-                CGRect(x:lx+4,y:y+4,width:rx-lx-8,height:medH-4), font:f7, color:.lightGray)
-            y += medH*2
-        } else {
-            for med in p.medikamente {
-                fillRect(CGRect(x:lx,y:y,width:rx-lx,height:medH), .white)
-                strokeRect(CGRect(x:lx,y:y,width:rx-lx,height:medH))
-                var xM = lx
-                let vals = [t(med.zeit), med.name, med.dosis, med.einheit, med.route, ""]
-                for (vi,(_, colW)) in medCols.enumerated() {
-                    txt(vals[vi], CGRect(x:xM+1.5,y:y+1.5,width:colW-3,height:medH-3), font:f7)
-                    vline(xM+colW, y, medH)
-                    xM += colW
+            let mTotW = rx - lx
+            let mC: [CGFloat] = [mTotW*0.11, mTotW*0.32, mTotW*0.14, mTotW*0.12, mTotW*0.20, mTotW*0.11]
+            let mHdr = ["Zeit","Medikament","Dosis","Einheit","Applikationsweg",""]
+            if y + 9 < pageSize.height - 15 {
+                fillRect(CGRect(x:lx,y:y,width:mTotW,height:9), vLightB)
+                strokeRect(CGRect(x:lx,y:y,width:mTotW,height:9))
+                var hx = lx
+                for (i,h2) in mHdr.enumerated() {
+                    txt(h2, CGRect(x:hx+1,y:y+1,width:mC[i]-2,height:7), font:f6b, color:colBlue)
+                    hx += mC[i]
+                }
+                y += 9
+            }
+            let medH: CGFloat = 10
+            for (idx, med) in p.medikamente.enumerated() {
+                if y + medH > pageSize.height - 15 { break }
+                let bg = idx%2==0 ? UIColor.white : UIColor(white:0.97,alpha:1)
+                fillRect(CGRect(x:lx,y:y,width:mTotW,height:medH), bg)
+                strokeRect(CGRect(x:lx,y:y,width:mTotW,height:medH))
+                var mx2 = lx
+                let vals2 = [t(med.zeit), med.name, med.dosis, med.einheit, med.route, ""]
+                for (j,val2) in vals2.enumerated() {
+                    if j < vals2.count-1 { vline(mx2+mC[j], y, medH) }
+                    txt(val2, CGRect(x:mx2+1.5,y:y+1.5,width:mC[j]-3,height:medH-3), font:f7)
+                    mx2 += mC[j]
                 }
                 y += medH
             }
+            y += 2
         }
-        y += 2
 
         // ── SECTION 7 Reanimation / Tod ───────────────────
         let r7W = (rx-lx) * 0.55
@@ -1102,6 +1152,16 @@ struct DINPDFGenerator {
             field("Defi Joule", "\(rea.defiJoule) J", x:r7tx, y:defY, w:r7tW, h:r7H, lw:r7tW*0.55)
         }
 
+        // Outcome-spezifische Zeiten
+        if rea.outcome == .rosc, let roscT = rea.roscZeit {
+            let roscY = r7y0 + CGFloat(r7items.count + (rea.defiAnzahl > 0 ? 1 : 0))*r7H
+            field("ROSC-Zeitpunkt", t(roscT), x:r7tx, y:roscY, w:r7tW, h:r7H, lw:r7tW*0.55)
+        }
+        if rea.outcome == .verstorben, let todT = rea.todFeststellungsZeit {
+            let todY = r7y0 + CGFloat(r7items.count + (rea.defiAnzahl > 0 ? 1 : 0))*r7H
+            field("Todeszeitpunkt", t(todT), x:r7tx, y:todY, w:r7tW, h:r7H, lw:r7tW*0.55)
+        }
+
         // NACA Score (right side)
         let nacaRows: [(String,Bool)] = NacaScore.allCases.map {
             ($0.beschreibung, $0 == p.ergebnis.nacaScore)
@@ -1117,21 +1177,29 @@ struct DINPDFGenerator {
 
         let maxR78 = max(r7items.count + (rea.defiAnzahl>0 ? 1 : 0), nacaRows.count)
         y = r7y0 + CGFloat(maxR78)*r7H + 2
+        if !rea.freitext.isEmpty && y + 11 < pageSize.height - 15 {
+            field("Reanimation – Notizen", rea.freitext, x:lx, y:y, w:rx-lx, h:11, lw:90)
+            y += 11
+        }
 
         // ── SECTION 9 Übergabe ────────────────────────────
         secHeader("9. Übergabe / Transportziel / Einsatzbesonderheiten", x:lx, y:y, w:rx-lx)
         y += 11
 
         let uHW = (rx-lx)/2
-        field("Transportziel",
-              p.ergebnis.transportZiel == .sonstige ? p.ergebnis.transportZielSonstige : p.ergebnis.transportZiel.rawValue,
-              x:lx, y:y, w:uHW, h:12, lw:65, hl:true)
-        field("Zielklinik", p.zielKlinik, x:lx+uHW, y:y, w:uHW, h:12, lw:50, hl:true)
+        field("Übergabe an Rettungsmittel", p.uebergabeAn, x:lx, y:y, w:rx-lx, h:12, lw:100, hl:true)
         y += 12
 
-        field("Übergabe an", p.uebergabeAn, x:lx, y:y, w:uHW, h:11, lw:55)
-        field("Zustand bei Übergabe", p.zustandBeiUebergabe, x:lx+uHW, y:y, w:uHW, h:11, lw:75)
+        field("Zustand bei Übergabe", p.zustandBeiUebergabe, x:lx, y:y, w:rx-lx, h:11, lw:80)
         y += 11
+        if !p.diagnose.diagnoseFreitext.isEmpty && y + 11 < pageSize.height - 15 {
+            field("Diagnose-Freitext", p.diagnose.diagnoseFreitext, x:lx, y:y, w:rx-lx, h:11, lw:80)
+            y += 11
+        }
+        if !p.ergebnis.anmerkungen.isEmpty && y + 11 < pageSize.height - 15 {
+            field("Anmerkungen", p.ergebnis.anmerkungen, x:lx, y:y, w:rx-lx, h:11, lw:80)
+            y += 11
+        }
 
         let besatzungNames = [p.besatzung.sanitaeter1, p.besatzung.sanitaeter2,
                               p.besatzung.sanitaeter3, p.besatzung.sanitaeter4]
@@ -1173,13 +1241,6 @@ struct DINPDFGenerator {
         }
         y += CGFloat(besPerCol)*besH + 2
 
-        // Freitext / Bemerkungen
-        let ftH: CGFloat = 28
-        fillRect(CGRect(x:lx,y:y,width:rx-lx,height:ftH), .white)
-        strokeRect(CGRect(x:lx,y:y,width:rx-lx,height:ftH))
-        txt("Bemerkungen:", CGRect(x:lx+2,y:y+1.5,width:60,height:8), font:f6b, color:.darkGray)
-        mtxt(p.freitext, CGRect(x:lx+2,y:y+10,width:rx-lx-4,height:ftH-12), font:f7)
-        y += ftH + 2
 
         // ── Unterschrift ──────────────────────────────────
         let sigH: CGFloat = min(40, pageSize.height - y - 10)
