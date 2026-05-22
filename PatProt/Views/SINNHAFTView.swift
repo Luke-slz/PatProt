@@ -7,6 +7,8 @@ struct SINNHAFTView: View {
     @EnvironmentObject private var protokoll: EinsatzProtokoll
     var onZurueck: () -> Void
 
+    @State private var zeigeBestaetigung = false
+
     var body: some View {
         Form {
             Section {
@@ -16,7 +18,7 @@ struct SINNHAFTView: View {
             // Auto-Fill Button
             Section {
                 Button {
-                    autoFill()
+                    zeigeBestaetigung = true
                 } label: {
                     HStack {
                         Image(systemName: "wand.and.stars")
@@ -35,44 +37,51 @@ struct SINNHAFTView: View {
                 }
                 .buttonStyle(.plain)
             }
+            .confirmationDialog("Felder neu befüllen?", isPresented: $zeigeBestaetigung, titleVisibility: .visible) {
+                Button("Neu befüllen", role: .destructive) { autoFill() }
+                Button("Abbrechen", role: .cancel) {}
+            } message: {
+                Text("Manuelle Änderungen werden überschrieben.")
+            }
 
             Group {
                 sinnhaftSektion("S", farbe: .orange, titel: "Situation",
                                 beschreibung: "Einsatznummer, Stichwort, Einsatzort",
-                                text: $befund.situation, minHeight: 70)
+                                text: $befund.situation)
 
                 sinnhaftSektion("I", farbe: .blue, titel: "Identifikation",
-                                beschreibung: "Einsatzmittel, Team, zuständige Einheit",
-                                text: $befund.identifikation, minHeight: 60)
+                                beschreibung: "Patient: Name, Alter, Geschlecht",
+                                text: $befund.identifikation)
 
                 sinnhaftSektion("N", farbe: .red, titel: "Notfallgeschehen",
                                 beschreibung: "Was ist passiert? Hergang, Ursache",
-                                text: $befund.notfall, minHeight: 80)
+                                text: $befund.notfall)
 
                 sinnhaftSektion("N", farbe: .purple, titel: "Notwendige Maßnahmen",
                                 beschreibung: "Durchgeführte Maßnahmen und Therapie",
-                                text: $befund.notwendigeMassnahmen, minHeight: 80)
+                                text: $befund.notwendigeMassnahmen)
 
                 sinnhaftSektion("H", farbe: .teal, titel: "Hintergrundinformationen",
                                 beschreibung: "Vorerkrankungen, Medikamente, Anamnese",
-                                text: $befund.hintergrund, minHeight: 70)
+                                text: $befund.hintergrund)
 
                 sinnhaftSektion("A", farbe: .green, titel: "Aktueller Zustand",
                                 beschreibung: "Vitaldaten, ABCDE-Ergebnis, Bewusstsein",
-                                text: $befund.aktuellerZustand, minHeight: 70)
+                                text: $befund.aktuellerZustand)
 
                 sinnhaftSektion("F", farbe: .indigo, titel: "Forderungen / Folgeempfehlung",
                                 beschreibung: "Benötigte Ressourcen, Verdachtsdiagnose",
-                                text: $befund.forderung, minHeight: 60)
+                                text: $befund.forderung)
 
                 sinnhaftSektion("T", farbe: Color("RDOrange"), titel: "Transport",
                                 beschreibung: "Transportziel, -modus, Voranmeldung",
-                                text: $befund.transport, minHeight: 60)
+                                text: $befund.transport)
             }
 
         }
+        .keyboardDismissToolbar()
         .navigationTitle("SINNHAFT-Schema")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.large)
         .navigationBarBackButtonHidden(true)
         .safeAreaInset(edge: .bottom) {
             Button(action: onZurueck) {
@@ -86,11 +95,7 @@ struct SINNHAFTView: View {
             .background(.bar)
         }
         .onAppear {
-            let leer = befund.situation.isEmpty && befund.identifikation.isEmpty &&
-                       befund.notfall.isEmpty && befund.notwendigeMassnahmen.isEmpty &&
-                       befund.hintergrund.isEmpty && befund.aktuellerZustand.isEmpty &&
-                       befund.forderung.isEmpty && befund.transport.isEmpty
-            if leer { autoFill() }
+            autoFill()
         }
     }
 
@@ -124,7 +129,7 @@ struct SINNHAFTView: View {
 
     private func sinnhaftSektion(
         _ buchstabe: String, farbe: Color, titel: String,
-        beschreibung: String, text: Binding<String>, minHeight: CGFloat
+        beschreibung: String, text: Binding<String>
     ) -> some View {
         Section {
             VStack(alignment: .leading, spacing: 8) {
@@ -140,18 +145,8 @@ struct SINNHAFTView: View {
                         Text(beschreibung).font(.caption).foregroundColor(.secondary)
                     }
                 }
-                TextEditor(text: text)
-                    .frame(minHeight: minHeight)
-                    .overlay(
-                        Group {
-                            if text.wrappedValue.isEmpty {
-                                Text("Hier eingeben…")
-                                    .foregroundColor(Color(.placeholderText))
-                                    .padding(.horizontal, 4).padding(.vertical, 8)
-                                    .allowsHitTesting(false)
-                            }
-                        }, alignment: .topLeading
-                    )
+                TextField("Hier eingeben…", text: text, axis: .vertical)
+                    .lineLimit(3...)
             }
         }
     }

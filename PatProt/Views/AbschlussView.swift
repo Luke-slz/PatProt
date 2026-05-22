@@ -40,37 +40,33 @@ struct AbschlussView: View {
             Section {
                 Picker("Verfasser", selection: $protokoll.verfasser) {
                     ForEach(ProtokollVerfasser.allCases, id: \.self) { v in
-                        Text(v.rawValue).tag(v)
+                        Text(v.rawValue).tag(v as ProtokollVerfasser)
                     }
                 }
                 .pickerStyle(.segmented)
-            } header: { Label("Protokoll geschrieben von", systemImage: "person.text.rectangle") }
+            } header: {
+                Label("Protokoll geschrieben von", systemImage: "person.text.rectangle")
+            }
 
             // NACA Score
             Section {
                 Picker("NACA-Score", selection: $protokoll.ergebnis.nacaScore) {
                     ForEach(NacaScore.allCases, id: \.self) { score in
-                        Text(score.beschreibung).tag(score)
+                        Text(score.beschreibung).tag(score as NacaScore)
                     }
                 }
                 .pickerStyle(.inline)
-            } header: { Label("NACA-Score", systemImage: "chart.bar.fill") }
+            } header: {
+                Label("NACA-Score", systemImage: "chart.bar.fill")
+            }
 
             // Transportziel
             Section {
-                Picker("Übergabe / Transportziel", selection: $protokoll.ergebnis.transportZiel) {
-                    ForEach(TransportZiel.allCases, id: \.self) { ziel in
-                        Text(ziel.rawValue).tag(ziel)
-                    }
-                }
-                .pickerStyle(.inline)
-                if protokoll.ergebnis.transportZiel == .sonstige {
-                    TextField("Sonstiges Ziel", text: $protokoll.ergebnis.transportZielSonstige)
-                }
-                TextField("Zielklinik (Name)", text: $protokoll.zielKlinik)
-                TextField("Übergabe an", text: $protokoll.uebergabeAn)
+                TextField("Rettungsmittel / Kennung (z.B. RTW 10/83-2)", text: $protokoll.uebergabeAn)
                 TextField("Zustand bei Übergabe", text: $protokoll.zustandBeiUebergabe)
-            } header: { Label("Übergabe / Transportziel", systemImage: "building.2.crop.circle") }
+            } header: {
+                Label("Übergabe an anderes Rettungsmittel", systemImage: "cross.vial.fill")
+            }
 
             // Einsatzbesonderheiten
             Section {
@@ -84,21 +80,9 @@ struct AbschlussView: View {
                 CheckboxRow("Aufwändige Rettung", isOn: $protokoll.ergebnis.aufwaendigeRettung)
                 CheckboxRow("Infektionsschutz", isOn: $protokoll.ergebnis.infektionsSchutz)
                 CheckboxRow("Schwerlasttransport", isOn: $protokoll.ergebnis.schwerlasttransport)
-            } header: { Label("Einsatzbesonderheiten", systemImage: "exclamationmark.triangle") }
-
-            // Alarm
-            Section {
-                CheckboxRow("Mitfahrverweigerung", isOn: $protokoll.ergebnis.mifahrverweigerung)
-                CheckboxRow("Voranmeldung", isOn: $protokoll.ergebnis.voranmeldung)
-                CheckboxRow("Gelb Alarm", isOn: $protokoll.ergebnis.gelbAlarm)
-                CheckboxRow("Rot Alarm", isOn: $protokoll.ergebnis.rotAlarm)
-            } header: { Label("Alarm / Meldung", systemImage: "bell.badge") }
-
-            // Freitext
-            Section {
-                TextEditor(text: $protokoll.freitext)
-                    .frame(minHeight: 80)
-            } header: { Label("Freitext / Abschlussbemerkung", systemImage: "note.text") }
+            } header: {
+                Label("Einsatzbesonderheiten", systemImage: "exclamationmark.triangle")
+            }
 
             // Archiv
             Section {
@@ -116,8 +100,11 @@ struct AbschlussView: View {
                 }
                 .buttonStyle(.bordered)
                 .tint(gespeichert ? .green : Color("RDOrange"))
-            } header: { Label("Archiv", systemImage: "archivebox") }
-              footer: { Text("Daten werden lokal auf dem Gerät gespeichert (DSGVO-konform).").font(.footnote).foregroundStyle(.secondary) }
+            } header: {
+                Label("Archiv", systemImage: "archivebox")
+            } footer: {
+                Text("Daten werden lokal auf dem Gerät gespeichert (DSGVO-konform).").font(.footnote).foregroundStyle(.secondary)
+            }
 
             // PDF EXPORT
             Section {
@@ -183,11 +170,14 @@ struct AbschlussView: View {
                 .buttonStyle(.bordered)
                 .tint(Color("RDOrange"))
                 .disabled(isGenerating || recipientEmail.isEmpty)
-            } header: { Label("PDF Export", systemImage: "square.and.arrow.up") }
-              footer: { Text("Die temporäre PDF-Datei wird nach dem Export gelöscht.").font(.footnote).foregroundStyle(.secondary) }
+            } header: {
+                Label("PDF Export", systemImage: "square.and.arrow.up")
+            } footer: {
+                Text("Die temporäre PDF-Datei wird nach dem Export gelöscht.").font(.footnote).foregroundStyle(.secondary)
+            }
         }
         .navigationTitle("Abschluss & Export")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button { zeigeEinstellungen = true } label: {

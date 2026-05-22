@@ -128,6 +128,7 @@ struct AirwayView: View {
             .background(.bar)
         }
         .navigationTitle("A — Airway")
+        .navigationBarTitleDisplayMode(.large)
         .navigationBarBackButtonHidden(true)
         .swipeBackEnabled()
     }
@@ -264,6 +265,7 @@ struct BreathingView: View {
             .background(.bar)
         }
         .navigationTitle("B — Breathing")
+        .navigationBarTitleDisplayMode(.large)
         .navigationBarBackButtonHidden(true)
         .swipeBackEnabled()
     }
@@ -423,6 +425,7 @@ struct CirculationView: View {
             .background(.bar)
         }
         .navigationTitle("C — Circulation")
+        .navigationBarTitleDisplayMode(.large)
         .navigationBarBackButtonHidden(true)
         .swipeBackEnabled()
     }
@@ -586,6 +589,7 @@ struct DisabilityView: View {
             .background(.bar)
         }
         .navigationTitle("D — Disability")
+        .navigationBarTitleDisplayMode(.large)
         .navigationBarBackButtonHidden(true)
         .swipeBackEnabled()
     }
@@ -728,6 +732,7 @@ struct ExposureView: View {
             .background(.bar)
         }
         .navigationTitle("E — Exposure")
+        .navigationBarTitleDisplayMode(.large)
         .navigationBarBackButtonHidden(true)
         .swipeBackEnabled()
     }

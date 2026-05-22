@@ -47,7 +47,7 @@ struct MedikamenteView: View {
 
         }
         .navigationTitle("Medikamente")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.large)
         .navigationBarBackButtonHidden(true)
         .safeAreaInset(edge: .bottom) {
             Button(action: onBack) {

@@ -29,7 +29,7 @@ struct BilderView: View {
         }
         .background(Color(.systemGroupedBackground))
         .navigationTitle("Bilder & Dateien")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.large)
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {

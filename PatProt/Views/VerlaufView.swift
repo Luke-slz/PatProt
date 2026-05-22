@@ -22,7 +22,7 @@ struct VerlaufView: View {
         }
         .background(Color(.systemGroupedBackground))
         .navigationTitle("Verlauf & Therapie")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.large)
         .navigationBarBackButtonHidden(true)
         .onAppear { abcdeUebernehmen() }
         .toolbar {

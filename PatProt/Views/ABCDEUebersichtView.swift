@@ -99,7 +99,7 @@ struct ABCDEUebersichtView: View {
         }
         .background(Color(.systemGroupedBackground))
         .navigationTitle("Befunde")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.large)
     }
 
     // MARK: Subtitel-Hilfsfunktionen

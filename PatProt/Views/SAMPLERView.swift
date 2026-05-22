@@ -102,7 +102,7 @@ struct SAMPLERView: View {
         }
         .keyboardDismissToolbar()
         .navigationTitle("SAMPLER")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.large)
     }
 }
 
@@ -199,7 +199,7 @@ struct ReanimationView: View {
             }
         }
         .navigationTitle("Reanimationsprotokoll")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.large)
         .navigationBarBackButtonHidden(true)
     }
 }
