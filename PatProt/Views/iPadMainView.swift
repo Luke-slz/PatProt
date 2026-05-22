@@ -8,9 +8,7 @@ struct iPadMainView: View {
     @EnvironmentObject private var appState: AppState
 
     @State private var selectedSection: iPadSection? = nil
-    @State private var abcdeExpanded = true
 
-    // Screenshot-Import
     @State private var isParsing = false
     @State private var parseError: String? = nil
     @State private var selectedPhoto: PhotosPickerItem? = nil
@@ -20,14 +18,17 @@ struct iPadMainView: View {
     @State private var zeigeArchiv = false
 
     enum iPadSection: Hashable {
-        case einsatzOrt
+        case konfiguration
+        case einsatzzeiten
+        case patient
         case notfallGeschehen
+        case abcde
         case airway, breathing, circulation, disability, exposure
         case sampler
-        case sinnhaft
         case diagnose
         case verlauf
         case massnahmen
+        case sinnhaft
         case reanimation
         case bilder
         case abschluss
@@ -63,7 +64,7 @@ struct iPadMainView: View {
                     Button {
                         protokoll.reset()
                         showingStart = false
-                        selectedSection = .einsatzOrt
+                        selectedSection = .konfiguration
                     } label: {
                         Label("Neuen Einsatz starten", systemImage: "plus.circle.fill")
                             .frame(maxWidth: 480)
@@ -150,7 +151,7 @@ struct iPadMainView: View {
         .sheet(isPresented: $zeigeArchiv) {
             ArchivView(onLaden: {
                 showingStart = false
-                selectedSection = .einsatzOrt
+                selectedSection = .konfiguration
             })
             .environmentObject(protokoll)
         }
@@ -168,10 +169,8 @@ struct iPadMainView: View {
                         Button {
                             showingStart = true
                             selectedSection = nil
-                            protokoll.reset()
                         } label: {
-                            Label("Einsatz beenden", systemImage: "xmark.circle.fill")
-                                .foregroundColor(.red)
+                            Image(systemName: "house.fill")
                         }
                     }
                 }
@@ -215,113 +214,51 @@ struct iPadMainView: View {
     @ViewBuilder
     private var sidebarContent: some View {
         List(selection: $selectedSection) {
-
-            // Einsatz-Info Header
             einsatzInfoHeader
 
-            // Einsatzdaten
-            Section("Einsatzdaten") {
-                iPadNavRow(icon: "clock", farbe: .primary,
-                           titel: "Einsatzzeiten",
-                           untertitel: einsatzzeitenUntertitel(),
-                           section: .einsatzOrt)
-                iPadNavRow(icon: "doc.on.clipboard", farbe: .primary,
-                           titel: "Rettungstechnische Daten",
-                           untertitel: protokoll.einsatzOrt.adresse.isEmpty
-                               ? "Einsatzort & Patient"
-                               : protokoll.einsatzOrt.adresse,
-                           section: .einsatzOrt)
-                iPadNavRow(icon: "bell.fill", farbe: .primary,
-                           titel: "Notfallgeschehen",
-                           untertitel: protokoll.notfallGeschehen.erstbefundVorOrt.isEmpty
-                               ? "Erstbefund & Notfallgeschehen"
-                               : protokoll.notfallGeschehen.erstbefundVorOrt,
-                           section: .notfallGeschehen)
+            Section {
+                iPadNavRow(icon: "gearshape.fill",  farbe: .gray,   titel: "Konfiguration",  section: .konfiguration,  badge: konfigurationBadge)
+                iPadNavRow(icon: "clock.fill",       farbe: .blue,   titel: "Einsatzzeiten",  section: .einsatzzeiten)
+                iPadNavRow(icon: "person.fill",      farbe: .teal,   titel: "Patient",         section: .patient,         badge: patientBadge)
             }
 
-            // Befunde (ABCDE)
-            Section("Befunde") {
-                ABCDESidebarZeile(buchstabe: "A", farbe: .orange,
-                                  titel: "Airway",
-                                  status: protokoll.airway.status,
-                                  section: .airway)
-                ABCDESidebarZeile(buchstabe: "B", farbe: .blue,
-                                  titel: "Breathing",
-                                  status: protokoll.breathing.status,
-                                  section: .breathing)
-                ABCDESidebarZeile(buchstabe: "C", farbe: .red,
-                                  titel: "Circulation",
-                                  status: protokoll.circulation.status,
-                                  section: .circulation)
-                ABCDESidebarZeile(buchstabe: "D", farbe: .purple,
-                                  titel: "Disability",
-                                  status: protokoll.disability.status,
-                                  section: .disability)
-                ABCDESidebarZeile(buchstabe: "E", farbe: .green,
-                                  titel: "Exposure",
-                                  status: protokoll.exposure.status,
-                                  section: .exposure)
+            Section {
+                iPadNavRow(icon: "bell.fill",                        farbe: .orange, titel: "Notfallgeschehen",   section: .notfallGeschehen, badge: notfallBadge)
+                iPadNavRow(icon: "staroflife.fill",                  farbe: .red,    titel: "ABCDE",               section: .abcde,            badge: befundeBadge)
+                iPadNavRow(icon: "list.clipboard.fill",              farbe: .indigo, titel: "SAMPLER-Schema",      section: .sampler)
+                iPadNavRow(icon: "eye.fill",                         farbe: .purple, titel: "Diagnosen",           section: .diagnose,         badge: diagnoseBadge)
             }
 
-            // Diagnose & Verlauf
-            Section("Diagnose") {
-                iPadNavRow(icon: "eye.fill", farbe: .primary,
-                           titel: "Diagnosen",
-                           untertitel: diagnoseUntertitel(),
-                           section: .diagnose)
-                iPadNavRow(icon: "waveform.path.ecg", farbe: .primary,
-                           titel: "Verlauf und Therapie",
-                           untertitel: protokoll.verlaufMessungen.isEmpty
-                               ? "Noch keine Messungen"
-                               : "\(protokoll.verlaufMessungen.count) Messung(en)",
-                           section: .verlauf)
+            Section {
+                iPadNavRow(icon: "waveform.path.ecg",                farbe: Color(.systemGreen), titel: "Verlauf und Therapie",   section: .verlauf,    badge: verlaufBadge)
+                iPadNavRow(icon: "cross.fill",                       farbe: .green,              titel: "Maßnahmen",               section: .massnahmen, badge: moduleBadge)
+                iPadNavRow(icon: "bubble.left.and.bubble.right.fill",farbe: .cyan,               titel: "SINNHAFT-Schema",          section: .sinnhaft)
+                iPadNavRow(icon: "heart.fill",                       farbe: .red,                titel: "Reanimation und Tod",      section: .reanimation)
+                iPadNavRow(icon: "photo.stack.fill",                 farbe: .brown,              titel: "Bilder & Dateien",         section: .bilder,    badge: bilderBadge)
             }
 
-            // Module & Therapie
-            Section("Module") {
-                iPadNavRow(icon: "list.clipboard.fill", farbe: .teal,
-                           titel: "SAMPLER",
-                           untertitel: "Anamnese & Vorgeschichte",
-                           section: .sampler)
-                iPadNavRow(icon: "bubble.left.and.bubble.right.fill", farbe: .indigo,
-                           titel: "SINNHAFT",
-                           untertitel: "Strukturiertes Übergabeschema",
-                           section: .sinnhaft)
-                iPadNavRow(icon: "square.grid.2x2.fill", farbe: .primary,
-                           titel: "Maßnahmen",
-                           untertitel: massnahmenUntertitel(),
-                           section: .massnahmen)
-                iPadNavRow(icon: "photo.stack", farbe: .primary,
-                           titel: "Bilder & Dateien",
-                           untertitel: protokoll.fotos.isEmpty
-                               ? "Keine Fotos"
-                               : "\(protokoll.fotos.count) Foto(s)",
-                           section: .bilder)
-            }
-
-            // Abschluss
-            Section("Abschluss") {
-                iPadNavRow(icon: "heart.fill",
-                           farbe: protokoll.reanimationAktiv ? .red : .primary,
-                           titel: "Reanimation und Tod",
-                           untertitel: protokoll.reanimationAktiv
-                               ? "Protokoll aktiv"
-                               : "Nicht durchgeführt",
-                           section: .reanimation)
-                iPadNavRow(icon: "list.bullet.rectangle.portrait", farbe: .primary,
-                           titel: "Ergebnis",
-                           untertitel: "Einsatz abschließen und exportieren",
-                           section: .abschluss)
-                iPadNavRow(icon: "gearshape.fill", farbe: .secondary,
-                           titel: "Konfiguration",
-                           untertitel: "",
-                           section: .settings)
+            Section {
+                HStack(spacing: 14) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color.red.opacity(0.15))
+                            .frame(width: 36, height: 36)
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.red)
+                            .font(.body)
+                    }
+                    Text("Einsatz beenden")
+                        .foregroundColor(.red)
+                        .fontWeight(.semibold)
+                    Spacer()
+                }
+                .tag(iPadSection.abschluss)
             }
         }
         .listStyle(.sidebar)
     }
 
-    // MARK: - Einsatz-Info Header im Sidebar
+    // MARK: - Einsatz-Info Header
 
     private var einsatzInfoHeader: some View {
         HStack(spacing: 12) {
@@ -357,17 +294,32 @@ struct iPadMainView: View {
     @ViewBuilder
     private var detailContent: some View {
         switch selectedSection {
-        case .einsatzOrt:
+        case .konfiguration:
             NavigationStack {
-                EinsatzOrtView(
-                    protokoll: protokoll,
-                    onWeiter: { selectedSection = .notfallGeschehen },
-                    onBack: { }
-                )
+                KonfigurationView(protokoll: protokoll)
+            }
+        case .einsatzzeiten:
+            NavigationStack {
+                EinsatzzeitenView(protokoll: protokoll)
+            }
+        case .patient:
+            NavigationStack {
+                PatientView(protokoll: protokoll)
             }
         case .notfallGeschehen:
             NavigationStack {
                 NotfallgeschehenView(befund: $protokoll.notfallGeschehen)
+            }
+        case .abcde:
+            NavigationStack {
+                ABCDEUebersichtView(
+                    protokoll: protokoll,
+                    onAirway:      { selectedSection = .airway },
+                    onBreathing:   { selectedSection = .breathing },
+                    onCirculation: { selectedSection = .circulation },
+                    onDisability:  { selectedSection = .disability },
+                    onExposure:    { selectedSection = .exposure }
+                )
             }
         case .airway:
             NavigationStack {
@@ -392,11 +344,11 @@ struct iPadMainView: View {
         case .sampler:
             NavigationStack {
                 SAMPLERView(befund: $protokoll.sampler,
-                            medikamentFotos: $protokoll.medikamentFotos) { selectedSection = .sinnhaft }
+                            medikamentFotos: $protokoll.medikamentFotos) { selectedSection = .diagnose }
             }
         case .sinnhaft:
             NavigationStack {
-                SINNHAFTView(befund: $protokoll.sinnhaft) { selectedSection = .diagnose }
+                SINNHAFTView(befund: $protokoll.sinnhaft) { selectedSection = .reanimation }
                     .environmentObject(protokoll)
             }
         case .diagnose:
@@ -405,11 +357,11 @@ struct iPadMainView: View {
             }
         case .verlauf:
             NavigationStack {
-                VerlaufView(messungen: $protokoll.verlaufMessungen) { selectedSection = .diagnose }
+                VerlaufView(messungen: $protokoll.verlaufMessungen) { selectedSection = .massnahmen }
             }
         case .massnahmen:
             NavigationStack {
-                MassnahmenView(befund: $protokoll.massnahmen, onBack: { selectedSection = .diagnose })
+                MassnahmenView(befund: $protokoll.massnahmen, onBack: { selectedSection = nil })
             }
         case .reanimation:
             NavigationStack {
@@ -417,11 +369,15 @@ struct iPadMainView: View {
             }
         case .bilder:
             NavigationStack {
-                BilderView(fotos: $protokoll.fotos) { selectedSection = .reanimation }
+                BilderView(fotos: $protokoll.fotos) { selectedSection = nil }
             }
         case .abschluss:
             NavigationStack {
-                AbschlussView(protokoll: protokoll, onBack: { selectedSection = .massnahmen })
+                AbschlussView(protokoll: protokoll, onBack: {
+                    protokoll.reset()
+                    showingStart = true
+                    selectedSection = nil
+                })
             }
         case .settings:
             NavigationStack {
@@ -455,8 +411,9 @@ struct iPadMainView: View {
             let daten = await ScreenshotParser.parse(image)
             await MainActor.run {
                 protokoll.einsatzOrt.einsatzNummer = daten.einsatzNummer
-                protokoll.einsatzOrt.einsatzArt    = daten.einsatzArt
-                protokoll.einsatzOrt.stichwort     = daten.stichwort
+                let code = daten.einsatzArt
+                protokoll.einsatzOrt.stichwort  = code
+                protokoll.einsatzOrt.einsatzArt = code
                 protokoll.einsatzOrt.adresse       = daten.adresse
                 protokoll.einsatzOrt.zusatz        = daten.zusatz
                 protokoll.einsatzOrt.sondersignal  = daten.sondersignal
@@ -475,100 +432,109 @@ struct iPadMainView: View {
         }
     }
 
-    // MARK: - Hilfsfunktionen
+    // MARK: - Badge Berechnungen
 
-    private func einsatzzeitenUntertitel() -> String {
+    private var konfigurationBadge: Int? {
         let eo = protokoll.einsatzOrt
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        formatter.dateStyle = .none
-        if let alarm = eo.alarmzeit {
-            return "Alarm \(formatter.string(from: alarm))"
-        }
-        return "Zeiten noch nicht erfasst"
+        var count = 0
+        if !eo.adresse.isEmpty       { count += 1 }
+        if !eo.einsatzNummer.isEmpty { count += 1 }
+        if !eo.stichwort.isEmpty     { count += 1 }
+        if !eo.fahrzeugName.isEmpty  { count += 1 }
+        return count > 0 ? count : nil
     }
 
-    private func diagnoseUntertitel() -> String {
-        let fuehrend = protokoll.diagnose.verdachtsdiagnosen.first { $0.wahrscheinlichkeit == .fuehrend }
-        if let f = fuehrend { return "V.a. \(f.name)" }
-        if !protokoll.diagnose.leitsymptom.isEmpty { return protokoll.diagnose.leitsymptom }
+    private var patientBadge: Int? {
+        let p = protokoll.patientDaten
+        var count = 0
+        if !p.vorname.isEmpty         { count += 1 }
+        if !p.nachname.isEmpty        { count += 1 }
+        if p.geburtsDatum != nil      { count += 1 }
+        if p.geschlecht != .unbekannt { count += 1 }
+        return count > 0 ? count : nil
+    }
+
+    private var notfallBadge: Int? {
+        let b = protokoll.notfallGeschehen
+        var count = 0
+        if !b.unfallhergangAuswahl.isEmpty                              { count += 1 }
+        if !b.unfallmechanismus.isEmpty                                  { count += 1 }
+        if !b.preEmergencyStatus.isEmpty                                 { count += 1 }
+        if !b.erstbefundAuswahl.isEmpty || !b.erstbefundVorOrt.isEmpty  { count += 1 }
+        if !b.verlaufsbemerkungen.isEmpty                                { count += 1 }
+        return count > 0 ? count : nil
+    }
+
+    private var diagnoseBadge: Int? {
         let c = protokoll.diagnose.verdachtsdiagnosen.count
-        return c == 0 ? "Noch nicht erfasst" : "\(c) Verdachtsdiagnosen"
+        return c > 0 ? c : nil
     }
 
-    private func massnahmenUntertitel() -> String {
+    private var befundeBadge: Int? {
+        let count = [protokoll.airway.status,
+                     protokoll.breathing.status,
+                     protokoll.circulation.status,
+                     protokoll.disability.status,
+                     protokoll.exposure.status]
+            .filter { $0 != .unbewertet }.count
+        return count > 0 ? count : nil
+    }
+
+    private var verlaufBadge: Int? {
+        let c = protokoll.verlaufMessungen.count
+        return c > 0 ? c : nil
+    }
+
+    private var moduleBadge: Int? {
         let m = protokoll.massnahmen
-        var aktive: [String] = []
-        if m.sauerstoffgabe  { aktive.append("O₂") }
-        if m.maskenbeatmung  { aktive.append("Maskenbeatmung") }
-        if m.supraglottisch  { aktive.append("Supraglottisch") }
-        if m.peripherVenoes  { aktive.append("IV-Zugang") }
-        if m.vakuummatratze  { aktive.append("Vakuummatratze") }
-        if m.tourniquet      { aktive.append("Tourniquet") }
-        return aktive.isEmpty ? "Noch nicht erfasst" : aktive.joined(separator: ", ")
+        var count = protokoll.medikamente.count
+        if m.sauerstoffgabe  { count += 1 }
+        if m.maskenbeatmung  { count += 1 }
+        if m.supraglottisch  { count += 1 }
+        if m.peripherVenoes  { count += 1 }
+        if m.vakuummatratze  { count += 1 }
+        if m.tourniquet      { count += 1 }
+        return count > 0 ? count : nil
+    }
+
+    private var bilderBadge: Int? {
+        let c = protokoll.fotos.count
+        return c > 0 ? c : nil
     }
 }
 
-// MARK: - Sidebar Hilfskomponenten
+// MARK: - Sidebar Row
 
 private struct iPadNavRow: View {
     let icon: String
     let farbe: Color
     let titel: String
-    let untertitel: String
     let section: iPadMainView.iPadSection
+    var badge: Int? = nil
 
     var body: some View {
-        Label {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(titel)
-                    .font(.subheadline).fontWeight(.semibold)
-                if !untertitel.isEmpty {
-                    Text(untertitel)
-                        .font(.caption).foregroundColor(.secondary)
-                        .lineLimit(1)
-                }
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(farbe.opacity(0.15))
+                    .frame(width: 36, height: 36)
+                Image(systemName: icon)
+                    .foregroundColor(farbe)
+                    .font(.body)
             }
-        } icon: {
-            Image(systemName: icon)
-                .foregroundColor(farbe)
-                .frame(width: 28, height: 28)
-                .background(farbe.opacity(0.15))
-                .cornerRadius(6)
-        }
-        .tag(section)
-    }
-}
-
-private struct ABCDESidebarZeile: View {
-    let buchstabe: String
-    let farbe: Color
-    let titel: String
-    let status: ABCDEStatus
-    let section: iPadMainView.iPadSection
-
-    var body: some View {
-        Label {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(titel)
-                        .font(.subheadline).fontWeight(.semibold)
-                    Text(status.rawValue)
-                        .font(.caption)
-                        .foregroundColor(status.color)
-                }
-                Spacer()
-                Image(systemName: status.symbol)
-                    .foregroundColor(status.color)
-                    .font(.caption)
+            Text(titel)
+                .foregroundColor(.primary)
+                .fontWeight(.medium)
+            Spacer()
+            if let count = badge, count > 0 {
+                Text("\(min(count, 99))")
+                    .font(.caption.weight(.bold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(Color("RDOrange"))
+                    .clipShape(Capsule())
             }
-        } icon: {
-            Text(buchstabe)
-                .font(.subheadline).fontWeight(.bold)
-                .foregroundColor(status == .unbewertet ? farbe : status.color)
-                .frame(width: 28, height: 28)
-                .background((status == .unbewertet ? farbe : status.color).opacity(0.15))
-                .cornerRadius(6)
         }
         .tag(section)
     }
