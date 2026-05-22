@@ -143,6 +143,9 @@ class EinsatzProtokoll: ObservableObject, Identifiable {
     // Bilder (in-app only, nicht auf Gerät gespeichert)
     @Published var fotos: [FotoEintrag] = []
 
+    // Medikamentenplan-Fotos (in-app only, nicht archiviert)
+    @Published var medikamentFotos: [FotoEintrag] = []
+
     // Ergebnis
     @Published var ergebnis = ErgebnisData()
 
@@ -177,6 +180,8 @@ class EinsatzProtokoll: ObservableObject, Identifiable {
         reanimation = ReanimationsProtokoll()
         fotos.forEach { $0.loeschen() }
         fotos = []
+        medikamentFotos.forEach { $0.loeschen() }
+        medikamentFotos = []
         ergebnis = ErgebnisData()
         zielKlinik = ""
         uebergabeAn = ""

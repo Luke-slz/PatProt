@@ -65,4 +65,16 @@ struct PatProtTests {
         #expect(NumpadSheet.formatDisplay(digits: "", mode: .decimal(label: "", unit: "")) == "—")
     }
 
+    @Test func medikamentFotosInitialisierenLeer() {
+        let p = EinsatzProtokoll()
+        #expect(p.medikamentFotos.isEmpty)
+    }
+
+    @Test func resetLeertMedikamentFotos() {
+        let p = EinsatzProtokoll()
+        p.medikamentFotos.append(FotoEintrag(bildDateiname: "test.jpg"))
+        p.reset()
+        #expect(p.medikamentFotos.isEmpty)
+    }
+
 }
