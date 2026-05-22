@@ -1,54 +1,353 @@
 import SwiftUI
 
+// MARK: - Hauptliste
+
 struct NotfallgeschehenView: View {
     @Binding var befund: NotfallgeschehenBefund
-    var onWeiter: () -> Void
-    var onBack: () -> Void
+
+    var body: some View {
+        List {
+            Section {
+                NavigationLink {
+                    UnfallhergangView(auswahl: $befund.unfallhergangAuswahl,
+                                      freitext: $befund.unfallhergangFreitext)
+                } label: {
+                    NfgZeile(
+                        titel: "Unfallhergang",
+                        wert: befund.unfallhergangAuswahl.isEmpty
+                            ? (befund.unfallhergangFreitext.isEmpty ? nil : befund.unfallhergangFreitext)
+                            : befund.unfallhergangAuswahl.prefix(2).joined(separator: ", ")
+                    )
+                }
+                NavigationLink {
+                    UnfallmechanismusView(auswahl: $befund.unfallmechanismus,
+                                          freitext: $befund.unfallmechanismusFreitext)
+                } label: {
+                    NfgZeile(
+                        titel: "Unfallmechanismus",
+                        wert: befund.unfallmechanismus.isEmpty ? nil : befund.unfallmechanismus
+                    )
+                }
+            }
+
+            Section {
+                NavigationLink {
+                    PreEmergencyStatusView(auswahl: $befund.preEmergencyStatus)
+                } label: {
+                    NfgZeile(
+                        titel: "Pre Emergency Status",
+                        wert: befund.preEmergencyStatus.isEmpty ? nil : befund.preEmergencyStatus
+                    )
+                }
+                NavigationLink {
+                    NacaScoreView(score: $befund.nacaScoreWert)
+                } label: {
+                    NfgZeile(
+                        titel: "NACA-Score",
+                        wert: befund.nacaScoreWert.map { "NACA \($0.rawValue)" }
+                    )
+                }
+            }
+
+            Section {
+                NavigationLink {
+                    ErstbefundView(auswahl: $befund.erstbefundAuswahl,
+                                   freitext: $befund.erstbefundVorOrt)
+                } label: {
+                    NfgZeile(
+                        titel: "Erstbefund bei Ankunft",
+                        wert: befund.erstbefundAuswahl.isEmpty
+                            ? (befund.erstbefundVorOrt.isEmpty ? nil : befund.erstbefundVorOrt)
+                            : befund.erstbefundAuswahl.prefix(2).joined(separator: ", ")
+                    )
+                }
+            }
+
+            Section {
+                NavigationLink {
+                    VerlaufsbemerkungView(bemerkung: $befund.verlaufsbemerkungen)
+                } label: {
+                    NfgZeile(
+                        titel: "Verlaufsbemerkungen",
+                        wert: befund.verlaufsbemerkungen.isEmpty ? nil : befund.verlaufsbemerkungen
+                    )
+                }
+                NavigationLink {
+                    DynamischeErweiterungView(befund: $befund)
+                } label: {
+                    NfgZeile(
+                        titel: "Dynamische Erweiterung / MANV",
+                        wert: befund.manv ? "MANV aktiv" : (befund.dynamischeErweiterung.isEmpty ? nil : "Erfasst")
+                    )
+                }
+            }
+        }
+        .navigationTitle("Notfallgeschehen")
+        .navigationBarTitleDisplayMode(.large)
+    }
+}
+
+// MARK: - Zeilenhelfer
+
+private struct NfgZeile: View {
+    let titel: String
+    let wert: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(titel).font(.body)
+            if let w = wert {
+                Text(w)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+            } else {
+                Text("Nicht erfasst")
+                    .font(.caption)
+                    .foregroundColor(Color(.tertiaryLabel))
+            }
+        }
+        .padding(.vertical, 2)
+    }
+}
+
+// MARK: - Unfallhergang (Multi-Select)
+
+struct UnfallhergangView: View {
+    @Binding var auswahl: [String]
+    @Binding var freitext: String
+
+    private let traumaOptionen = [
+        "KFZ-Insasse", "Motorradfahrer", "Fahrradfahrer", "Fußgänger",
+        "Zug / Schiff", "Sturz >3 m", "Sturz <3 m",
+        "Schlag (Gegenstand)", "Schuss", "Stich",
+        "Gewaltverbrechen", "Maschinenunfall / Einklemmung", "Verschüttung"
+    ]
+
+    private let medizinischOptionen = [
+        "Plötzlicher Kollaps", "Bewusstlosigkeit", "Krampfanfall",
+        "Brustschmerz", "Atemnot", "Allergische Reaktion",
+        "Suizidversuch", "Intoxikation", "Ertrinken / Beinaheertrinken"
+    ]
+
+    private let sonstigesOptionen = [
+        "andere Unfallarten", "nicht bekannt"
+    ]
 
     var body: some View {
         Form {
-            // Erstbefund
+            AuswahlSection(titel: "Trauma", optionen: traumaOptionen, auswahl: $auswahl)
+            AuswahlSection(titel: "Medizinisch", optionen: medizinischOptionen, auswahl: $auswahl)
+            AuswahlSection(titel: "Sonstiges", optionen: sonstigesOptionen, auswahl: $auswahl)
+
             Section {
-                VStack(alignment: .leading, spacing: 6) {
-                    Label("Erstbefund bei Ankunft", systemImage: "eyes")
-                        .font(.subheadline).fontWeight(.semibold)
-                    Text("Zustand des Patienten bei Erstkontakt")
-                        .font(.caption).foregroundColor(.secondary)
-                    TextEditor(text: $befund.erstbefundVorOrt)
-                        .frame(minHeight: 80)
+                TextField("Ergänzungen / Sonstiges", text: $freitext, axis: .vertical)
+                    .lineLimit(3...6)
+            } header: {
+                Text("Freitext")
+            }
+        }
+        .navigationTitle("Unfallhergang")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - Unfallmechanismus (Single-Select)
+
+struct UnfallmechanismusView: View {
+    @Binding var auswahl: String
+    @Binding var freitext: String
+
+    private let optionen = [
+        "Stumpfes Trauma", "Penetrierendes Trauma", "Explosionstrauma",
+        "Verbrennung / Verbrühung", "Inhalationstrauma", "Elektrounfall",
+        "Barotrauma", "Kein Trauma (internistisch)", "Unbekannt"
+    ]
+
+    var body: some View {
+        Form {
+            Section {
+                ForEach(optionen, id: \.self) { option in
+                    Button {
+                        auswahl = (auswahl == option) ? "" : option
+                    } label: {
+                        HStack {
+                            Text(option).foregroundColor(.primary)
+                            Spacer()
+                            if auswahl == option {
+                                Image(systemName: "checkmark").foregroundColor(Color("RDOrange"))
+                            }
+                        }
+                    }
                 }
             }
-
-            // Patient vorgefunden
             Section {
-                VStack(alignment: .leading, spacing: 6) {
-                    Label("Patient vorgefunden", systemImage: "person.fill")
-                        .font(.subheadline).fontWeight(.semibold)
-                    Text("z.B. bewusstlos am Boden, sitzend, stehend")
-                        .font(.caption).foregroundColor(.secondary)
-                    TextField("", text: $befund.patientGefunden)
+                TextField("Ergänzungen", text: $freitext, axis: .vertical)
+                    .lineLimit(2...4)
+            } header: {
+                Text("Freitext")
+            }
+        }
+        .navigationTitle("Unfallmechanismus")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - Pre Emergency Status (Single-Select)
+
+struct PreEmergencyStatusView: View {
+    @Binding var auswahl: String
+
+    private let optionen = [
+        "Gut (selbstständig)",
+        "Reduziert (hilfsbedürftig)",
+        "Chronisch krank",
+        "Demenziell verändert",
+        "Pflegebedürftig",
+        "Unbekannt"
+    ]
+
+    var body: some View {
+        Form {
+            Section {
+                ForEach(optionen, id: \.self) { option in
+                    Button {
+                        auswahl = (auswahl == option) ? "" : option
+                    } label: {
+                        HStack {
+                            Text(option).foregroundColor(.primary)
+                            Spacer()
+                            if auswahl == option {
+                                Image(systemName: "checkmark").foregroundColor(Color("RDOrange"))
+                            }
+                        }
+                    }
                 }
             }
+        }
+        .navigationTitle("Pre Emergency Status")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
 
-            // Ersthelfer
+// MARK: - NACA-Score
+
+struct NacaScoreView: View {
+    @Binding var score: NacaScore?
+
+    var body: some View {
+        Form {
             Section {
-                VStack(alignment: .leading, spacing: 6) {
-                    Label("Ersthelfermaßnahmen", systemImage: "person.2.fill")
-                        .font(.subheadline).fontWeight(.semibold)
-                    Text("Maßnahmen vor Rettungsdienst-Eintreffen")
-                        .font(.caption).foregroundColor(.secondary)
-                    TextEditor(text: $befund.ersthelferMassnahmen)
-                        .frame(minHeight: 60)
+                ForEach(NacaScore.allCases, id: \.self) { naca in
+                    Button {
+                        score = (score == naca) ? nil : naca
+                    } label: {
+                        HStack {
+                            Text(naca.beschreibung).foregroundColor(.primary)
+                            Spacer()
+                            if score == naca {
+                                Image(systemName: "checkmark").foregroundColor(Color("RDOrange"))
+                            }
+                        }
+                    }
                 }
+            } footer: {
+                Text("Tippe erneut um die Auswahl aufzuheben.")
+                    .font(.caption)
+            }
+        }
+        .navigationTitle("NACA-Score")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - Erstbefund (Multi-Select + Freitext)
+
+struct ErstbefundView: View {
+    @Binding var auswahl: [String]
+    @Binding var freitext: String
+
+    private let optionen = [
+        "Ansprechbar", "Verwirrt", "Bewusstlos",
+        "Liegend", "Sitzend", "Stehend",
+        "Schnappatmung", "Atemstillstand", "Pulslos", "Krampfend"
+    ]
+
+    var body: some View {
+        Form {
+            AuswahlSection(titel: "Zustand bei Erstkontakt", optionen: optionen, auswahl: $auswahl)
+            Section {
+                TextField("Freitext (Zustand bei Ankunft)", text: $freitext, axis: .vertical)
+                    .lineLimit(3...8)
+            } header: {
+                Text("Ergänzungen")
+            }
+        }
+        .navigationTitle("Erstbefund")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - Verlaufsbemerkungen
+
+struct VerlaufsbemerkungView: View {
+    @Binding var bemerkung: String
+
+    private let schnellauswahl = [
+        "Stabil", "Leicht verbessert", "Verbessert",
+        "Leicht verschlechtert", "Verschlechtert", "Kritisch verschlechtert"
+    ]
+
+    var body: some View {
+        Form {
+            Section {
+                ForEach(schnellauswahl, id: \.self) { chip in
+                    Button {
+                        bemerkung = (bemerkung.trimmingCharacters(in: .whitespaces) == chip) ? "" : chip
+                    } label: {
+                        HStack {
+                            Text(chip).foregroundColor(.primary)
+                            Spacer()
+                            if bemerkung.trimmingCharacters(in: .whitespaces) == chip {
+                                Image(systemName: "checkmark").foregroundColor(Color("RDOrange"))
+                            }
+                        }
+                    }
+                }
+            } header: {
+                Text("Schnellauswahl")
+            }
+            Section {
+                TextField("Freitext Verlauf", text: $bemerkung, axis: .vertical)
+                    .lineLimit(3...8)
+            } header: {
+                Text("Freitext")
+            }
+        }
+        .navigationTitle("Verlaufsbemerkungen")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - Dynamische Erweiterung / MANV
+
+struct DynamischeErweiterungView: View {
+    @Binding var befund: NotfallgeschehenBefund
+
+    var body: some View {
+        Form {
+            Section {
+                TextField("Besonderheiten, Nachforderungen, Notizen…",
+                          text: $befund.dynamischeErweiterung, axis: .vertical)
+                    .lineLimit(4...12)
+            } header: {
+                Text("Dynamische Erweiterung")
             }
 
-            // Beteiligte / MANV
             Section {
                 Stepper("Anzahl Beteiligte: \(befund.anzahlBeteiligte)",
                         value: $befund.anzahlBeteiligte, in: 1...999)
-                Toggle("MANV-Lage", isOn: $befund.manv)
-                    .tint(.red)
-
+                Toggle("MANV-Lage", isOn: $befund.manv).tint(.red)
                 if befund.manv {
                     Toggle("1. Eintreffende Kraft", isOn: $befund.ersteEintreffendeKraft)
                         .tint(Color("RDOrange"))
@@ -57,86 +356,41 @@ struct NotfallgeschehenView: View {
                 Label("Besonderheiten", systemImage: "exclamationmark.triangle.fill")
             }
 
-            // MANV-Sichtung (nur wenn MANV + 1. Eintreffend)
             if befund.manv && befund.ersteEintreffendeKraft {
                 Section {
-                    SKZeile(farbe: .red,    kuerzel: "SK I",
-                            bezeichnung: "Sofortige Behandlung",
-                            count: $befund.manvSK1)
-                    SKZeile(farbe: .yellow, kuerzel: "SK II",
-                            bezeichnung: "Aufgeschobene Behandlung",
-                            count: $befund.manvSK2)
-                    SKZeile(farbe: .green,  kuerzel: "SK III",
-                            bezeichnung: "Leicht verletzt",
-                            count: $befund.manvSK3)
-                    SKZeile(farbe: .blue,   kuerzel: "SK IV",
-                            bezeichnung: "Ohne Überlebenschance",
-                            count: $befund.manvSK4)
-                    SKZeile(farbe: .gray,   kuerzel: "T",
-                            bezeichnung: "Verstorben",
-                            count: $befund.manvVerstorben)
-
+                    SKZeile(farbe: .red,    kuerzel: "SK I",   bezeichnung: "Sofortige Behandlung",     count: $befund.manvSK1)
+                    SKZeile(farbe: .yellow, kuerzel: "SK II",  bezeichnung: "Aufgeschobene Behandlung", count: $befund.manvSK2)
+                    SKZeile(farbe: .green,  kuerzel: "SK III", bezeichnung: "Leicht verletzt",           count: $befund.manvSK3)
+                    SKZeile(farbe: .blue,   kuerzel: "SK IV",  bezeichnung: "Ohne Überlebenschance",     count: $befund.manvSK4)
+                    SKZeile(farbe: .gray,   kuerzel: "T",      bezeichnung: "Verstorben",                count: $befund.manvVerstorben)
                     HStack {
                         Text("Gesamt").fontWeight(.semibold)
                         Spacer()
-                        Text("\(befund.manvGesamtSK) Personen")
-                            .fontWeight(.semibold)
-                            .foregroundColor(.secondary)
+                        Text("\(befund.manvGesamtSK) Personen").fontWeight(.semibold).foregroundColor(.secondary)
                     }
                 } header: {
                     Label("Sichtungsergebnis", systemImage: "person.3.fill")
                 } footer: {
-                    Text("Anzahl direkt tippen oder mit + / − anpassen")
-                        .font(.caption)
+                    Text("Anzahl direkt tippen oder mit + / − anpassen").font(.caption)
                 }
             }
 
-            // MANV-Meldung (nur wenn MANV aktiv)
             if befund.manv {
                 Section {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Label("Lagemeldung", systemImage: "antenna.radiowaves.left.and.right")
-                            .font(.subheadline).fontWeight(.semibold)
-                        Text("Erstmeldung an Leitstelle / Führung")
-                            .font(.caption).foregroundColor(.secondary)
-                        TextEditor(text: $befund.manvLagemeldung)
-                            .frame(minHeight: 70)
-                    }
+                    TextField("Lagemeldung an Leitstelle", text: $befund.manvLagemeldung, axis: .vertical)
+                        .lineLimit(2...5)
                     TextField("Nachgeforderte Kräfte / Mittel", text: $befund.manvNachforderung)
                 } header: {
                     Label("MANV-Meldung", systemImage: "megaphone.fill")
                 }
             }
-
         }
-        .safeAreaInset(edge: .bottom) {
-            Button(action: onWeiter) {
-                Label("Weiter zur Befunderhebung", systemImage: "arrow.right.circle.fill")
-                    .frame(maxWidth: .infinity)
-                    .padding()
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(Color("RDOrange"))
-            .padding([.horizontal, .bottom])
-            .background(.bar)
-        }
-        .navigationTitle("Notfallgeschehen")
+        .navigationTitle("Dyn. Erweiterung / MANV")
         .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(true)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: onBack) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "chevron.left")
-                        Text("Zurück")
-                    }
-                }
-            }
-        }
     }
 }
 
-// MARK: - SK-Zeile
+// MARK: - SKZeile
 
 private struct SKZeile: View {
     let farbe: Color
@@ -151,40 +405,58 @@ private struct SKZeile: View {
                 RoundedRectangle(cornerRadius: 6)
                     .fill(farbe == .yellow ? Color.yellow : farbe.opacity(0.15))
                     .frame(width: 44, height: 32)
-                Text(kuerzel)
-                    .font(.caption).fontWeight(.bold)
+                Text(kuerzel).font(.caption).fontWeight(.bold)
                     .foregroundColor(farbe == .yellow ? .black : farbe)
             }
-            VStack(alignment: .leading, spacing: 1) {
-                Text(bezeichnung)
-                    .font(.subheadline)
-            }
+            Text(bezeichnung).font(.subheadline)
             Spacer()
             HStack(spacing: 0) {
                 Button { if count > 0 { count -= 1 } } label: {
-                    Image(systemName: "minus.circle.fill")
-                        .font(.title2)
+                    Image(systemName: "minus.circle.fill").font(.title2)
                         .foregroundColor(count > 0 ? farbe : .secondary)
-                }
-                .buttonStyle(.plain)
-
-                Text("\(count)")
-                    .font(.title3).fontWeight(.semibold)
+                }.buttonStyle(.plain)
+                Text("\(count)").font(.title3).fontWeight(.semibold)
                     .frame(minWidth: 36, alignment: .center)
                     .contentShape(Rectangle())
                     .onTapGesture { zeigeNumpad = true }
-
                 Button { count += 1 } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.title2)
-                        .foregroundColor(farbe)
-                }
-                .buttonStyle(.plain)
+                    Image(systemName: "plus.circle.fill").font(.title2).foregroundColor(farbe)
+                }.buttonStyle(.plain)
             }
         }
         .sheet(isPresented: $zeigeNumpad) {
             NumpadSheet(mode: .integer(label: kuerzel, unit: "Personen", maxDigits: 3),
                         initial: "\(count)") { val in count = Int(val) ?? count }
+        }
+    }
+}
+
+// MARK: - AuswahlSection Helper (Multi-Select)
+
+private struct AuswahlSection: View {
+    let titel: String
+    let optionen: [String]
+    @Binding var auswahl: [String]
+
+    var body: some View {
+        Section(titel) {
+            ForEach(optionen, id: \.self) { option in
+                Button {
+                    if auswahl.contains(option) {
+                        auswahl.removeAll { $0 == option }
+                    } else {
+                        auswahl.append(option)
+                    }
+                } label: {
+                    HStack {
+                        Text(option).foregroundColor(.primary)
+                        Spacer()
+                        if auswahl.contains(option) {
+                            Image(systemName: "checkmark").foregroundColor(Color("RDOrange"))
+                        }
+                    }
+                }
+            }
         }
     }
 }
