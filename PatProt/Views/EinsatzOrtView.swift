@@ -291,7 +291,7 @@ struct EinsatzOrtView: View {
 
 // MARK: - Besatzungsfeld mit Personal-Picker
 
-private struct BesatzungsFeld: View {
+struct BesatzungsFeld: View {
     let label: String
     @Binding var text: String
     let personal: [String]
