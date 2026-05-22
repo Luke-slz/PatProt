@@ -4,6 +4,11 @@ struct KonfigurationView: View {
     @ObservedObject var protokoll: EinsatzProtokoll
     @StateObject private var locationManager = LocationManager()
     @AppStorage("customFahrzeuge") private var customFahrzeugeJSON: String = "[]"
+    @AppStorage("gespeichertesPersonal") private var personalJSON: String = "[]"
+
+    private var gespeichertesPersonal: [String] {
+        (try? JSONDecoder().decode([String].self, from: Data(personalJSON.utf8))) ?? []
+    }
     @State private var zeigeStichwortPicker = false
     @State private var zeigeEinsatzNrNumpad = false
     @State private var zeigeWeiteresEinsatzmittel = false
@@ -86,6 +91,20 @@ struct KonfigurationView: View {
                 }
             } header: {
                 Label("Einsatzart & Fahrzeuge", systemImage: "exclamationmark.triangle")
+            }
+
+            Section {
+                BesatzungsFeld(label: "Sanitäter 1", text: $protokoll.besatzung.sanitaeter1, personal: gespeichertesPersonal)
+                BesatzungsFeld(label: "Sanitäter 2", text: $protokoll.besatzung.sanitaeter2, personal: gespeichertesPersonal)
+                BesatzungsFeld(label: "Sanitäter 3", text: $protokoll.besatzung.sanitaeter3, personal: gespeichertesPersonal)
+                BesatzungsFeld(label: "Sanitäter 4", text: $protokoll.besatzung.sanitaeter4, personal: gespeichertesPersonal)
+            } header: {
+                Label("Besatzung", systemImage: "person.2")
+            } footer: {
+                if !gespeichertesPersonal.isEmpty {
+                    Text("Tippe auf \(Image(systemName: "person.badge.plus")) um aus gespeichertem Personal auszuwählen.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
             }
         }
         .navigationTitle("Konfiguration")

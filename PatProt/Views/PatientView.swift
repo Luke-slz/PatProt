@@ -3,14 +3,9 @@ import SwiftUI
 struct PatientView: View {
     @ObservedObject var protokoll: EinsatzProtokoll
 
-    @AppStorage("gespeichertesPersonal") private var personalJSON: String = "[]"
     @State private var geburtsdatumText: String = ""
     @State private var zeigeGeburtsdatumNumpad = false
     @State private var zeigeGewichtNumpad = false
-
-    private var gespeichertesPersonal: [String] {
-        (try? JSONDecoder().decode([String].self, from: Data(personalJSON.utf8))) ?? []
-    }
 
     var body: some View {
         Form {
@@ -50,21 +45,8 @@ struct PatientView: View {
                 Label("Klinische Angaben", systemImage: "stethoscope")
             }
 
-            Section {
-                BesatzungsFeld(label: "Sanitäter 1", text: $protokoll.besatzung.sanitaeter1, personal: gespeichertesPersonal)
-                BesatzungsFeld(label: "Sanitäter 2", text: $protokoll.besatzung.sanitaeter2, personal: gespeichertesPersonal)
-                BesatzungsFeld(label: "Sanitäter 3", text: $protokoll.besatzung.sanitaeter3, personal: gespeichertesPersonal)
-                BesatzungsFeld(label: "Sanitäter 4", text: $protokoll.besatzung.sanitaeter4, personal: gespeichertesPersonal)
-            } header: {
-                Label("Besatzung", systemImage: "person.2")
-            } footer: {
-                if !gespeichertesPersonal.isEmpty {
-                    Text("Tippe auf \(Image(systemName: "person.badge.plus")) um aus gespeichertem Personal auszuwählen.")
-                        .font(.footnote).foregroundStyle(.secondary)
-                }
-            }
         }
-        .navigationTitle("Rettungstechnische Daten")
+        .navigationTitle("Patient")
         .navigationBarTitleDisplayMode(.large)
         .onAppear {
             if let geb = protokoll.patientDaten.geburtsDatum {
