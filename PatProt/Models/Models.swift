@@ -192,6 +192,7 @@ struct EinsatzOrt: Codable {
     var einsatzNummer = ""
     var notarzt: Bool = false
     var sondersignal: Bool = false
+    var mitPatient: Bool = false
 }
 
 
@@ -498,6 +499,20 @@ struct MassnahmenBefund: Codable {
     var beckenschlinge: Bool = false
     var lagerungSonstige: String = ""
 
+    // Airway-Erweiterungen
+    var cpap: Bool = false
+    var cpapMbar: String = ""
+    var heimlich: Bool = false
+
+    // Kreislauf-Erweiterungen
+    var defibrillation: Bool = false
+    var defiJoule: Int = 200
+    var defiAnzahl: Int = 1
+    var kardioversion: Bool = false
+    var kardioversionJoule: Int = 100
+    var intraossaer: Bool = false
+    var intraossaerOrt: String = ""
+
     // Monitoring
     var monEkg: Bool = false
     var monNibp: Bool = false
@@ -530,6 +545,12 @@ struct ErgebnisData: Codable {
     var rotAlarm: Bool = false
 
     var anmerkungen: String = ""
+
+    // Transportziel Klinik
+    var transportzielZna: Bool = false
+    var transportzielStrokeUnit: Bool = false
+    var transportzielKathLabor: Bool = false
+    var transportzielSonstigesKH: String = ""
 }
 
 // MARK: - Notfallgeschehen
