@@ -641,11 +641,9 @@ struct DINPDFGenerator {
 
         y = mvColY + CGFloat(max(mvItems.count, atItems.count, ciItems.count, neItems.count, haItems.count))*mvH + 2
 
-        // Hautfarbe / Temp row
-        field("Hautfarbe", p.exposure.hautfarbe, x:lx, y:y, w:(rx-lx)/3, h:11, lw:42)
-        field("Temperatur", p.exposure.temperatur.map{String(format:"%.1f °C",$0)} ?? "",
-              x:lx+(rx-lx)/3, y:y, w:(rx-lx)/3, h:11, lw:45)
-        field("Verletzungen", p.exposure.verletzungen, x:lx+(rx-lx)*2/3, y:y, w:(rx-lx)/3, h:11, lw:45)
+        // Hautfarbe / Verletzungen (Temp ist bereits in Messwerte)
+        field("Hautfarbe", p.exposure.hautfarbe, x:lx, y:y, w:(rx-lx)/2, h:11, lw:42)
+        field("Verletzungen", p.exposure.verletzungen, x:lx+(rx-lx)/2, y:y, w:(rx-lx)/2, h:11, lw:45)
         y += 11
 
         // ── SECTION 4 ──────────────────────────────────────
