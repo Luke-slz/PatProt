@@ -210,35 +210,21 @@ struct DINPDFGenerator {
         // ── Row A: Insurance (left) | Section 1 (right) ──
         let rowAH: CGFloat = 88
 
-        // Left: insurance / patient header
+        // Left: patient header (klinisch relevante Felder)
         do {
             let x = lx; let w = c1 - lx
-            field("Krankenkasse / Kostenträger", p.patientDaten.kostentraeger,
-                  x:x, y:y, w:w, h:14, lw:w*0.48)
-            field("Name des Versicherten",
+            field("Name des Patienten",
                   "\(p.patientDaten.nachname), \(p.patientDaten.vorname)",
-                  x:x, y:y+14, w:w, h:14, lw:w*0.48, hl:true)
+                  x:x, y:y, w:w, h:14, lw:w*0.38, hl:true)
             field("geb. am", d(p.patientDaten.geburtsDatum),
-                  x:x, y:y+28, w:w*0.55, h:12, lw:38)
+                  x:x, y:y+14, w:w*0.55, h:12, lw:38)
             field("Geschlecht", p.patientDaten.geschlecht.rawValue,
-                  x:x+w*0.55, y:y+28, w:w*0.45, h:12, lw:42)
-            // Versichertenart
-            let vRow = CGRect(x:x,y:y+40,width:w,height:12)
-            fillRect(vRow, .white); strokeRect(vRow)
-            txt("Versichertenart:", CGRect(x:x+1,y:y+41,width:65,height:10), font:f6, color:.darkGray)
-            cb("Mitglied", false, x:x+68, y:y+41, bs:7, lw:35)
-            cb("Fam.-Vers.", false, x:x+108, y:y+41, bs:7, lw:40)
-            cb("Rentner", false, x:x+152, y:y+41, bs:7, lw:35)
-            // 3 split fields
-            let fw3 = w/3
-            field("Kostenträger-Kennz.", "", x:x, y:y+52, w:fw3, h:12, lw:fw3*0.55)
+                  x:x+w*0.55, y:y+14, w:w*0.45, h:12, lw:42)
+            let fw2 = w / 2
             field("Versicherten-Nr.", p.patientDaten.versicherungsNummer,
-                  x:x+fw3, y:y+52, w:fw3, h:12, lw:fw3*0.5)
-            field("Status", "", x:x+fw3*2, y:y+52, w:fw3, h:12, lw:fw3*0.4)
+                  x:x, y:y+26, w:fw2, h:12, lw:fw2*0.5)
             let gewStr = p.patientDaten.gewicht.map { String(format: "%.0f kg", $0) } ?? ""
-            field("Gewicht", gewStr, x:x, y:y+64, w:fw3, h:12, lw:fw3*0.55)
-            field("Arzt-Nr.", "", x:x+fw3, y:y+64, w:fw3, h:12, lw:fw3*0.4)
-            field("Datum", d(p.einsatzOrt.alarmzeit), x:x+fw3*2, y:y+64, w:fw3, h:12, lw:fw3*0.35)
+            field("Gewicht", gewStr, x:x+fw2, y:y+26, w:fw2, h:12, lw:fw2*0.5)
         }
 
         // Right: Section 1 Rettungstechnische Daten
