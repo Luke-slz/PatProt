@@ -291,32 +291,25 @@ struct DINPDFGenerator {
 
         // ── EINSATZPROTOKOLL title block ──────────────────
         do {
-            let x = lx; let w = c1 - lx; let bh: CGFloat = 55
+            let x = lx; let w = c1 - lx; let bh: CGFloat = 36
             fillRect(CGRect(x:x,y:y,width:w,height:bh), vLightB)
             strokeRect(CGRect(x:x,y:y,width:w,height:bh))
             txt("EINSATZPROTOKOLL",
-                CGRect(x:x+3,y:y+4,width:w-6,height:16), font:f13b, color:colBlue)
-            cb("Notfallsanitäter", p.verfasser == .notfallsanitaeter, x:x+3, y:y+24, bs:7, lw:80)
-            cb("Rettungssanitäter", p.verfasser == .rettungssanitaeter, x:x+3, y:y+36, bs:7, lw:80)
+                CGRect(x:x+3,y:y+3,width:w-6,height:14), font:f13b, color:colBlue)
+            cb("Notfallsanitäter", p.verfasser == .notfallsanitaeter, x:x+3, y:y+19, bs:7, lw:80)
+            cb("Rettungssanitäter", p.verfasser == .rettungssanitaeter, x:x+95, y:y+19, bs:7, lw:80)
             y += bh
         }
 
-        // ── Männlich/Weiblich + Standort row ─────────────
+        // ── Einsatzbesonderheiten-Schnellzeile ─────────────
         do {
-            let x = lx; let w = c1 - lx
             let rh: CGFloat = 12
-            fillRect(CGRect(x:x,y:y,width:w,height:rh), .white)
-            strokeRect(CGRect(x:x,y:y,width:w,height:rh))
-            cb("männlich", p.patientDaten.geschlecht == .maennlich, x:x+2, y:y+2, bs:7, lw:35)
-            cb("weiblich", p.patientDaten.geschlecht == .weiblich, x:x+55, y:y+2, bs:7, lw:35)
-            cb("unbek.", p.patientDaten.geschlecht == .unbekannt, x:x+108, y:y+2, bs:7, lw:30)
-            // Right side: additional info (Einsatzabbruch etc)
-            let rx2 = c1; let rw = rx - c1
-            fillRect(CGRect(x:rx2,y:y,width:rw,height:rh), .white)
-            strokeRect(CGRect(x:rx2,y:y,width:rw,height:rh))
-            cb("Einsatzabbruch", false, x:rx2+2, y:y+2, bs:7, lw:60)
-            cb("Transportverweigerung", false, x:rx2+80, y:y+2, bs:7, lw:80)
-            cb("Fehlalarm", false, x:rx2+180, y:y+2, bs:7, lw:50)
+            fillRect(CGRect(x:lx, y:y, width:rx-lx, height:rh), .white)
+            strokeRect(CGRect(x:lx, y:y, width:rx-lx, height:rh))
+            let qW = (rx - lx) / 3
+            cb("Einsatzabbruch",       p.ergebnis.ambulantVorOrt,        x:lx+2,      y:y+2, bs:7, lw:qW-12)
+            cb("Transportverweigerung", p.ergebnis.mifahrverweigerung,   x:lx+qW+2,   y:y+2, bs:7, lw:qW-12)
+            cb("Fehlalarm",            false,                             x:lx+qW*2+2, y:y+2, bs:7, lw:qW-12)
             y += rh
         }
 
@@ -909,7 +902,7 @@ struct DINPDFGenerator {
         // ── SECTION 5 Verlauf ─────────────────────────────
         secHeader("5. Verlauf / Verlaufsbeschreibung", x:lx, y:y, w:rx-lx)
         y += 11
-        let verlaufH: CGFloat = 40
+        let verlaufH: CGFloat = 58
         fillRect(CGRect(x:lx,y:y,width:rx-lx,height:verlaufH), .white)
         strokeRect(CGRect(x:lx,y:y,width:rx-lx,height:verlaufH))
         // Verlaufsmessungen als Text formatieren
@@ -1018,7 +1011,7 @@ struct DINPDFGenerator {
             ("Temperatur", p.massnahmen.monTemperatur),
         ]
         let maY1 = y
-        let monColW = (rx - lx) / CGFloat(monItems.count > 3 ? 3 : 2)
+        let monColW = (rx - lx) / CGFloat(monItems.count)
         for (i,(label,checked)) in monItems.enumerated() {
             let col = lx + CGFloat(i) * monColW
             fillRect(CGRect(x:col,y:maY1,width:monColW,height:maH), i%2==0 ? .white : UIColor(white:0.97,alpha:1))
