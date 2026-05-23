@@ -300,18 +300,7 @@ struct DINPDFGenerator {
             cb("Rettungssanitäter", p.verfasser == .rettungssanitaeter, x:x+95, y:titleY+19, bs:7, lw:80)
         }
 
-        // ── Einsatzbesonderheiten-Schnellzeile ─────────────
-        let quickRowY = titleY + 36
-        do {
-            let rh: CGFloat = 12
-            fillRect(CGRect(x:lx, y:quickRowY, width:rx-lx, height:rh), .white)
-            strokeRect(CGRect(x:lx, y:quickRowY, width:rx-lx, height:rh))
-            let qW = (rx - lx) / 3
-            cb("Einsatzabbruch",        false,                           x:lx+2,      y:quickRowY+2, bs:7, lw:qW-12)
-            cb("Transportverweigerung", p.ergebnis.mifahrverweigerung,   x:lx+qW+2,   y:quickRowY+2, bs:7, lw:qW-12)
-            cb("Fehlalarm",             false,                           x:lx+qW*2+2, y:quickRowY+2, bs:7, lw:qW-12)
-        }
-        y = max(rightY, quickRowY + 12)
+        y = max(rightY, titleY + 36)
 
         // ── SECTION 2 ──────────────────────────────────────
         secHeader("2. Notfallgeschehen / Anamnese / Erstbefund", x:lx, y:y, w:rx-lx)
