@@ -787,13 +787,42 @@ struct DINPDFGenerator {
         }
         y += CGFloat(maxRows2)*cbH + 2
 
+        // ── SECTION 5 Verlauf ─────────────────────────────
+        secHeader("5. Verlauf / Verlaufsbeschreibung", x:lx, y:y, w:rx-lx)
+        y += 11
+        let verlaufH: CGFloat = 120
+        fillRect(CGRect(x:lx,y:y,width:rx-lx,height:verlaufH), .white)
+        strokeRect(CGRect(x:lx,y:y,width:rx-lx,height:verlaufH))
+        var verlaufText = p.diagnose.verlauf
+        if !p.verlaufMessungen.isEmpty {
+            let tf2 = DateFormatter(); tf2.dateFormat = "HH:mm"
+            let messStr = p.verlaufMessungen
+                .sorted { $0.zeitpunkt < $1.zeitpunkt }
+                .map { m -> String in
+                    var parts: [String] = [tf2.string(from: m.zeitpunkt)]
+                    if let af = m.atemFrequenz { parts.append("AF \(af)") }
+                    if let sp = m.spo2 { parts.append("SpO₂ \(sp)%") }
+                    if let pu = m.puls { parts.append("Puls \(pu)") }
+                    if let sy = m.blutdruckSys, let di = m.blutdruckDia { parts.append("RR \(sy)/\(di)") }
+                    if let gc = m.gcsGesamt { parts.append("GCS \(gc)") }
+                    if let bz = m.blutzucker { parts.append("BZ \(String(format:"%.1f",bz))") }
+                    if let tmp = m.temperatur { parts.append("T \(String(format:"%.1f",tmp))°C") }
+                    if !m.massnahmen.isEmpty { parts.append(m.massnahmen) }
+                    if !m.freitext.isEmpty { parts.append(m.freitext) }
+                    return parts.joined(separator: " | ")
+                }
+                .joined(separator: "\n")
+            verlaufText = verlaufText.isEmpty ? messStr : verlaufText + "\n" + messStr
+        }
+        mtxt(verlaufText, CGRect(x:lx+2,y:y+2,width:rx-lx-4,height:verlaufH-4), font:f7)
+
         // Footer
         drawFooter(erstelltAm: p.erstelltAm)
     }
 
     // ─────────────────────────────────────────────────────
     // MARK: - PAGE 2  (Seiten 3+4 des Originals)
-    // Sections: 4.2 Verletzungen · 5 Verlauf · 6 Maßnahmen · 6.5 Medi · 7 Reani · 8 Ergebnis · 9 Übergabe
+    // Sections: 4.2 Verletzungen · 6 Maßnahmen · 6.5 Medi · 7 Reani · 8 Ergebnis · 9 Übergabe
     // ─────────────────────────────────────────────────────
 
     private static func drawPage2(p: EinsatzProtokoll) {
@@ -887,37 +916,6 @@ struct DINPDFGenerator {
         }
 
         y = max(vmY + 20, spezY0 + CGFloat(spezItems.count)*spezH) + 2
-
-        // ── SECTION 5 Verlauf ─────────────────────────────
-        secHeader("5. Verlauf / Verlaufsbeschreibung", x:lx, y:y, w:rx-lx)
-        y += 11
-        let verlaufH: CGFloat = 58
-        fillRect(CGRect(x:lx,y:y,width:rx-lx,height:verlaufH), .white)
-        strokeRect(CGRect(x:lx,y:y,width:rx-lx,height:verlaufH))
-        // Verlaufsmessungen als Text formatieren
-        var verlaufText = p.diagnose.verlauf
-        if !p.verlaufMessungen.isEmpty {
-            let tf2 = DateFormatter(); tf2.dateFormat = "HH:mm"
-            let messStr = p.verlaufMessungen
-                .sorted { $0.zeitpunkt < $1.zeitpunkt }
-                .map { m -> String in
-                    var parts: [String] = [tf2.string(from: m.zeitpunkt)]
-                    if let af = m.atemFrequenz { parts.append("AF \(af)") }
-                    if let sp = m.spo2 { parts.append("SpO₂ \(sp)%") }
-                    if let pu = m.puls { parts.append("Puls \(pu)") }
-                    if let sy = m.blutdruckSys, let di = m.blutdruckDia { parts.append("RR \(sy)/\(di)") }
-                    if let gc = m.gcsGesamt { parts.append("GCS \(gc)") }
-                    if let bz = m.blutzucker { parts.append("BZ \(String(format:"%.1f",bz))") }
-                    if let tmp = m.temperatur { parts.append("T \(String(format:"%.1f",tmp))°C") }
-                    if !m.massnahmen.isEmpty { parts.append(m.massnahmen) }
-                    if !m.freitext.isEmpty { parts.append(m.freitext) }
-                    return parts.joined(separator: " | ")
-                }
-                .joined(separator: "\n")
-            verlaufText = verlaufText.isEmpty ? messStr : verlaufText + "\n" + messStr
-        }
-        mtxt(verlaufText, CGRect(x:lx+2,y:y+2,width:rx-lx-4,height:verlaufH-4), font:f7)
-        y += verlaufH + 2
 
         // ── SECTION 6 Maßnahmen ────────────────────────────
         secHeader("6. Maßnahmen", x:lx, y:y, w:rx-lx)
