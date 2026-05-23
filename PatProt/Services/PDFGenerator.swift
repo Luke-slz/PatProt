@@ -535,7 +535,6 @@ struct DINPDFGenerator {
         let atItems: [(String,Bool)] = [
             ("unauffällig", p.breathing.status == .nicht_kritisch),
             ("Dyspnoe", p.breathing.dyspnoe),
-            ("Zyanose", p.breathing.zyanose),
             ("Atemweg frei", p.airway.freiheit),
             ("Verlegt", p.airway.verlegung),
             ("Guedel", p.airway.oropharyngealtubus),
