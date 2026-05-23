@@ -138,7 +138,7 @@ struct MassnahmenView: View {
                     HStack {
                         Text("Joule")
                         Spacer()
-                        Text(String(befund.kardioversionJoule))
+                        Text("\(befund.kardioversionJoule) J").foregroundColor(.secondary)
                     }
                     .contentShape(Rectangle())
                     .onTapGesture { zeigeKardioversionJouleNumpad = true }
