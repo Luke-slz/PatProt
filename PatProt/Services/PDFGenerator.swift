@@ -292,10 +292,8 @@ struct DINPDFGenerator {
             strokeRect(CGRect(x:x,y:y,width:w,height:bh))
             txt("EINSATZPROTOKOLL",
                 CGRect(x:x+3,y:y+4,width:w-6,height:16), font:f13b, color:colBlue)
-            cb("Notfallsanitäter", p.verfasser == .notfallsanitaeter, x:x+3, y:y+31, bs:7, lw:60)
-            cb("Rettungssanitäter", p.verfasser == .rettungssanitaeter, x:x+72, y:y+31, bs:7, lw:60)
-            txt("Einsatznummer:", CGRect(x:x+3,y:y+42,width:55,height:9), font:f6b, color:.darkGray)
-            valBox(p.einsatzOrt.einsatzNummer, x:x+58, y:y+41, w:w-62, h:11, font:f8b, hl:true)
+            cb("Notfallsanitäter", p.verfasser == .notfallsanitaeter, x:x+3, y:y+24, bs:7, lw:80)
+            cb("Rettungssanitäter", p.verfasser == .rettungssanitaeter, x:x+3, y:y+36, bs:7, lw:80)
             y += bh
         }
 
