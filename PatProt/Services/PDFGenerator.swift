@@ -274,16 +274,17 @@ struct DINPDFGenerator {
                        x:x+tW*2, y:y, w:tW, labelH:7, valH:11)
             y += 18
 
-            labeledVal("Übergabe an RD", t(p.einsatzOrt.krankenHausAnkunft),
-                       x:x, y:y, w:tW, labelH:7, valH:11)
+            let tW2 = w / 2
+            labeledVal("Ankunft Zielklinik", t(p.einsatzOrt.krankenHausAnkunft),
+                       x:x, y:y, w:tW2, labelH:7, valH:11)
             labeledVal("Einsatz-Nr.", p.einsatzOrt.einsatzNummer,
-                       x:x+tW, y:y, w:tW, labelH:7, valH:11)
-            labeledVal("Einsatzart", p.einsatzOrt.stichwort,
-                       x:x+tW*2, y:y, w:tW, labelH:7, valH:11)
+                       x:x+tW2, y:y, w:tW2, labelH:7, valH:11)
             y += 18
             let adresseText = [p.einsatzOrt.adresse, p.einsatzOrt.zusatz].filter { !$0.isEmpty }.joined(separator: ", ")
+            let stichwortText = [p.einsatzOrt.stichwort, p.einsatzOrt.einsatzArt]
+                .filter { !$0.isEmpty }.joined(separator: " · ")
             field("Einsatzort", adresseText, x:x, y:y, w:w/2, h:11, lw:42)
-            field("Stichwort", p.einsatzOrt.einsatzArt, x:x+w/2, y:y, w:w/2, h:11, lw:42)
+            field("Stichwort", stichwortText, x:x+w/2, y:y, w:w/2, h:11, lw:42)
             y += 11
         }
         y = hh + rowAH
