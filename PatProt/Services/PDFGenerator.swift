@@ -386,9 +386,49 @@ struct DINPDFGenerator {
             y += 11
         }
 
-        // ABCDE + SAMPLER grid
+        // SAMPLER-Anamnese — DIVI Section 2
+        do {
+            var samplerData: [(String, String)] = []
+            if !p.sampler.symptome.isEmpty {
+                samplerData.append(("S – Symptome", p.sampler.symptome))
+            }
+            if !p.sampler.allergien.isEmpty {
+                samplerData.append(("A – Allergien", p.sampler.allergien))
+            }
+            if !p.medikamentFotos.isEmpty {
+                samplerData.append(("M – Medikamente", "Medikamentenplan: Foto-Anhang (S. 3ff.)"))
+            } else if !p.sampler.medikamente.isEmpty {
+                samplerData.append(("M – Medikamente", p.sampler.medikamente))
+            }
+            if !p.sampler.patientenVorgeschichte.isEmpty {
+                samplerData.append(("P – Vorgeschichte", p.sampler.patientenVorgeschichte))
+            }
+            if !p.sampler.letztesMahl.isEmpty {
+                samplerData.append(("L – Letztes Essen", p.sampler.letztesMahl))
+            }
+            if !p.sampler.ereignis.isEmpty {
+                samplerData.append(("E – Ereignis", p.sampler.ereignis))
+            }
+            if !p.sampler.risikofaktoren.isEmpty {
+                samplerData.append(("R – Risikofaktoren", p.sampler.risikofaktoren))
+            }
+            if samplerData.isEmpty {
+                fillRect(CGRect(x:lx, y:y, width:rx-lx, height:11), .white)
+                strokeRect(CGRect(x:lx, y:y, width:rx-lx, height:11))
+                txt("SAMPLER – nicht erhoben",
+                    CGRect(x:lx+3, y:y+2, width:rx-lx-6, height:7),
+                    font:f7, color:.lightGray)
+                y += 11
+            } else {
+                for (label, value) in samplerData {
+                    field(label, value, x:lx, y:y, w:rx-lx, h:11, lw:85)
+                    y += 11
+                }
+            }
+        }
+
+        // ABCDE grid
         let abcdeLetters = ["A","B","C","D","E"]
-        let samplerLetters = ["S","M","P","L","R"]
         func buildAirwayDetail() -> String {
             var parts = [p.airway.freitext]
             if p.airway.verlegung && !p.airway.verlegungsUrsache.isEmpty { parts.append("Ursache: \(p.airway.verlegungsUrsache)") }
@@ -429,20 +469,19 @@ struct DINPDFGenerator {
         let rowH: CGFloat = 15
         for i in 0..<5 {
             let ry = y + CGFloat(i)*rowH
-            // Letter box A-E
-            fillRect(CGRect(x:lx,y:ry,width:12,height:rowH), subBlue)
-            txt(abcdeLetters[i], CGRect(x:lx+1,y:ry+3,width:10,height:rowH-6), font:f7b, color:.white, align:.center)
-            // Content
-            let cw = rx - lx - 26
-            fillRect(CGRect(x:lx+12,y:ry,width:cw,height:rowH), i%2==0 ? .white : UIColor(white:0.97,alpha:1))
-            strokeRect(CGRect(x:lx+12,y:ry,width:cw,height:rowH))
+            // Letter box A-E (12pt)
+            fillRect(CGRect(x:lx, y:ry, width:12, height:rowH), subBlue)
+            txt(abcdeLetters[i], CGRect(x:lx+1, y:ry+3, width:10, height:rowH-6),
+                font:f7b, color:.white, align:.center)
+            // Content (volle Breite bis rx)
+            let cw = rx - lx - 12
+            fillRect(CGRect(x:lx+12, y:ry, width:cw, height:rowH),
+                     i%2==0 ? .white : UIColor(white:0.97,alpha:1))
+            strokeRect(CGRect(x:lx+12, y:ry, width:cw, height:rowH))
             let isOB = abcdeRaw[i].isEmpty
-            txt(abcdeVals[i], CGRect(x:lx+14,y:ry+3,width:cw-4,height:rowH-6),
+            txt(abcdeVals[i], CGRect(x:lx+14, y:ry+3, width:cw-4, height:rowH-6),
                 font: isOB ? UIFont.italicSystemFont(ofSize: 7) : f7,
                 color: abcdeColors[i])
-            // Right SAMPLER letter
-            fillRect(CGRect(x:rx-14,y:ry,width:14,height:rowH), subBlue.withAlphaComponent(0.7))
-            txt(samplerLetters[i], CGRect(x:rx-13,y:ry+3,width:12,height:rowH-6), font:f7b, color:.white, align:.center)
         }
         y += CGFloat(5)*rowH
 
@@ -768,41 +807,6 @@ struct DINPDFGenerator {
             cb(label, checked, x:d3x+2, y:ry+1, bs:7, lw:dW-12)
         }
         y += CGFloat(maxRows2)*cbH + 2
-
-        // SAMPLER Anamnese block (remaining space)
-        if y + 80 < pageSize.height - 15 {
-            secHeader("SAMPLER-Anamnese", x:lx, y:y, w:rx-lx)
-            y += 11
-
-            var samplerData: [(String, String)] = []
-            if !p.sampler.symptome.isEmpty            { samplerData.append(("S – Symptome",      p.sampler.symptome)) }
-            if !p.sampler.allergien.isEmpty           { samplerData.append(("A – Allergien",     p.sampler.allergien)) }
-            if !p.medikamentFotos.isEmpty {
-                samplerData.append(("M – Medikamente", "Medikamentenplan: Foto-Anhang (S. 3ff.)"))
-            } else if !p.sampler.medikamente.isEmpty {
-                samplerData.append(("M – Medikamente", p.sampler.medikamente))
-            }
-            if !p.sampler.patientenVorgeschichte.isEmpty { samplerData.append(("P – Vorgeschichte", p.sampler.patientenVorgeschichte)) }
-            if !p.sampler.letztesMahl.isEmpty            { samplerData.append(("L – Letztes Essen", p.sampler.letztesMahl)) }
-            if !p.sampler.ereignis.isEmpty               { samplerData.append(("E – Ereignis",      p.sampler.ereignis)) }
-            if !p.sampler.risikofaktoren.isEmpty         { samplerData.append(("R – Risikofaktoren", p.sampler.risikofaktoren)) }
-
-            if samplerData.isEmpty {
-                if y + 11 < pageSize.height - 15 {
-                    fillRect(CGRect(x: lx, y: y, width: rx - lx, height: 11), .white)
-                    strokeRect(CGRect(x: lx, y: y, width: rx - lx, height: 11))
-                    txt("– nicht erhoben –", CGRect(x: lx + 3, y: y + 2, width: rx - lx - 6, height: 7),
-                        font: f7, color: .lightGray)
-                    y += 11
-                }
-            } else {
-                for (label, value) in samplerData {
-                    guard y + 11 < pageSize.height - 15 else { break }
-                    field(label, value, x: lx, y: y, w: rx - lx, h: 11, lw: 85)
-                    y += 11
-                }
-            }
-        }
 
         // Footer
         drawFooter(erstelltAm: p.erstelltAm)
