@@ -1042,9 +1042,9 @@ struct DINPDFGenerator {
         ]
         let maItems2: [(String,Bool)] = [
             ("Peripher-venös", p.massnahmen.peripherVenoes),
-            ("Intraossär", p.massnahmen.intraossaer),
             ("Defibrillation", p.massnahmen.defibrillation),
             ("Kardioversion", p.massnahmen.kardioversion),
+            ("Intraossär", p.massnahmen.intraossaer),
             ("Tourniquet", p.massnahmen.tourniquet),
             ("Verband / Wundvers.", p.massnahmen.verband),
             ("Beckenschlinge", p.massnahmen.beckenschlinge),

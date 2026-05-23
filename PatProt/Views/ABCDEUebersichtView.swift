@@ -93,6 +93,40 @@ struct ABCDEUebersichtView: View {
                 }
                 .cornerRadius(14)
                 .padding(.horizontal)
+
+                NavigationLink {
+                    BodyMapView(matrix: $protokoll.diagnose.verletzungsMatrix)
+                } label: {
+                    HStack(spacing: 14) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.teal.opacity(0.15))
+                                .frame(width: 40, height: 40)
+                            Image(systemName: "figure.stand")
+                                .font(.title2)
+                                .foregroundColor(.teal)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Körperkarte")
+                                .font(.subheadline).fontWeight(.semibold)
+                                .foregroundColor(.primary)
+                            Text(koerperkarteSubtitel())
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+                    .background(Color(.secondarySystemGroupedBackground))
+                    .cornerRadius(14)
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal)
                 .padding(.bottom)
             }
             .padding(.top)
@@ -137,6 +171,17 @@ struct ABCDEUebersichtView: View {
         if protokoll.exposure.status == ABCDEStatus.unbewertet { return "Noch nicht bewertet" }
         if let t = protokoll.exposure.temperatur { return "Temp. \(String(format: "%.1f", t))°C" }
         return "Bewertet"
+    }
+
+    func koerperkarteSubtitel() -> String {
+        let m = protokoll.diagnose.verletzungsMatrix
+        let schwer = BodyMapRegion.allCases.filter { $0.grad(from: m) == .schwer }.count
+        let leicht = BodyMapRegion.allCases.filter { $0.grad(from: m) == .leicht }.count
+        if schwer == 0 && leicht == 0 { return "Keine Verletzungen eingetragen" }
+        var teile: [String] = []
+        if schwer > 0 { teile.append("\(schwer) schwer") }
+        if leicht > 0 { teile.append("\(leicht) leicht") }
+        return teile.joined(separator: " · ")
     }
 }
 
