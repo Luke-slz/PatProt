@@ -233,16 +233,19 @@ struct DINPDFGenerator {
             secHeader("1. Rettungstechnische Daten", x:x, y:y, w:w)
             let sh: CGFloat = 11; y += sh
 
-            // Vehicle checkboxes
-            let fz = p.einsatzOrt.fahrzeugName
-            let cbW = w / 7
-            let vItems: [(String,Bool)] = [
-                ("NKW", false)
+            // Vehicle checkboxes — auto-detect aus fahrzeugName
+            let fzUp = p.einsatzOrt.fahrzeugName.uppercased()
+            let vItems: [(String, Bool)] = [
+                ("RTW", fzUp.contains("RTW")),
+                ("KTW", fzUp.contains("KTW")),
+                ("FR",  fzUp.contains("FR") || fzUp.contains("FIRST")),
+                ("NEF", fzUp.contains("NEF")),
             ]
-            fillRect(CGRect(x:x,y:y,width:w,height:11), .white)
-            strokeRect(CGRect(x:x,y:y,width:w,height:11))
+            let vColW = w / CGFloat(vItems.count)
+            fillRect(CGRect(x:x, y:y, width:w, height:11), .white)
+            strokeRect(CGRect(x:x, y:y, width:w, height:11))
             for (i,(label,checked)) in vItems.enumerated() {
-                cb(label, checked, x:x+CGFloat(i)*cbW+1, y:y+1.5, bs:7, lw:cbW-10)
+                cb(label, checked, x:x+CGFloat(i)*vColW+2, y:y+1.5, bs:7, lw:vColW-11)
             }
             y += 11
 
