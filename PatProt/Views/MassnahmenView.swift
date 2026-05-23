@@ -7,6 +7,10 @@ struct MassnahmenView: View {
     @State private var zeigeSauerstoffNumpad = false
     @State private var zeigeEgaGrNumpad = false
     @State private var zeigeVenoesGroesseNumpad = false
+    @State private var zeigeCpapNumpad = false
+    @State private var zeigeDefiJouleNumpad = false
+    @State private var zeigeDefiAnzahlNumpad = false
+    @State private var zeigeKardioversionJouleNumpad = false
 
     var body: some View {
         Form {
@@ -53,6 +57,22 @@ struct MassnahmenView: View {
                     }
                 }
                 CheckboxRow("Atemwegszugang erschwert", isOn: $befund.atemwegErschwert)
+                CheckboxRow("CPAP (5–15 mBar)", isOn: $befund.cpap)
+                if befund.cpap {
+                    HStack {
+                        Text("mBar")
+                        Spacer()
+                        Text(befund.cpapMbar.isEmpty ? "—" : befund.cpapMbar)
+                            .foregroundColor(befund.cpapMbar.isEmpty ? .secondary : .primary)
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture { zeigeCpapNumpad = true }
+                    .sheet(isPresented: $zeigeCpapNumpad) {
+                        NumpadSheet(mode: .integer(label: "CPAP Druck", unit: "mBar", maxDigits: 2),
+                                    initial: befund.cpapMbar) { val in befund.cpapMbar = val }
+                    }
+                }
+                CheckboxRow("Heimlich (Fremdkörperentfernung)", isOn: $befund.heimlich)
                 TextField("Sonstige Airway-Maßnahmen", text: $befund.airwaySonstige)
             } header: {
                 Label("Airway / Stabilisation", systemImage: "lungs")
@@ -74,6 +94,59 @@ struct MassnahmenView: View {
                     .sheet(isPresented: $zeigeVenoesGroesseNumpad) {
                         NumpadSheet(mode: .decimal(label: "Kanülen-Größe", unit: "G"),
                                     initial: befund.peripherVenoesGroesse) { val in befund.peripherVenoesGroesse = val }
+                    }
+                }
+                CheckboxRow("Intraossär-Zugang", isOn: $befund.intraossaer)
+                if befund.intraossaer {
+                    TextField("Ort (z.B. Tibia re.)", text: $befund.intraossaerOrt)
+                }
+                CheckboxRow("Defibrillation", isOn: $befund.defibrillation)
+                if befund.defibrillation {
+                    HStack {
+                        Text("Joule")
+                        Spacer()
+                        Text("\(befund.defiJoule) J")
+                            .foregroundColor(.secondary)
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture { zeigeDefiJouleNumpad = true }
+                    .sheet(isPresented: $zeigeDefiJouleNumpad) {
+                        NumpadSheet(mode: .integer(label: "Energie", unit: "J", maxDigits: 3),
+                                    initial: String(befund.defiJoule)) { val in
+                            befund.defiJoule = Int(val) ?? 200
+                        }
+                    }
+                }
+                if befund.defibrillation {
+                    HStack {
+                        Text("Anzahl Schocks")
+                        Spacer()
+                        Text("\(befund.defiAnzahl)×")
+                            .foregroundColor(.secondary)
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture { zeigeDefiAnzahlNumpad = true }
+                    .sheet(isPresented: $zeigeDefiAnzahlNumpad) {
+                        NumpadSheet(mode: .integer(label: "Anzahl Schocks", unit: "×", maxDigits: 2),
+                                    initial: String(befund.defiAnzahl)) { val in
+                            befund.defiAnzahl = Int(val) ?? 1
+                        }
+                    }
+                }
+                CheckboxRow("Kardioversion", isOn: $befund.kardioversion)
+                if befund.kardioversion {
+                    HStack {
+                        Text("Joule")
+                        Spacer()
+                        Text(String(befund.kardioversionJoule))
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture { zeigeKardioversionJouleNumpad = true }
+                    .sheet(isPresented: $zeigeKardioversionJouleNumpad) {
+                        NumpadSheet(mode: .integer(label: "Energie Kardioversion", unit: "J", maxDigits: 3),
+                                    initial: String(befund.kardioversionJoule)) { val in
+                            befund.kardioversionJoule = Int(val) ?? 100
+                        }
                     }
                 }
                 TextField("Sonstige Kreislauf-Maßnahmen", text: $befund.circSonstige)
