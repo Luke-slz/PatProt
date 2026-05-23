@@ -207,8 +207,7 @@ struct DINPDFGenerator {
 
         var y: CGFloat = hh
 
-        // ── Row A: Insurance (left) | Section 1 (right) ──
-        let rowAH: CGFloat = 88
+        // ── Row A: Patient (left) | Section 1 (right) ──
 
         // Left: patient header (klinisch relevante Felder)
         do {
@@ -287,31 +286,32 @@ struct DINPDFGenerator {
             field("Stichwort", stichwortText, x:x+w/2, y:y, w:w/2, h:11, lw:42)
             y += 11
         }
-        y = hh + rowAH
+        let rightY = y   // Section 1 right column bottom
 
-        // ── EINSATZPROTOKOLL title block ──────────────────
+        // ── EINSATZPROTOKOLL title block (directly below patient block) ──
+        let titleY = hh + 38
         do {
             let x = lx; let w = c1 - lx; let bh: CGFloat = 36
-            fillRect(CGRect(x:x,y:y,width:w,height:bh), vLightB)
-            strokeRect(CGRect(x:x,y:y,width:w,height:bh))
+            fillRect(CGRect(x:x,y:titleY,width:w,height:bh), vLightB)
+            strokeRect(CGRect(x:x,y:titleY,width:w,height:bh))
             txt("EINSATZPROTOKOLL",
-                CGRect(x:x+3,y:y+3,width:w-6,height:14), font:f13b, color:colBlue)
-            cb("Notfallsanitäter", p.verfasser == .notfallsanitaeter, x:x+3, y:y+19, bs:7, lw:80)
-            cb("Rettungssanitäter", p.verfasser == .rettungssanitaeter, x:x+95, y:y+19, bs:7, lw:80)
-            y += bh
+                CGRect(x:x+3,y:titleY+3,width:w-6,height:14), font:f13b, color:colBlue)
+            cb("Notfallsanitäter", p.verfasser == .notfallsanitaeter, x:x+3, y:titleY+19, bs:7, lw:80)
+            cb("Rettungssanitäter", p.verfasser == .rettungssanitaeter, x:x+95, y:titleY+19, bs:7, lw:80)
         }
 
         // ── Einsatzbesonderheiten-Schnellzeile ─────────────
+        let quickRowY = titleY + 36
         do {
             let rh: CGFloat = 12
-            fillRect(CGRect(x:lx, y:y, width:rx-lx, height:rh), .white)
-            strokeRect(CGRect(x:lx, y:y, width:rx-lx, height:rh))
+            fillRect(CGRect(x:lx, y:quickRowY, width:rx-lx, height:rh), .white)
+            strokeRect(CGRect(x:lx, y:quickRowY, width:rx-lx, height:rh))
             let qW = (rx - lx) / 3
-            cb("Einsatzabbruch",       p.ergebnis.ambulantVorOrt,        x:lx+2,      y:y+2, bs:7, lw:qW-12)
-            cb("Transportverweigerung", p.ergebnis.mifahrverweigerung,   x:lx+qW+2,   y:y+2, bs:7, lw:qW-12)
-            cb("Fehlalarm",            false,                             x:lx+qW*2+2, y:y+2, bs:7, lw:qW-12)
-            y += rh
+            cb("Einsatzabbruch",        false,                           x:lx+2,      y:quickRowY+2, bs:7, lw:qW-12)
+            cb("Transportverweigerung", p.ergebnis.mifahrverweigerung,   x:lx+qW+2,   y:quickRowY+2, bs:7, lw:qW-12)
+            cb("Fehlalarm",             false,                           x:lx+qW*2+2, y:quickRowY+2, bs:7, lw:qW-12)
         }
+        y = max(rightY, quickRowY + 12)
 
         // ── SECTION 2 ──────────────────────────────────────
         secHeader("2. Notfallgeschehen / Anamnese / Erstbefund", x:lx, y:y, w:rx-lx)
@@ -1168,7 +1168,6 @@ struct DINPDFGenerator {
         secHeader("9. Übergabe / Transportziel / Einsatzbesonderheiten", x:lx, y:y, w:rx-lx)
         y += 11
 
-        let uHW = (rx-lx)/2
         field("Übergabe an Rettungsmittel", p.uebergabeAn, x:lx, y:y, w:rx-lx, h:12, lw:100, hl:true)
         y += 12
 
