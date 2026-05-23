@@ -56,6 +56,16 @@ struct AbschlussView: View {
                 Label("Übergabe an anderes Rettungsmittel", systemImage: "cross.vial.fill")
             }
 
+            // Transportziel Klinik
+            Section {
+                CheckboxRow("ZNA / Notaufnahme", isOn: $protokoll.ergebnis.transportzielZna)
+                CheckboxRow("Stroke Unit", isOn: $protokoll.ergebnis.transportzielStrokeUnit)
+                CheckboxRow("Kath.-Labor", isOn: $protokoll.ergebnis.transportzielKathLabor)
+                TextField("Sonstiges Ziel", text: $protokoll.ergebnis.transportzielSonstigesKH)
+            } header: {
+                Label("Transportziel Klinik", systemImage: "building.2.crop.circle")
+            }
+
             // Einsatzbesonderheiten
             Section {
                 CheckboxRow("Ambulante Versorgung vor Ort", isOn: $protokoll.ergebnis.ambulantVorOrt)
