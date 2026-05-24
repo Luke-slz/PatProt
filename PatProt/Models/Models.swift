@@ -138,6 +138,7 @@ class EinsatzProtokoll: ObservableObject, Identifiable {
 
     // Ergebnis
     @Published var ergebnis = ErgebnisData()
+    @Published var uebergabeMesswerte = UebergabeMesswerte()
 
     // Abschluss
     @Published var uebergabeAn = ""
@@ -171,6 +172,7 @@ class EinsatzProtokoll: ObservableObject, Identifiable {
         medikamentFotos.forEach { $0.loeschen() }
         medikamentFotos = []
         ergebnis = ErgebnisData()
+        uebergabeMesswerte = UebergabeMesswerte()
         uebergabeAn = ""
         zustandBeiUebergabe = ""
         verfasser = .notfallsanitaeter
@@ -519,6 +521,17 @@ struct MassnahmenBefund: Codable {
     var monBz: Bool = false
     var monSpo2: Bool = false
     var monTemperatur: Bool = false
+}
+
+// MARK: - Übergabe-Messwerte
+struct UebergabeMesswerte: Codable {
+    var rrSys:  String = ""
+    var rrDia:  String = ""
+    var hf:     String = ""
+    var spo2:   String = ""
+    var af:     String = ""
+    var bz:     String = ""
+    var temp:   String = ""
 }
 
 // MARK: - Ergebnis / Transportziel (Sektion 8 + 9)
