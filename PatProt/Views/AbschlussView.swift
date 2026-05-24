@@ -14,6 +14,13 @@ struct AbschlussView: View {
     @State private var gespeichert = false
     @State private var speicherFehler = false
     @State private var mailNichtVerfügbar = false
+    @State private var zeigeUebRrSys  = false
+    @State private var zeigeUebRrDia  = false
+    @State private var zeigeUebHf     = false
+    @State private var zeigeUebSpo2   = false
+    @State private var zeigeUebAf     = false
+    @State private var zeigeUebBz     = false
+    @State private var zeigeUebTemp   = false
     var onBack: () -> Void
 
     var body: some View {
@@ -46,6 +53,19 @@ struct AbschlussView: View {
                 .pickerStyle(.segmented)
             } header: {
                 Label("Protokoll geschrieben von", systemImage: "person.text.rectangle")
+            }
+
+            // Übergabe-Messwerte
+            Section {
+                uebRow("RR syst.",   $protokoll.uebergabeMesswerte.rrSys,  "mmHg", $zeigeUebRrSys)
+                uebRow("RR diast.",  $protokoll.uebergabeMesswerte.rrDia,  "mmHg", $zeigeUebRrDia)
+                uebRow("HF /min",    $protokoll.uebergabeMesswerte.hf,     "/min", $zeigeUebHf)
+                uebRow("SpO₂ %",     $protokoll.uebergabeMesswerte.spo2,   "%",    $zeigeUebSpo2)
+                uebRow("AF /min",    $protokoll.uebergabeMesswerte.af,     "/min", $zeigeUebAf)
+                uebRow("BZ",         $protokoll.uebergabeMesswerte.bz,     "mmol", $zeigeUebBz)
+                uebRow("Temp °C",    $protokoll.uebergabeMesswerte.temp,   "°C",   $zeigeUebTemp)
+            } header: {
+                Label("Übergabe-Messwerte", systemImage: "waveform.path.ecg")
             }
 
             // Transportziel
@@ -220,6 +240,23 @@ struct AbschlussView: View {
                     }
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private func uebRow(_ label: String, _ value: Binding<String>,
+                         _ unit: String, _ zeige: Binding<Bool>) -> some View {
+        HStack {
+            Text(label)
+            Spacer()
+            Text(value.wrappedValue.isEmpty ? "—" : "\(value.wrappedValue) \(unit)")
+                .foregroundColor(value.wrappedValue.isEmpty ? .secondary : .primary)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture { zeige.wrappedValue = true }
+        .sheet(isPresented: zeige) {
+            NumpadSheet(mode: .decimal(label: label, unit: unit),
+                        initial: value.wrappedValue) { val in value.wrappedValue = val }
         }
     }
 
