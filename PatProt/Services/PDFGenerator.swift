@@ -838,7 +838,7 @@ struct DINPDFGenerator {
 
     // ─────────────────────────────────────────────────────
     // MARK: - PAGE 2  (Seiten 3+4 des Originals)
-    // Sections: 4.2 Verletzungen · 6 Maßnahmen · 6.5 Medi · 7 Reani · 8 Ergebnis · 9 Übergabe
+    // Sections: 4.2 Verletzungen · 5 Verlauf · 4.5 Medi · 6 Maßnahmen · 7 Reani · 8 Ergebnis · 9 Übergabe
     // ─────────────────────────────────────────────────────
 
     private static func drawPage2(p: EinsatzProtokoll) {
