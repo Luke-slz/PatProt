@@ -703,6 +703,7 @@ struct ProtokollDaten: Codable, Identifiable {
     var reanimationAktiv: Bool
     var reanimation: ReanimationsProtokoll
     var ergebnis: ErgebnisData
+    var uebergabeMesswerte: UebergabeMesswerte
     var uebergabeAn: String
     var zustandBeiUebergabe: String
     var verfasser: ProtokollVerfasser?
@@ -720,6 +721,7 @@ extension EinsatzProtokoll {
             verlaufMessungen: verlaufMessungen, massnahmen: massnahmen,
             medikamente: medikamente, reanimationAktiv: reanimationAktiv,
             reanimation: reanimation, ergebnis: ergebnis,
+            uebergabeMesswerte: uebergabeMesswerte,
             uebergabeAn: uebergabeAn,
             zustandBeiUebergabe: zustandBeiUebergabe,
             verfasser: verfasser
@@ -735,6 +737,7 @@ extension EinsatzProtokoll {
         verlaufMessungen = d.verlaufMessungen; massnahmen = d.massnahmen
         medikamente = d.medikamente; reanimationAktiv = d.reanimationAktiv
         reanimation = d.reanimation; ergebnis = d.ergebnis
+        uebergabeMesswerte = d.uebergabeMesswerte
         uebergabeAn = d.uebergabeAn
         zustandBeiUebergabe = d.zustandBeiUebergabe
         verfasser = d.verfasser ?? .notfallsanitaeter
