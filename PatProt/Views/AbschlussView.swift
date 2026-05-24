@@ -62,8 +62,8 @@ struct AbschlussView: View {
                 uebRow("HF /min",    $protokoll.uebergabeMesswerte.hf,     "/min", $zeigeUebHf)
                 uebRow("SpO₂ %",     $protokoll.uebergabeMesswerte.spo2,   "%",    $zeigeUebSpo2)
                 uebRow("AF /min",    $protokoll.uebergabeMesswerte.af,     "/min", $zeigeUebAf)
-                uebRow("BZ",         $protokoll.uebergabeMesswerte.bz,     "mmol", $zeigeUebBz)
-                uebRow("Temp °C",    $protokoll.uebergabeMesswerte.temp,   "°C",   $zeigeUebTemp)
+                uebRow("BZ",         $protokoll.uebergabeMesswerte.bz,     "mmol/L", $zeigeUebBz, useDecimal: true)
+                uebRow("Temp °C",    $protokoll.uebergabeMesswerte.temp,   "°C",   $zeigeUebTemp, useDecimal: true)
             } header: {
                 Label("Übergabe-Messwerte", systemImage: "waveform.path.ecg")
             }
@@ -245,7 +245,8 @@ struct AbschlussView: View {
 
     @ViewBuilder
     private func uebRow(_ label: String, _ value: Binding<String>,
-                         _ unit: String, _ zeige: Binding<Bool>) -> some View {
+                         _ unit: String, _ zeige: Binding<Bool>,
+                         useDecimal: Bool = false) -> some View {
         HStack {
             Text(label)
             Spacer()
@@ -255,8 +256,13 @@ struct AbschlussView: View {
         .contentShape(Rectangle())
         .onTapGesture { zeige.wrappedValue = true }
         .sheet(isPresented: zeige) {
-            NumpadSheet(mode: .decimal(label: label, unit: unit),
-                        initial: value.wrappedValue) { val in value.wrappedValue = val }
+            if useDecimal {
+                NumpadSheet(mode: .decimal(label: label, unit: unit),
+                            initial: value.wrappedValue) { val in value.wrappedValue = val }
+            } else {
+                NumpadSheet(mode: .integer(label: label, unit: unit, maxDigits: 4),
+                            initial: value.wrappedValue) { val in value.wrappedValue = val }
+            }
         }
     }
 
