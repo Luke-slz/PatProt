@@ -938,82 +938,173 @@ struct DINPDFGenerator {
 
         y = max(vmY + 20, spezY0 + CGFloat(spezItems.count)*spezH) + 2
 
+        // ── SECTION 5 Verlauf (Zeitraster) ─────────────────
+        secHeader("5. Verlauf / Verlaufsbeschreibung", x:lx, y:y, w:rx-lx)
+        y += 11
+
+        let vLabelW: CGFloat = 36
+        let vMaxCols = 8
+        let vColW = (rx - lx - vLabelW) / CGFloat(vMaxCols)
+        let vRowH: CGFloat = 11
+        let vTf = DateFormatter(); vTf.dateFormat = "HH:mm"
+        let vMess = Array(p.verlaufMessungen.sorted { $0.zeitpunkt < $1.zeitpunkt }.prefix(vMaxCols))
+        let vRows: [(String, (VerlaufsMessung) -> String)] = [
+            ("RR sys",  { $0.blutdruckSys.map  { "\($0)" } ?? "" }),
+            ("RR dia",  { $0.blutdruckDia.map  { "\($0)" } ?? "" }),
+            ("HF /min", { $0.puls.map          { "\($0)" } ?? "" }),
+            ("SpO₂ %",  { $0.spo2.map          { "\($0)" } ?? "" }),
+            ("AF /min", { $0.atemFrequenz.map  { "\($0)" } ?? "" }),
+            ("BZ",      { $0.blutzucker.map    { String(format:"%.1f",$0) } ?? "" }),
+            ("Temp °C", { $0.temperatur.map    { String(format:"%.1f",$0) } ?? "" }),
+            ("GCS",     { $0.gcsGesamt.map     { "\($0)" } ?? "" }),
+        ]
+        let vGridY = y
+        let vLabelBg = UIColor(red:0.90, green:0.95, blue:1.0, alpha:1)
+
+        fillRect(CGRect(x:lx, y:vGridY, width:vLabelW, height:vRowH), vLightB)
+        strokeRect(CGRect(x:lx, y:vGridY, width:vLabelW, height:vRowH))
+        txt("Uhrzeit", CGRect(x:lx+2, y:vGridY+2, width:vLabelW-4, height:vRowH-4), font:f6b, color:colBlue)
+        for col in 0..<vMaxCols {
+            let cx = lx + vLabelW + CGFloat(col)*vColW
+            fillRect(CGRect(x:cx, y:vGridY, width:vColW, height:vRowH), vLightB)
+            strokeRect(CGRect(x:cx, y:vGridY, width:vColW, height:vRowH))
+            let ts = col < vMess.count ? vTf.string(from: vMess[col].zeitpunkt) : ""
+            txt(ts, CGRect(x:cx+1, y:vGridY+2, width:vColW-2, height:vRowH-4), font:f6b, color:colBlue, align:.center)
+        }
+        for (row, (label, fn)) in vRows.enumerated() {
+            let ry = vGridY + CGFloat(row + 1) * vRowH
+            let dataBg: UIColor = row%2 == 0 ? .white : UIColor(white:0.97, alpha:1)
+            fillRect(CGRect(x:lx, y:ry, width:vLabelW, height:vRowH), vLabelBg)
+            strokeRect(CGRect(x:lx, y:ry, width:vLabelW, height:vRowH))
+            txt(label, CGRect(x:lx+2, y:ry+2, width:vLabelW-4, height:vRowH-4), font:f6, color:colBlue)
+            for col in 0..<vMaxCols {
+                let cx = lx + vLabelW + CGFloat(col)*vColW
+                fillRect(CGRect(x:cx, y:ry, width:vColW, height:vRowH), dataBg)
+                strokeRect(CGRect(x:cx, y:ry, width:vColW, height:vRowH))
+                let val = col < vMess.count ? fn(vMess[col]) : ""
+                txt(val, CGRect(x:cx+1, y:ry+2, width:vColW-2, height:vRowH-4), font:f7b, color:.black, align:.center)
+            }
+        }
+        y = vGridY + CGFloat(vRows.count + 1) * vRowH + 2
+        if !p.diagnose.verlauf.isEmpty {
+            let vFtH: CGFloat = 22
+            fillRect(CGRect(x:lx, y:y, width:rx-lx, height:vFtH), .white)
+            strokeRect(CGRect(x:lx, y:y, width:rx-lx, height:vFtH))
+            mtxt(p.diagnose.verlauf, CGRect(x:lx+2, y:y+2, width:rx-lx-4, height:vFtH-4), font:f7)
+            y += vFtH
+        }
+
+        // ── SECTION 4.5 Medikamente ───────────────────────
+        if !p.medikamente.isEmpty {
+            secHeader("4.5 Medikamente", x:lx, y:y, w:rx-lx)
+            y += 11
+            let mTotW = rx - lx
+            let mC: [CGFloat] = [mTotW*0.32, mTotW*0.14, mTotW*0.12, mTotW*0.20, mTotW*0.11, mTotW*0.11]
+            let mHdr = ["Medikament","Dosis","Einheit","Applikationsweg","Zeit",""]
+            fillRect(CGRect(x:lx,y:y,width:mTotW,height:9), vLightB)
+            strokeRect(CGRect(x:lx,y:y,width:mTotW,height:9))
+            var hx = lx
+            for (i,h2) in mHdr.enumerated() {
+                txt(h2, CGRect(x:hx+1,y:y+1,width:mC[i]-2,height:7), font:f6b, color:colBlue)
+                hx += mC[i]
+            }
+            y += 9
+            let medH: CGFloat = 10
+            for (idx, med) in p.medikamente.enumerated() {
+                if y + medH > pageSize.height - 15 { break }
+                let bg = idx%2==0 ? UIColor.white : UIColor(white:0.97,alpha:1)
+                fillRect(CGRect(x:lx,y:y,width:mTotW,height:medH), bg)
+                strokeRect(CGRect(x:lx,y:y,width:mTotW,height:medH))
+                var mx2 = lx
+                let vals2 = [med.name, med.dosis, med.einheit, med.route, t(med.zeit), ""]
+                for (j,val2) in vals2.enumerated() {
+                    if j < vals2.count-1 { vline(mx2+mC[j], y, medH) }
+                    txt(val2, CGRect(x:mx2+1.5,y:y+1.5,width:mC[j]-3,height:medH-3), font:f7)
+                    mx2 += mC[j]
+                }
+                y += medH
+            }
+            y += 2
+        }
+
         // ── SECTION 6 Maßnahmen ────────────────────────────
         secHeader("6. Maßnahmen", x:lx, y:y, w:rx-lx)
         y += 11
 
-        let m6W = (rx-lx) / 3
-        let m6x1 = lx; let m6x2 = lx+m6W; let m6x3 = lx+m6W*2
+        let totalW = rx - lx
+        let m6W1 = totalW * 0.25
+        let m6W2 = totalW * 0.26
+        let m6W3 = totalW * 0.25
+        let m6W4 = totalW - m6W1 - m6W2 - m6W3
+        let m6x1 = lx
+        let m6x2 = lx + m6W1
+        let m6x3 = lx + m6W1 + m6W2
+        let m6x4 = lx + m6W1 + m6W2 + m6W3
 
-        // Sub-headers
-        subHeader("Airway / Stabilisation", x:m6x1, y:y, w:m6W)
-        subHeader("Kreislauf / Zugänge", x:m6x2, y:y, w:m6W)
-        subHeader("Lagerung / Transport", x:m6x3, y:y, w:m6W)
+        subHeader("Airway / Stabilisation", x:m6x1, y:y, w:m6W1)
+        subHeader("Kreislauf / Zugänge",    x:m6x2, y:y, w:m6W2)
+        subHeader("Weitere Maßnahmen",      x:m6x3, y:y, w:m6W3)
+        subHeader("Lagerung / Transport",   x:m6x4, y:y, w:m6W4)
         y += 9.5
 
         let maH: CGFloat = 9.5
         let maItems1: [(String,Bool)] = [
-            ("Atemweg freimachen", p.massnahmen.atemwegFreimachen),
-            ("Cervikalstütze/HWS", p.massnahmen.cervikalStuetze),
-            ("Absaugung", p.massnahmen.absaugung),
-            ("Sauerstoffgabe", p.massnahmen.sauerstoffgabe),
-            ("Maskenbeatmung", p.massnahmen.maskenbeatmung),
-            ("Mask.beat. unmöglich", p.massnahmen.maskenbeatmungUnmoeglich),
-            ("EGA supraglottisch", p.massnahmen.supraglottisch),
-            ("Atemweg erschwert", p.massnahmen.atemwegErschwert),
-            ("CPAP", p.massnahmen.cpap),
-            ("Heimlich (FK)", p.massnahmen.heimlich),
+            ("Atemweg freimachen",  p.massnahmen.atemwegFreimachen),
+            ("Cervikalstütze/HWS",  p.massnahmen.cervikalStuetze),
+            ("Absaugung",           p.massnahmen.absaugung),
+            ("Sauerstoffgabe",      p.massnahmen.sauerstoffgabe),
+            ("Maskenbeatmung",      p.massnahmen.maskenbeatmung),
+            ("Mask.beat. unmöglich",p.massnahmen.maskenbeatmungUnmoeglich),
+            ("EGA supraglottisch",  p.massnahmen.supraglottisch),
+            ("Atemweg erschwert",   p.massnahmen.atemwegErschwert),
+            ("CPAP",                p.massnahmen.cpap),
+            ("Heimlich (FK)",       p.massnahmen.heimlich),
         ]
         let maItems2: [(String,Bool)] = [
-            ("Peripher-venös", p.massnahmen.peripherVenoes),
-            ("Defibrillation", p.massnahmen.defibrillation),
-            ("Kardioversion", p.massnahmen.kardioversion),
-            ("Intraossär", p.massnahmen.intraossaer),
-            ("Tourniquet", p.massnahmen.tourniquet),
-            ("Verband / Wundvers.", p.massnahmen.verband),
-            ("Beckenschlinge", p.massnahmen.beckenschlinge),
-            ("Wärmeerhalt", p.massnahmen.waermeerhalt),
-            ("Kühlung", p.massnahmen.kuehlung),
+            ("Peripher-venös",     p.massnahmen.peripherVenoes),
+            ("Defibrillation",     p.massnahmen.defibrillation),
+            ("Kardioversion",      p.massnahmen.kardioversion),
+            ("Intraossär",         p.massnahmen.intraossaer),
+            ("Tourniquet",         p.massnahmen.tourniquet),
+            ("Verband / Wundvers.",p.massnahmen.verband),
+            ("Beckenschlinge",     p.massnahmen.beckenschlinge),
             ("Krisenintervention", p.massnahmen.krisenintervention),
-            ("Entbindung", p.massnahmen.entbindung),
+            ("Entbindung",         p.massnahmen.entbindung),
         ]
         let maItems3: [(String,Bool)] = [
-            ("OK-Hochlagerung", p.massnahmen.okHochlagerung),
-            ("Flachlagerung", p.massnahmen.flachlagerung),
-            ("Schocklagerung", p.massnahmen.schocklagerung),
-            ("Herz-Tieflage", p.massnahmen.herzTieflage),
-            ("Linksseitenlage", p.massnahmen.linksseitenlage),
-            ("Sitzender Transport", p.massnahmen.sitzenderTransport),
-            ("Vakuummatratze", p.massnahmen.vakuummatratze),
-            ("Schaufeltrage", p.massnahmen.schaufeltrage),
+            ("Wärmeerhalt", p.massnahmen.waermeerhalt),
+            ("Kühlung",     p.massnahmen.kuehlung),
+        ]
+        let maItems4: [(String,Bool)] = [
+            ("OK-Hochlagerung",    p.massnahmen.okHochlagerung),
+            ("Flachlagerung",      p.massnahmen.flachlagerung),
+            ("Schocklagerung",     p.massnahmen.schocklagerung),
+            ("Herz-Tieflage",      p.massnahmen.herzTieflage),
+            ("Linksseitenlage",    p.massnahmen.linksseitenlage),
+            ("Sitzender Transport",p.massnahmen.sitzenderTransport),
+            ("Vakuummatratze",     p.massnahmen.vakuummatratze),
+            ("Schaufeltrage",      p.massnahmen.schaufeltrage),
             ("Extremit.schienung", p.massnahmen.extremitaetenschienung),
         ]
+
+        let allCols: [([(String,Bool)], CGFloat, CGFloat)] = [
+            (maItems1, m6x1, m6W1), (maItems2, m6x2, m6W2),
+            (maItems3, m6x3, m6W3), (maItems4, m6x4, m6W4),
+        ]
         let maY0 = y
-        for (i,(label,checked)) in maItems1.enumerated() {
-            let ry = maY0 + CGFloat(i)*maH
-            let bg: UIColor = i%2==0 ? .white : UIColor(white:0.97,alpha:1)
-            fillRect(CGRect(x:m6x1,y:ry,width:m6W,height:maH), bg)
-            strokeRect(CGRect(x:m6x1,y:ry,width:m6W,height:maH))
-            cb(label, checked, x:m6x1+2, y:ry+1, bs:7, lw:m6W-12)
+        for (items, cx, cw) in allCols {
+            for (i,(label,checked)) in items.enumerated() {
+                let ry = maY0 + CGFloat(i)*maH
+                let bg: UIColor = i%2==0 ? .white : UIColor(white:0.97,alpha:1)
+                fillRect(CGRect(x:cx,y:ry,width:cw,height:maH), bg)
+                strokeRect(CGRect(x:cx,y:ry,width:cw,height:maH))
+                cb(label, checked, x:cx+2, y:ry+1, bs:7, lw:cw-12)
+            }
         }
-        for (i,(label,checked)) in maItems2.enumerated() {
-            let ry = maY0 + CGFloat(i)*maH
-            let bg: UIColor = i%2==0 ? .white : UIColor(white:0.97,alpha:1)
-            fillRect(CGRect(x:m6x2,y:ry,width:m6W,height:maH), bg)
-            strokeRect(CGRect(x:m6x2,y:ry,width:m6W,height:maH))
-            cb(label, checked, x:m6x2+2, y:ry+1, bs:7, lw:m6W-12)
-        }
-        for (i,(label,checked)) in maItems3.enumerated() {
-            let ry = maY0 + CGFloat(i)*maH
-            let bg: UIColor = i%2==0 ? .white : UIColor(white:0.97,alpha:1)
-            fillRect(CGRect(x:m6x3,y:ry,width:m6W,height:maH), bg)
-            strokeRect(CGRect(x:m6x3,y:ry,width:m6W,height:maH))
-            cb(label, checked, x:m6x3+2, y:ry+1, bs:7, lw:m6W-12)
-        }
-        y = maY0 + CGFloat(max(maItems1.count, maItems2.count, maItems3.count))*maH + 1
+        y = maY0 + CGFloat(max(maItems1.count, maItems2.count, maItems3.count, maItems4.count))*maH + 1
 
         // Monitoring row
-        subHeader("Monitoring", x:m6x1, y:y, w:m6W)
+        subHeader("Monitoring", x:m6x1, y:y, w:m6W1)
         y += 9.5
 
         let monItems: [(String,Bool)] = [
@@ -1069,43 +1160,6 @@ struct DINPDFGenerator {
             if y + 10 > pageSize.height - 15 { break }
             field(lbl, val, x:lx, y:y, w:rx-lx, h:10, lw:80)
             y += 10
-        }
-
-        // ── SECTION 6.5 Medikamente ────────────────────────
-        if !p.medikamente.isEmpty {
-            if y + 11 < pageSize.height - 15 {
-                secHeader("6.5 Medikamente", x:lx, y:y, w:rx-lx)
-                y += 11
-            }
-            let mTotW = rx - lx
-            let mC: [CGFloat] = [mTotW*0.32, mTotW*0.14, mTotW*0.12, mTotW*0.20, mTotW*0.11, mTotW*0.11]
-            let mHdr = ["Medikament","Dosis","Einheit","Applikationsweg","Zeit",""]
-            if y + 9 < pageSize.height - 15 {
-                fillRect(CGRect(x:lx,y:y,width:mTotW,height:9), vLightB)
-                strokeRect(CGRect(x:lx,y:y,width:mTotW,height:9))
-                var hx = lx
-                for (i,h2) in mHdr.enumerated() {
-                    txt(h2, CGRect(x:hx+1,y:y+1,width:mC[i]-2,height:7), font:f6b, color:colBlue)
-                    hx += mC[i]
-                }
-                y += 9
-            }
-            let medH: CGFloat = 10
-            for (idx, med) in p.medikamente.enumerated() {
-                if y + medH > pageSize.height - 15 { break }
-                let bg = idx%2==0 ? UIColor.white : UIColor(white:0.97,alpha:1)
-                fillRect(CGRect(x:lx,y:y,width:mTotW,height:medH), bg)
-                strokeRect(CGRect(x:lx,y:y,width:mTotW,height:medH))
-                var mx2 = lx
-                let vals2 = [med.name, med.dosis, med.einheit, med.route, t(med.zeit), ""]
-                for (j,val2) in vals2.enumerated() {
-                    if j < vals2.count-1 { vline(mx2+mC[j], y, medH) }
-                    txt(val2, CGRect(x:mx2+1.5,y:y+1.5,width:mC[j]-3,height:medH-3), font:f7)
-                    mx2 += mC[j]
-                }
-                y += medH
-            }
-            y += 2
         }
 
         // ── SECTION 7 Reanimation / Tod ───────────────────
