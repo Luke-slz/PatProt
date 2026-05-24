@@ -372,45 +372,21 @@ struct DINPDFGenerator {
             y += 11
         }
 
-        // SAMPLER-Anamnese — DIVI Section 2
-        do {
-            var samplerData: [(String, String)] = []
-            if !p.sampler.symptome.isEmpty {
-                samplerData.append(("S – Symptome", p.sampler.symptome))
-            }
-            if !p.sampler.allergien.isEmpty {
-                samplerData.append(("A – Allergien", p.sampler.allergien))
-            }
-            if !p.medikamentFotos.isEmpty {
-                samplerData.append(("M – Medikamente", "Medikamentenplan: Foto-Anhang (S. 3ff.)"))
-            } else if !p.sampler.medikamente.isEmpty {
-                samplerData.append(("M – Medikamente", p.sampler.medikamente))
-            }
-            if !p.sampler.patientenVorgeschichte.isEmpty {
-                samplerData.append(("P – Vorgeschichte", p.sampler.patientenVorgeschichte))
-            }
-            if !p.sampler.letztesMahl.isEmpty {
-                samplerData.append(("L – Letztes Essen", p.sampler.letztesMahl))
-            }
-            if !p.sampler.ereignis.isEmpty {
-                samplerData.append(("E – Ereignis", p.sampler.ereignis))
-            }
-            if !p.sampler.risikofaktoren.isEmpty {
-                samplerData.append(("R – Risikofaktoren", p.sampler.risikofaktoren))
-            }
-            if samplerData.isEmpty {
-                fillRect(CGRect(x:lx, y:y, width:rx-lx, height:11), .white)
-                strokeRect(CGRect(x:lx, y:y, width:rx-lx, height:11))
-                txt("SAMPLER – nicht erhoben",
-                    CGRect(x:lx+3, y:y+2, width:rx-lx-6, height:7),
-                    font:f7, color:.lightGray)
-                y += 11
-            } else {
-                for (label, value) in samplerData {
-                    field(label, value, x:lx, y:y, w:rx-lx, h:11, lw:85)
-                    y += 11
-                }
-            }
+        // SAMPLER — immer alle 7 Zeilen anzeigen
+        let samplerAllRows: [(String, String)] = [
+            ("S – Symptome",       p.sampler.symptome),
+            ("A – Allergien",      p.sampler.allergien),
+            ("M – Medikamente",    p.medikamentFotos.isEmpty
+                                    ? p.sampler.medikamente
+                                    : "Medikamentenplan: Foto-Anhang (S. 3ff.)"),
+            ("P – Vorgeschichte",  p.sampler.patientenVorgeschichte),
+            ("L – Letztes Essen",  p.sampler.letztesMahl),
+            ("E – Ereignis",       p.sampler.ereignis),
+            ("R – Risikofaktoren", p.sampler.risikofaktoren),
+        ]
+        for (label, value) in samplerAllRows {
+            field(label, value, x:lx, y:y, w:rx-lx, h:11, lw:85)
+            y += 11
         }
 
         // ABCDE grid
@@ -483,37 +459,43 @@ struct DINPDFGenerator {
         let bW5 = (rx - c2) * 0.45            // E/Haut
 
         subHeader("Messwerte", x:lx, y:y, w:bW1)
+        let mvLbl: CGFloat = 42
+        let mvAnk: CGFloat = (bW1 - mvLbl) / 2
+        let mvUeb: CGFloat = bW1 - mvLbl - mvAnk
+        txt("Ankunft",  CGRect(x:lx+mvLbl,       y:y+2.5, width:mvAnk-2, height:4.5),
+            font:f5, color:.white, align:.center)
+        txt("Übergabe", CGRect(x:lx+mvLbl+mvAnk, y:y+2.5, width:mvUeb-2, height:4.5),
+            font:f5, color:.white, align:.center)
         subHeader("A+B Atmung", x:lx+bW1, y:y, w:bW2)
         subHeader("C Cirkulation+EKG", x:lx+bW1+bW2, y:y, w:bW3)
         subHeader("D Neurologie", x:c2, y:y, w:bW4)
         subHeader("E/Haut", x:c2+bW4, y:y, w:bW5)
         y += 9.5
 
-        // Messwerte column: RR SYS / DIA / HF / SpO2 / AF / etCO2 / BZ / Temp
+        // Messwerte: Ankunft | Übergabe
+        let u = p.uebergabeMesswerte
         let mvH: CGFloat = 11
-        let mvLw: CGFloat = 42
-        let mvVw = bW1 - mvLw - 2
-        let mvItems: [(String,String)] = [
-            ("RR syst.", p.circulation.blutdruckSystolisch.map { "\($0)" } ?? ""),
-            ("RR diast.", p.circulation.blutdruckDiastolisch.map { "\($0)" } ?? ""),
-            ("HF (/min)", p.circulation.puls.map { "\($0)" } ?? ""),
-            ("Rhythmus", p.circulation.pulsRhythmus),
-            ("SpO₂ (%)", p.breathing.spo2.map { "\($0)" } ?? ""),
-            ("AF (/min)", p.breathing.atemFrequenz.map { "\($0)" } ?? ""),
-            ("etCO₂", ""),
-            ("BZ", p.disability.blutzucker.map { String(format:"%.1f",$0) } ?? ""),
-            ("Temp (°C)", p.exposure.temperatur.map { String(format:"%.1f",$0) } ?? ""),
+        let mvItems: [(String, String, String)] = [
+            ("RR syst.",  p.circulation.blutdruckSystolisch.map  { "\($0)" } ?? "", u.rrSys),
+            ("RR diast.", p.circulation.blutdruckDiastolisch.map { "\($0)" } ?? "", u.rrDia),
+            ("HF (/min)", p.circulation.puls.map                 { "\($0)" } ?? "", u.hf),
+            ("SpO₂ (%)",  p.breathing.spo2.map                   { "\($0)" } ?? "", u.spo2),
+            ("AF (/min)", p.breathing.atemFrequenz.map            { "\($0)" } ?? "", u.af),
+            ("BZ",        p.disability.blutzucker.map { String(format:"%.1f",$0) } ?? "", u.bz),
+            ("Temp (°C)", p.exposure.temperatur.map   { String(format:"%.1f",$0) } ?? "", u.temp),
         ]
         let mvColY = y
-        for (i,(label,value)) in mvItems.enumerated() {
+        for (i,(label,ankVal,uebVal)) in mvItems.enumerated() {
             let ry = mvColY + CGFloat(i)*mvH
-            let bg: UIColor = i%2 == 0 ? .white : UIColor(white:0.97,alpha:1)
             let hl = (label == "RR syst." || label == "RR diast.")
+            let bg: UIColor = i%2 == 0 ? .white : UIColor(white:0.97,alpha:1)
             fillRect(CGRect(x:lx,y:ry,width:bW1,height:mvH), hl ? hlYellow : bg)
             strokeRect(CGRect(x:lx,y:ry,width:bW1,height:mvH))
-            vline(lx+mvLw, ry, mvH)
-            txt(label, CGRect(x:lx+1.5,y:ry+2,width:mvLw-3,height:mvH-4), font:f6, color:.darkGray)
-            txt(value, CGRect(x:lx+mvLw+2,y:ry+2,width:mvVw-4,height:mvH-4), font:f7b)
+            vline(lx+mvLbl, ry, mvH)
+            vline(lx+mvLbl+mvAnk, ry, mvH)
+            txt(label,  CGRect(x:lx+1.5,              y:ry+2, width:mvLbl-3,  height:mvH-4), font:f6, color:.darkGray)
+            txt(ankVal, CGRect(x:lx+mvLbl+1.5,        y:ry+2, width:mvAnk-3,  height:mvH-4), font:f7b, align:.center)
+            txt(uebVal, CGRect(x:lx+mvLbl+mvAnk+1.5,  y:ry+2, width:mvUeb-3,  height:mvH-4), font:f7b, align:.center)
         }
 
         // A+B Atmung checkboxes
@@ -790,64 +772,6 @@ struct DINPDFGenerator {
             cb(label, checked, x:d3x+2, y:ry+1, bs:7, lw:dW-12)
         }
         y += CGFloat(maxRows2)*cbH + 2
-
-        // ── SECTION 5 Verlauf (Zeitraster) ─────────────────
-        secHeader("5. Verlauf / Verlaufsbeschreibung", x:lx, y:y, w:rx-lx)
-        y += 11
-
-        let vLabelW: CGFloat = 36
-        let vMaxCols = 8
-        let vColW = (rx - lx - vLabelW) / CGFloat(vMaxCols)
-        let vRowH: CGFloat = 11
-        let vTf = DateFormatter(); vTf.dateFormat = "HH:mm"
-        let vMess = Array(p.verlaufMessungen.sorted { $0.zeitpunkt < $1.zeitpunkt }.prefix(vMaxCols))
-        let vRows: [(String, (VerlaufsMessung) -> String)] = [
-            ("RR sys",  { $0.blutdruckSys.map  { "\($0)" } ?? "" }),
-            ("RR dia",  { $0.blutdruckDia.map  { "\($0)" } ?? "" }),
-            ("HF /min", { $0.puls.map          { "\($0)" } ?? "" }),
-            ("SpO₂ %", { $0.spo2.map           { "\($0)" } ?? "" }),
-            ("AF /min", { $0.atemFrequenz.map  { "\($0)" } ?? "" }),
-            ("BZ",      { $0.blutzucker.map    { String(format:"%.1f",$0) } ?? "" }),
-            ("Temp °C", { $0.temperatur.map    { String(format:"%.1f",$0) } ?? "" }),
-            ("GCS",     { $0.gcsGesamt.map     { "\($0)" } ?? "" }),
-        ]
-        let vGridY = y
-        let vLabelBg = UIColor(red:0.90, green:0.95, blue:1.0, alpha:1)
-
-        // Header row (Uhrzeit)
-        fillRect(CGRect(x:lx, y:vGridY, width:vLabelW, height:vRowH), vLightB)
-        strokeRect(CGRect(x:lx, y:vGridY, width:vLabelW, height:vRowH))
-        txt("Uhrzeit", CGRect(x:lx+2, y:vGridY+2, width:vLabelW-4, height:vRowH-4), font:f6b, color:colBlue)
-        for col in 0..<vMaxCols {
-            let cx = lx + vLabelW + CGFloat(col)*vColW
-            fillRect(CGRect(x:cx, y:vGridY, width:vColW, height:vRowH), vLightB)
-            strokeRect(CGRect(x:cx, y:vGridY, width:vColW, height:vRowH))
-            let ts = col < vMess.count ? vTf.string(from: vMess[col].zeitpunkt) : ""
-            txt(ts, CGRect(x:cx+1, y:vGridY+2, width:vColW-2, height:vRowH-4), font:f6b, color:colBlue, align:.center)
-        }
-        // Value rows
-        for (row, (label, fn)) in vRows.enumerated() {
-            let ry = vGridY + CGFloat(row + 1) * vRowH
-            let dataBg: UIColor = row%2 == 0 ? .white : UIColor(white:0.97, alpha:1)
-            fillRect(CGRect(x:lx, y:ry, width:vLabelW, height:vRowH), vLabelBg)
-            strokeRect(CGRect(x:lx, y:ry, width:vLabelW, height:vRowH))
-            txt(label, CGRect(x:lx+2, y:ry+2, width:vLabelW-4, height:vRowH-4), font:f6, color:colBlue)
-            for col in 0..<vMaxCols {
-                let cx = lx + vLabelW + CGFloat(col)*vColW
-                fillRect(CGRect(x:cx, y:ry, width:vColW, height:vRowH), dataBg)
-                strokeRect(CGRect(x:cx, y:ry, width:vColW, height:vRowH))
-                let val = col < vMess.count ? fn(vMess[col]) : ""
-                txt(val, CGRect(x:cx+1, y:ry+2, width:vColW-2, height:vRowH-4), font:f7b, color:.black, align:.center)
-            }
-        }
-        y = vGridY + CGFloat(vRows.count + 1) * vRowH
-        if !p.diagnose.verlauf.isEmpty {
-            let vFtH: CGFloat = 22
-            fillRect(CGRect(x:lx, y:y, width:rx-lx, height:vFtH), .white)
-            strokeRect(CGRect(x:lx, y:y, width:rx-lx, height:vFtH))
-            mtxt(p.diagnose.verlauf, CGRect(x:lx+2, y:y+2, width:rx-lx-4, height:vFtH-4), font:f7)
-            y += vFtH
-        }
 
         // Footer
         drawFooter(erstelltAm: p.erstelltAm)
