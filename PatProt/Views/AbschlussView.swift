@@ -62,7 +62,7 @@ struct AbschlussView: View {
                 uebRow("HF /min",    $protokoll.uebergabeMesswerte.hf,     "/min", $zeigeUebHf)
                 uebRow("SpO₂ %",     $protokoll.uebergabeMesswerte.spo2,   "%",    $zeigeUebSpo2)
                 uebRow("AF /min",    $protokoll.uebergabeMesswerte.af,     "/min", $zeigeUebAf)
-                uebRow("BZ",         $protokoll.uebergabeMesswerte.bz,     "mmol/L", $zeigeUebBz, useDecimal: true)
+                uebRow("BZ",         $protokoll.uebergabeMesswerte.bz,     "mg/dL", $zeigeUebBz, useDecimal: true)
                 uebRow("Temp °C",    $protokoll.uebergabeMesswerte.temp,   "°C",   $zeigeUebTemp, useDecimal: true)
             } header: {
                 Label("Übergabe-Messwerte", systemImage: "waveform.path.ecg")
@@ -191,7 +191,7 @@ struct AbschlussView: View {
             } header: {
                 Label("PDF Export", systemImage: "square.and.arrow.up")
             } footer: {
-                Text("Die temporäre PDF-Datei wird nach dem Export gelöscht.").font(.footnote).foregroundStyle(.secondary)
+                Text("Das Protokoll bleibt 24 Stunden nach dem Export im Archiv.").font(.footnote).foregroundStyle(.secondary)
             }
         }
         .navigationTitle("Abschluss & Export")
@@ -207,6 +207,11 @@ struct AbschlussView: View {
             if let url = pdfURL {
                 ShareSheet(activityItems: [url]) { completed in
                     if completed {
+                        if !gespeichert {
+                            try? ProtokollArchiv.shared.speichern(protokoll)
+                            gespeichert = true
+                        }
+                        ProtokollArchiv.shared.markierePDFExport(id: protokoll.id)
                         nachExportBereinigen()
                     }
                 }
@@ -236,6 +241,11 @@ struct AbschlussView: View {
                     attachmentURL: url
                 ) { result in
                     if result == .sent {
+                        if !gespeichert {
+                            try? ProtokollArchiv.shared.speichern(protokoll)
+                            gespeichert = true
+                        }
+                        ProtokollArchiv.shared.markierePDFExport(id: protokoll.id)
                         nachExportBereinigen()
                     }
                 }

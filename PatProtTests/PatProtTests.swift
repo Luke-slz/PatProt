@@ -89,4 +89,38 @@ struct PatProtTests {
         #expect(true)
     }
 
+    @Test func markierePDFExportSetztDatum() throws {
+        let archiv = try ProtokollArchiv.testInstance()
+        var daten = ProtokollDaten()
+        daten.id = UUID()
+        try archiv.speichern(daten)
+        #expect(daten.pdfExportiertAm == nil)
+        archiv.markierePDFExport(id: daten.id)
+        let geladen = archiv.laden()
+        let eintrag = geladen.first(where: { $0.id == daten.id })
+        #expect(eintrag?.pdfExportiertAm != nil)
+    }
+
+    @Test func purgeEntferntAbgelaufeneEintraege() throws {
+        let archiv = try ProtokollArchiv.testInstance()
+        var daten = ProtokollDaten()
+        daten.id = UUID()
+        daten.pdfExportiertAm = Date().addingTimeInterval(-90000)  // 25h ago
+        try archiv.speichern(daten)
+        archiv.laden()  // triggers purge
+        let nach = archiv.laden()
+        #expect(nach.first(where: { $0.id == daten.id }) == nil)
+    }
+
+    @Test func purgeBelaesstFrischangeEintraege() throws {
+        let archiv = try ProtokollArchiv.testInstance()
+        var daten = ProtokollDaten()
+        daten.id = UUID()
+        daten.pdfExportiertAm = Date().addingTimeInterval(-3600)  // 1h ago
+        try archiv.speichern(daten)
+        archiv.laden()
+        let nach = archiv.laden()
+        #expect(nach.first(where: { $0.id == daten.id }) != nil)
+    }
+
 }
