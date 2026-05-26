@@ -339,7 +339,7 @@ struct iPadMainView: View {
             }
         case .exposure:
             NavigationStack {
-                ExposureView(befund: $protokoll.exposure) { selectedSection = .sampler }
+                ExposureView(protokoll: protokoll) { selectedSection = .sampler }
             }
         case .sampler:
             NavigationStack {

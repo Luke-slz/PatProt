@@ -246,6 +246,16 @@ struct BreathingView: View {
             }
 
             Section {
+                CheckboxRow("Spastik",           isOn: $befund.spastik)
+                CheckboxRow("Rasselgeräusche",   isOn: $befund.rasselgeraeusche)
+                CheckboxRow("Stridor",           isOn: $befund.stridor)
+                CheckboxRow("Schnappatmung",     isOn: $befund.schnappatmung)
+                CheckboxRow("Apnoe",             isOn: $befund.apnoe)
+                CheckboxRow("Hyperventilation",  isOn: $befund.hyperventilation)
+                CheckboxRow("Nicht beurteilbar", isOn: $befund.abNichtBeurteilbar)
+            } header: { Label("Atemstörungen", systemImage: "wind") }
+
+            Section {
                 TextEditor(text: $befund.freitext).frame(minHeight: 80)
                 Text("→ PDF S. 1 · ABCDE · B")
                     .font(.caption2)
@@ -397,6 +407,28 @@ struct CirculationView: View {
             } header: { Label("EKG", systemImage: "waveform.path.ecg") }
 
             Section {
+                CheckboxRow("Sinusrhythmus",            isOn: $befund.sinusrhythmus)
+                CheckboxRow("Absolute Arrhythmie",      isOn: $befund.absoluteArrhythmie)
+                CheckboxRow("AV-Block II°/III°",        isOn: $befund.avBlock)
+                CheckboxRow("QRS-Tachykardie breit",    isOn: $befund.qrsTachykardieBreit)
+                CheckboxRow("QRS-Tachykardie schmal",   isOn: $befund.qrsTachykardieSchmal)
+                CheckboxRow("Kammerflattern/-flimmern", isOn: $befund.kammerflattern)
+                CheckboxRow("Pulslose elektr. Akt.",    isOn: $befund.pea)
+                CheckboxRow("Asystolie",                isOn: $befund.asystolie)
+                CheckboxRow("Schrittmacherrhythmus",    isOn: $befund.schrittmacher)
+                CheckboxRow("Infarkt-EKG (STEMI/LSB)", isOn: $befund.infarktEkg)
+                CheckboxRow("Rekap. > 2 Sek.",          isOn: $befund.rekapillierung)
+                CheckboxRow("Nicht beurteilbar",        isOn: $befund.cNichtBeurteilbar)
+            } header: { Label("EKG-Rhythmus", systemImage: "waveform") }
+
+            Section {
+                CheckboxRow("SVES",      isOn: $befund.sves)
+                CheckboxRow("VES",       isOn: $befund.ves)
+                CheckboxRow("Monomorph", isOn: $befund.extrasystolenMonomorph)
+                CheckboxRow("Polymorph", isOn: $befund.extrasystolenPolymorph)
+            } header: { Text("Extrasystolen") }
+
+            Section {
                 Toggle("Blutung vorhanden", isOn: $befund.blutung)
                 if befund.blutung {
                     TextField("Lokalisation der Blutung", text: $befund.blutungLokalisation)
@@ -533,10 +565,42 @@ struct DisabilityView: View {
             }
 
             Section {
-                TextField("Pupillen links (z.B. weit, eng, mittel)", text: $befund.pupillenLinks)
-                TextField("Pupillen rechts", text: $befund.pupillenRechts)
-                Toggle("Lichtreaktion vorhanden", isOn: $befund.pupillenReaktion)
+                CheckboxRow("Wach",                     isOn: $befund.bewWach)
+                CheckboxRow("Reagiert auf Ansprache",   isOn: $befund.bewAnsprache)
+                CheckboxRow("Reagiert auf Schmerzreiz", isOn: $befund.bewSchmerzreiz)
+                CheckboxRow("Bewusstlos",               isOn: $befund.bewusstlos)
+                CheckboxRow("Nicht beurteilbar",        isOn: $befund.dNichtBeurteilbar)
+            } header: { Label("Bewusstseinslage", systemImage: "person.fill.questionmark") }
+
+            Section {
+                Text("Rechts").font(.caption).foregroundColor(.secondary)
+                CheckboxRow("Eng",                 isOn: $befund.pupilleReEng)
+                CheckboxRow("Mittel",              isOn: $befund.pupilleReMittel)
+                CheckboxRow("Weit",                isOn: $befund.pupilleReWeit)
+                CheckboxRow("Entrundet",           isOn: $befund.pupilleReEntrundet)
+                CheckboxRow("Keine Lichtreaktion", isOn: $befund.pupilleReKeineLichtreaktion)
+                CheckboxRow("Nicht beurteilbar",   isOn: $befund.pupilleReNichtBeurteilbar)
+                Text("Links").font(.caption).foregroundColor(.secondary)
+                CheckboxRow("Eng",                 isOn: $befund.pupilleLiEng)
+                CheckboxRow("Mittel",              isOn: $befund.pupilleLiMittel)
+                CheckboxRow("Weit",                isOn: $befund.pupilleLiWeit)
+                CheckboxRow("Entrundet",           isOn: $befund.pupilleLiEntrundet)
+                CheckboxRow("Keine Lichtreaktion", isOn: $befund.pupilleLiKeineLichtreaktion)
+                CheckboxRow("Nicht beurteilbar",   isOn: $befund.pupilleLiNichtBeurteilbar)
             } header: { Label("Pupillen", systemImage: "eye.circle") }
+
+            Section {
+                CheckboxRow("Vorb. neurol. Defizit",  isOn: $befund.neuroVorbestehendesDefizit)
+                CheckboxRow("Facialisparese",          isOn: $befund.neuroFacialisparese)
+                CheckboxRow("Armparese",               isOn: $befund.neuroArmparese)
+                CheckboxRow("Sprachstörung",           isOn: $befund.neuroSprachstoerung)
+                CheckboxRow("Sehstörung",              isOn: $befund.neuroSehstoerung)
+                CheckboxRow("Babinski-Zeichen",        isOn: $befund.neuroBabinski)
+                CheckboxRow("Querschnittsymptomatik",  isOn: $befund.neuroQuerschnitt)
+                CheckboxRow("Meningismus",             isOn: $befund.neuroMeningismus)
+                CheckboxRow("Demenz",                  isOn: $befund.neuroDemenz)
+                CheckboxRow("Nicht beurteilbar",       isOn: $befund.neuroNichtBeurteilbar)
+            } header: { Label("Neurologische Auffälligkeiten", systemImage: "brain") }
 
             Section {
                 VStack(alignment: .leading, spacing: 2) {
@@ -648,22 +712,22 @@ struct GCSStepper: View {
 // MARK: - E: Exposure
 
 struct ExposureView: View {
-    @Binding var befund: ExposureBefund
+    @ObservedObject var protokoll: EinsatzProtokoll
     var onZurueck: () -> Void
     @State private var zeigeTempNumpad = false
 
     private var tempBg: Color {
-        vitalBg(befund.temperatur, normal: 36.0...37.5, warning: 35.0...38.5)
+        vitalBg(protokoll.exposure.temperatur, normal: 36.0...37.5, warning: 35.0...38.5)
     }
     private var tempWarn: (String, Bool)? {
-        vitalWarnText(befund.temperatur, normal: 36.0...37.5, warning: 35.0...38.5,
+        vitalWarnText(protokoll.exposure.temperatur, normal: 36.0...37.5, warning: 35.0...38.5,
                       lowWarn: "Hypothermie (< 36.0°C)", highWarn: "Fieber / Hyperthermie (> 37.5°C)")
     }
 
     var body: some View {
         Form {
             Section {
-                StatusPickerView(status: $befund.status)
+                StatusPickerView(status: $protokoll.exposure.status)
             } header: { Text("Gesamtstatus") }
 
             Section {
@@ -671,15 +735,15 @@ struct ExposureView: View {
                     HStack {
                         Text("Körpertemperatur (°C)")
                         Spacer()
-                        Text(befund.temperatur.map { String(format: "%.1f", $0) } ?? "—")
-                            .foregroundColor(befund.temperatur == nil ? .secondary : .primary)
+                        Text(protokoll.exposure.temperatur.map { String(format: "%.1f", $0) } ?? "—")
+                            .foregroundColor(protokoll.exposure.temperatur == nil ? .secondary : .primary)
                     }
                     .contentShape(Rectangle())
                     .onTapGesture { zeigeTempNumpad = true }
                     .sheet(isPresented: $zeigeTempNumpad) {
                         NumpadSheet(mode: .decimal(label: "Körpertemperatur", unit: "°C"),
-                                    initial: befund.temperatur.map { String(format: "%.1f", $0) } ?? "") { val in
-                            befund.temperatur = Double(val.replacingOccurrences(of: ",", with: "."))
+                                    initial: protokoll.exposure.temperatur.map { String(format: "%.1f", $0) } ?? "") { val in
+                            protokoll.exposure.temperatur = Double(val.replacingOccurrences(of: ",", with: "."))
                         }
                     }
                     if let (msg, crit) = tempWarn {
@@ -687,33 +751,57 @@ struct ExposureView: View {
                     }
                 }
                 .listRowBackground(tempBg)
-                TextField("Hautfarbe / Hautturgor", text: $befund.hautfarbe)
-                Toggle("Ödeme", isOn: $befund.oedeme)
+                TextField("Hautfarbe / Hautturgor", text: $protokoll.exposure.hautfarbe)
+                Toggle("Ödeme", isOn: $protokoll.exposure.oedeme)
             } header: { Label("Allgemeinbefund", systemImage: "person.fill") }
 
             Section {
-                TextField("Verletzungen / Befunde (z.B. Hämatome, Wunden)", text: $befund.verletzungen)
+                CheckboxRow("Nicht untersucht",    isOn: $protokoll.exposure.hautNichtUntersucht)
+                CheckboxRow("Stehende Hautfalten", isOn: $protokoll.exposure.stehendeHautfalten)
+                CheckboxRow("Kaltschweißig",       isOn: $protokoll.exposure.kaltschweissig)
+                CheckboxRow("Dekubitus",           isOn: $protokoll.exposure.dekubitus)
+                CheckboxRow("Exanthem",            isOn: $protokoll.exposure.exanthem)
+                CheckboxRow("Nicht beurteilbar",   isOn: $protokoll.exposure.hautNichtBeurteilbar)
+            } header: { Label("Haut", systemImage: "hand.raised") }
+
+            Section {
+                TextField("Verletzungen / Befunde (z.B. Hämatome, Wunden)", text: $protokoll.exposure.verletzungen)
                     .lineLimit(4)
             } header: { Label("Verletzungen", systemImage: "bandage") }
-            
+
             Section {
-                Toggle("Trauma", isOn: $befund.trauma)
-                if befund.trauma {
-                    TextField("Traumamechanismus (z.B. Sturz, VU, Assault)", text: $befund.traumaMechanismus)
-                    Toggle("Bewusstseinsverlust", isOn: $befund.bewusstseinsverlust)
-                    Toggle("Helm getragen", isOn: $befund.helmGetragen)
-                    Toggle("Gurt getragen", isOn: $befund.gurtGetragen)
-                    TextField("Sichtbare Deformitäten", text: $befund.sichtbareDeformitaeten)
-                    TextField("Schmerzlokalisation", text: $befund.schmerzLokalisation)
-                    Toggle("Frakturverdacht", isOn: $befund.frakturVerdacht)
-                    Toggle("Äußere Blutung", isOn: $befund.blutungExtern)
-                    Toggle("Rücken-/Nackenschmerz", isOn: $befund.rueckenNackenSchmerz)
-                    Toggle("Bewegungseinschränkung", isOn: $befund.bewegungseinschraenkung)
+                Toggle("Trauma", isOn: $protokoll.exposure.trauma)
+                if protokoll.exposure.trauma {
+                    TextField("Traumamechanismus (z.B. Sturz, VU, Assault)", text: $protokoll.exposure.traumaMechanismus)
+                    Toggle("Bewusstseinsverlust", isOn: $protokoll.exposure.bewusstseinsverlust)
+                    Toggle("Helm getragen", isOn: $protokoll.exposure.helmGetragen)
+                    Toggle("Gurt getragen", isOn: $protokoll.exposure.gurtGetragen)
+                    TextField("Sichtbare Deformitäten", text: $protokoll.exposure.sichtbareDeformitaeten)
+                    TextField("Schmerzlokalisation", text: $protokoll.exposure.schmerzLokalisation)
+                    Toggle("Frakturverdacht", isOn: $protokoll.exposure.frakturVerdacht)
+                    Toggle("Äußere Blutung", isOn: $protokoll.exposure.blutungExtern)
+                    Toggle("Rücken-/Nackenschmerz", isOn: $protokoll.exposure.rueckenNackenSchmerz)
+                    Toggle("Bewegungseinschränkung", isOn: $protokoll.exposure.bewegungseinschraenkung)
                 }
             } header: { Label("Trauma", systemImage: "figure.fall") }
 
             Section {
-                TextEditor(text: $befund.freitext).frame(minHeight: 80)
+                CheckboxRow("Unauffällig",       isOn: $protokoll.psyche.unauffaellig)
+                CheckboxRow("Ängstlich",         isOn: $protokoll.psyche.aengstlich)
+                CheckboxRow("Wahnhaft",          isOn: $protokoll.psyche.wahnhaft)
+                CheckboxRow("Suizidal",          isOn: $protokoll.psyche.suizidal)
+                CheckboxRow("Erregt",            isOn: $protokoll.psyche.erregt)
+                CheckboxRow("Verlangsamt",       isOn: $protokoll.psyche.verlangsamt)
+                CheckboxRow("Depressiv",         isOn: $protokoll.psyche.depressiv)
+                CheckboxRow("Euphorisch",        isOn: $protokoll.psyche.euphorisch)
+                CheckboxRow("Verwirrt",          isOn: $protokoll.psyche.verwirrt)
+                CheckboxRow("Motorisch unruhig", isOn: $protokoll.psyche.motorischUnruhig)
+                CheckboxRow("Aggressiv",         isOn: $protokoll.psyche.aggressiv)
+                CheckboxRow("Nicht beurteilbar", isOn: $protokoll.psyche.nichtBeurteilbar)
+            } header: { Label("Psyche", systemImage: "brain.head.profile") }
+
+            Section {
+                TextEditor(text: $protokoll.exposure.freitext).frame(minHeight: 80)
                 Text("→ PDF S. 1 · ABCDE · E")
                     .font(.caption2)
                     .foregroundColor(.secondary)

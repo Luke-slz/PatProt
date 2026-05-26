@@ -124,7 +124,7 @@ struct iPhoneContentView: View {
                         path.append(.exposure)
                     }
                 case .exposure:
-                    ExposureView(befund: $protokoll.exposure) {
+                    ExposureView(protokoll: protokoll) {
                         path.removeAll { [.airway,.breathing,.circulation,.disability,.exposure].contains($0) }
                     }
                 case .sampler:
