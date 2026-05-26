@@ -281,9 +281,6 @@ struct AbschlussView: View {
             try? FileManager.default.removeItem(at: url)
             pdfURL = nil
         }
-        if gespeichert {
-            ProtokollArchiv.shared.loeschen(protokoll.id)
-        }
         protokoll.reset()
         onBack()
     }
