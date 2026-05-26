@@ -694,7 +694,6 @@ struct UebergabeMesswerte: Codable {
 // MARK: - Ergebnis / Transportziel (Sektion 8 + 9)
 
 struct ErgebnisData: Codable {
-    var nacaScore: NacaScore = .naca3
     var transportZiel: TransportZiel = .anderesRettungsmittel
 
     // Einsatzbesonderheiten
@@ -866,6 +865,67 @@ struct ProtokollDaten: Codable, Identifiable {
     var uebergabeAn: String
     var zustandBeiUebergabe: String
     var verfasser: ProtokollVerfasser?
+    var pdfExportiertAm: Date? = nil
+
+    init(
+        id: UUID = UUID(),
+        erstelltAm: Date = Date(),
+        einsatzOrt: EinsatzOrt = EinsatzOrt(),
+        patientDaten: PatientDaten = PatientDaten(),
+        besatzung: Besatzung = Besatzung(),
+        notfallGeschehen: NotfallgeschehenBefund = NotfallgeschehenBefund(),
+        kritisch: Bool = false,
+        airway: AirwayBefund = AirwayBefund(),
+        breathing: BreathingBefund = BreathingBefund(),
+        circulation: CirculationBefund = CirculationBefund(),
+        disability: DisabilityBefund = DisabilityBefund(),
+        exposure: ExposureBefund = ExposureBefund(),
+        sampler: SAMPLERBefund = SAMPLERBefund(),
+        sinnhaft: SINNHAFTBefund = SINNHAFTBefund(),
+        diagnose: DiagnoseBefund = DiagnoseBefund(),
+        verlaufMessungen: [VerlaufsMessung] = [],
+        massnahmen: MassnahmenBefund = MassnahmenBefund(),
+        medikamente: [MedikamentEintrag] = [],
+        reanimationAktiv: Bool = false,
+        reanimation: ReanimationsProtokoll = ReanimationsProtokoll(),
+        ergebnis: ErgebnisData = ErgebnisData(),
+        uebergabeMesswerte: UebergabeMesswerte = UebergabeMesswerte(),
+        psyche: PsycheBefund? = nil,
+        uebergabeBefunde: UebergabeBefunde? = nil,
+        uebergabeAn: String = "",
+        zustandBeiUebergabe: String = "",
+        verfasser: ProtokollVerfasser? = nil,
+        pdfExportiertAm: Date? = nil
+    ) {
+        self.id = id
+        self.erstelltAm = erstelltAm
+        self.einsatzOrt = einsatzOrt
+        self.patientDaten = patientDaten
+        self.besatzung = besatzung
+        self.notfallGeschehen = notfallGeschehen
+        self.kritisch = kritisch
+        self.airway = airway
+        self.breathing = breathing
+        self.circulation = circulation
+        self.disability = disability
+        self.exposure = exposure
+        self.sampler = sampler
+        self.sinnhaft = sinnhaft
+        self.diagnose = diagnose
+        self.verlaufMessungen = verlaufMessungen
+        self.massnahmen = massnahmen
+        self.medikamente = medikamente
+        self.reanimationAktiv = reanimationAktiv
+        self.reanimation = reanimation
+        self.ergebnis = ergebnis
+        self.uebergabeMesswerte = uebergabeMesswerte
+        self.psyche = psyche
+        self.uebergabeBefunde = uebergabeBefunde
+        self.uebergabeAn = uebergabeAn
+        self.zustandBeiUebergabe = zustandBeiUebergabe
+        self.verfasser = verfasser
+        self.pdfExportiertAm = pdfExportiertAm
+    }
 }
 
 extension EinsatzProtokoll {
@@ -993,7 +1053,7 @@ extension SINNHAFTBefund {
         if let sys = protokoll.circulation.blutdruckSystolisch,
            let dia = protokoll.circulation.blutdruckDiastolisch { zustandParts.append("RR: \(sys)/\(dia) mmHg") }
         if protokoll.disability.status != .unbewertet { zustandParts.append("GCS: \(protokoll.disability.gcsGesamt)") }
-        if let bz = protokoll.disability.blutzucker { zustandParts.append("BZ: \(String(format: "%.1f", bz)) mmol/L") }
+        if let bz = protokoll.disability.blutzucker { zustandParts.append("BZ: \(String(format: "%.0f", bz)) mg/dL") }
         if let temp = protokoll.exposure.temperatur { zustandParts.append("Temp: \(String(format: "%.1f", temp))°C") }
         if let letzte = protokoll.verlaufMessungen.sorted(by: { $0.zeitpunkt < $1.zeitpunkt }).last {
             let f = DateFormatter(); f.dateFormat = "HH:mm"

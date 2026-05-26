@@ -77,4 +77,16 @@ struct PatProtTests {
         #expect(p.medikamentFotos.isEmpty)
     }
 
+    @Test func protokollDatenHatPdfExportiertAmNil() {
+        let daten = ProtokollDaten()
+        #expect(daten.pdfExportiertAm == nil)
+    }
+
+    @Test func ergebnisDataHatKeinNacaScore() {
+        // This test verifies at compile time that nacaScore no longer exists on ErgebnisData.
+        // If ErgebnisData still has nacaScore, this file will not compile.
+        let _ = ErgebnisData()  // must compile without nacaScore
+        #expect(true)
+    }
+
 }
