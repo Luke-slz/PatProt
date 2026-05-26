@@ -309,12 +309,12 @@ struct DINPDFGenerator {
                        x:x, y:y, w:tW, labelH:7, valH:11)
             labeledVal("Ankunft Einsatzort", t(p.einsatzOrt.ankunftzeit),
                        x:x+tW, y:y, w:tW, labelH:7, valH:11)
-            labeledVal("Abfahrt Einsatzstelle", t(p.einsatzOrt.abfahrtzeit),
+            labeledVal("Einsatz Ende", t(p.einsatzOrt.abfahrtzeit),
                        x:x+tW*2, y:y, w:tW, labelH:7, valH:11)
             y += 18
 
             let tW2 = w / 2
-            labeledVal("Ankunft Zielklinik", t(p.einsatzOrt.krankenHausAnkunft),
+            labeledVal("Übergabe an RD", t(p.einsatzOrt.krankenHausAnkunft),
                        x:x, y:y, w:tW2, labelH:7, valH:11)
             labeledVal("Einsatz-Nr.", p.einsatzOrt.einsatzNummer,
                        x:x+tW2, y:y, w:tW2, labelH:7, valH:11)
@@ -530,7 +530,7 @@ struct DINPDFGenerator {
             ("HF (/min)", p.circulation.puls.map                 { "\($0)" } ?? "", u.hf),
             ("SpO₂ (%)",  p.breathing.spo2.map                   { "\($0)" } ?? "", u.spo2),
             ("AF (/min)", p.breathing.atemFrequenz.map            { "\($0)" } ?? "", u.af),
-            ("BZ",        p.disability.blutzucker.map { String(format:"%.1f",$0) } ?? "", u.bz),
+            ("BZ",        p.disability.blutzucker.map { String(format:"%.0f",$0) } ?? "", u.bz),
             ("Temp (°C)", p.exposure.temperatur.map   { String(format:"%.1f",$0) } ?? "", u.temp),
         ]
         for (i,(label,ankVal,uebVal)) in mvItems.enumerated() {
