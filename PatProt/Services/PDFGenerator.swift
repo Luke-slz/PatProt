@@ -161,6 +161,42 @@ struct DINPDFGenerator {
         }
     }
 
+    /// Dual-checkbox row: Ankunft (left, read-only style) | Label | Übergabe (right)
+    private static func dualCb(_ label: String, ankunft: Bool, uebergabe: Bool,
+                                x: CGFloat, y: CGFloat, w: CGFloat, h: CGFloat) {
+        let cbW: CGFloat = 9
+        let lblW = w - 2*cbW - 4
+        let bg: UIColor = .white
+        fillRect(CGRect(x:x, y:y, width:w, height:h), bg)
+        strokeRect(CGRect(x:x, y:y, width:w, height:h))
+        // Ankunft checkbox (grayed fill when not set)
+        let ankBox = CGRect(x:x+1.5, y:y+1, width:cbW-2, height:h-2)
+        if ankunft {
+            fillRect(ankBox, cbBg)
+            checkFill.setStroke()
+            let tick = UIBezierPath(); tick.lineWidth = 0.9
+            tick.move(to: CGPoint(x:ankBox.minX+1, y:ankBox.midY))
+            tick.addLine(to: CGPoint(x:ankBox.midX-0.5, y:ankBox.maxY-1.5))
+            tick.addLine(to: CGPoint(x:ankBox.maxX-1, y:ankBox.minY+1.5))
+            tick.stroke()
+        }
+        strokeRect(ankBox)
+        // Label
+        txt(label, CGRect(x:x+cbW+2, y:y+1, width:lblW, height:h-2), font:f6)
+        // Übergabe checkbox
+        let uebBox = CGRect(x:x+w-cbW-1.5, y:y+1, width:cbW-2, height:h-2)
+        if uebergabe {
+            fillRect(uebBox, cbBg)
+            checkFill.setStroke()
+            let tick2 = UIBezierPath(); tick2.lineWidth = 0.9
+            tick2.move(to: CGPoint(x:uebBox.minX+1, y:uebBox.midY))
+            tick2.addLine(to: CGPoint(x:uebBox.midX-0.5, y:uebBox.maxY-1.5))
+            tick2.addLine(to: CGPoint(x:uebBox.maxX-1, y:uebBox.minY+1.5))
+            tick2.stroke()
+        }
+        strokeRect(uebBox)
+    }
+
     // ─────────────────────────────────────────────────────
     // MARK: - MAIN GENERATE
     // ─────────────────────────────────────────────────────
@@ -451,30 +487,43 @@ struct DINPDFGenerator {
         secHeader("3. Befunde", x:lx, y:y, w:rx-lx)
         y += 11
 
-        // Sub-headers for columns
-        let bW1 = c1 - lx                     // messwerte
-        let bW2 = (c2 - c1) * 0.50            // A+B Atmung
-        let bW3 = (c2 - c1) * 0.50            // C Cirkulation
-        let bW4 = (rx - c2) * 0.55            // D Neurologie
-        let bW5 = (rx - c2) * 0.45            // E/Haut
+        // Column widths (lx=7, rx=588, total=581)
+        let bW_mv:  CGFloat = 110  // Messwerte
+        let bW_ab:  CGFloat = 120  // A+B Atmung (dual cb)
+        let bW_sch: CGFloat = 40   // Schmerz
+        let bW_c:   CGFloat = 130  // C Kreislauf+EKG (dual cb)
+        let bW_d:   CGFloat = 181  // D Neurologie (dual cb)
+        let xMv  = lx
+        let xAb  = xMv + bW_mv
+        let xSch = xAb + bW_ab
+        let xC   = xSch + bW_sch
+        let xD   = xC + bW_c
 
-        subHeader("Messwerte", x:lx, y:y, w:bW1)
+        // Sub-headers
+        subHeader("Messwerte", x:xMv, y:y, w:bW_mv)
         let mvLbl: CGFloat = 42
-        let mvAnk: CGFloat = (bW1 - mvLbl) / 2
-        let mvUeb: CGFloat = bW1 - mvLbl - mvAnk
-        txt("Ankunft",  CGRect(x:lx+mvLbl,       y:y+2.5, width:mvAnk-2, height:4.5),
-            font:f5, color:.white, align:.center)
-        txt("Übergabe", CGRect(x:lx+mvLbl+mvAnk, y:y+2.5, width:mvUeb-2, height:4.5),
-            font:f5, color:.white, align:.center)
-        subHeader("A+B Atmung", x:lx+bW1, y:y, w:bW2)
-        subHeader("C Cirkulation+EKG", x:lx+bW1+bW2, y:y, w:bW3)
-        subHeader("D Neurologie", x:c2, y:y, w:bW4)
-        subHeader("E/Haut", x:c2+bW4, y:y, w:bW5)
+        let mvAnk: CGFloat = (bW_mv - mvLbl) / 2
+        let mvUeb: CGFloat = bW_mv - mvLbl - mvAnk
+        txt("Ankunft",  CGRect(x:xMv+mvLbl,       y:y+2.5, width:mvAnk-2, height:4.5), font:f5, color:.white, align:.center)
+        txt("Übergabe", CGRect(x:xMv+mvLbl+mvAnk, y:y+2.5, width:mvUeb-2, height:4.5), font:f5, color:.white, align:.center)
+        subHeader("A+B Atmung", x:xAb, y:y, w:bW_ab)
+        txt("Ank.", CGRect(x:xAb+2,         y:y+2.5, width:14, height:4.5), font:f5, color:.white)
+        txt("Üb.",  CGRect(x:xAb+bW_ab-16,  y:y+2.5, width:14, height:4.5), font:f5, color:.white, align:.right)
+        subHeader("Schmerz", x:xSch, y:y, w:bW_sch)
+        subHeader("C Kreislauf+EKG", x:xC, y:y, w:bW_c)
+        txt("Ank.", CGRect(x:xC+2,        y:y+2.5, width:14, height:4.5), font:f5, color:.white)
+        txt("Üb.",  CGRect(x:xC+bW_c-16,  y:y+2.5, width:14, height:4.5), font:f5, color:.white, align:.right)
+        subHeader("D Neurologie", x:xD, y:y, w:bW_d)
+        txt("Ank.", CGRect(x:xD+2,        y:y+2.5, width:14, height:4.5), font:f5, color:.white)
+        txt("Üb.",  CGRect(x:xD+bW_d-16,  y:y+2.5, width:14, height:4.5), font:f5, color:.white, align:.right)
         y += 9.5
 
-        // Messwerte: Ankunft | Übergabe
-        let u = p.uebergabeMesswerte
+        let mvColY = y
+        let dCbH: CGFloat = 8.5
+
+        // ── Messwerte (dual Ankunft/Übergabe) ──
         let mvH: CGFloat = 11
+        let u = p.uebergabeMesswerte
         let mvItems: [(String, String, String)] = [
             ("RR syst.",  p.circulation.blutdruckSystolisch.map  { "\($0)" } ?? "", u.rrSys),
             ("RR diast.", p.circulation.blutdruckDiastolisch.map { "\($0)" } ?? "", u.rrDia),
@@ -484,132 +533,130 @@ struct DINPDFGenerator {
             ("BZ",        p.disability.blutzucker.map { String(format:"%.1f",$0) } ?? "", u.bz),
             ("Temp (°C)", p.exposure.temperatur.map   { String(format:"%.1f",$0) } ?? "", u.temp),
         ]
-        let mvColY = y
         for (i,(label,ankVal,uebVal)) in mvItems.enumerated() {
             let ry = mvColY + CGFloat(i)*mvH
             let hl = (label == "RR syst." || label == "RR diast.")
             let bg: UIColor = i%2 == 0 ? .white : UIColor(white:0.97,alpha:1)
-            fillRect(CGRect(x:lx,y:ry,width:bW1,height:mvH), hl ? hlYellow : bg)
-            strokeRect(CGRect(x:lx,y:ry,width:bW1,height:mvH))
-            vline(lx+mvLbl, ry, mvH)
-            vline(lx+mvLbl+mvAnk, ry, mvH)
-            txt(label,  CGRect(x:lx+1.5,              y:ry+2, width:mvLbl-3,  height:mvH-4), font:f6, color:.darkGray)
-            txt(ankVal, CGRect(x:lx+mvLbl+1.5,        y:ry+2, width:mvAnk-3,  height:mvH-4), font:f7b, align:.center)
-            txt(uebVal, CGRect(x:lx+mvLbl+mvAnk+1.5,  y:ry+2, width:mvUeb-3,  height:mvH-4), font:f7b, align:.center)
+            fillRect(CGRect(x:xMv,y:ry,width:bW_mv,height:mvH), hl ? hlYellow : bg)
+            strokeRect(CGRect(x:xMv,y:ry,width:bW_mv,height:mvH))
+            vline(xMv+mvLbl, ry, mvH)
+            vline(xMv+mvLbl+mvAnk, ry, mvH)
+            txt(label,  CGRect(x:xMv+1.5,              y:ry+2, width:mvLbl-3,  height:mvH-4), font:f6, color:.darkGray)
+            txt(ankVal, CGRect(x:xMv+mvLbl+1.5,        y:ry+2, width:mvAnk-3,  height:mvH-4), font:f7b, align:.center)
+            txt(uebVal, CGRect(x:xMv+mvLbl+mvAnk+1.5,  y:ry+2, width:mvUeb-3,  height:mvH-4), font:f7b, align:.center)
         }
 
-        // A+B Atmung checkboxes
-        let atAx = lx + bW1
-        let atItems: [(String,Bool)] = [
-            ("unauffällig", p.breathing.status == .nicht_kritisch),
-            ("Dyspnoe", p.breathing.dyspnoe),
-            ("Atemweg frei", p.airway.freiheit),
-            ("Verlegt", p.airway.verlegung),
-            ("Guedel", p.airway.oropharyngealtubus),
-            ("Wendl", p.airway.nasopharyngealtubus),
-            ("iGel/EGA", p.massnahmen.supraglottisch),
-            ("Intubiert", p.airway.intubiert),
-            ("Konikotomie", p.airway.konikotomie),
-            ("O₂-Gabe", p.breathing.sauerstoffGabe),
-            ("Beatmung", p.breathing.beatmung),
+        // ── A+B Atmung (dual cb) ──
+        let ub = p.uebergabeBefunde
+        let abItems: [(String, Bool, Bool)] = [
+            ("unauffällig",  p.breathing.status == .nicht_kritisch, ub.abUnauffaellig),
+            ("Dyspnoe",      p.breathing.dyspnoe,                   ub.dyspnoe),
+            ("Zyanose",      p.breathing.zyanose,                   ub.zyanose),
+            ("Spastik",      p.breathing.spastik,                   ub.spastik),
+            ("Rasselger.",   p.breathing.rasselgeraeusche,           ub.rasselgeraeusche),
+            ("Stridor",      p.breathing.stridor,                   ub.stridor),
+            ("Atemw.-Verl.", p.airway.verlegung,                    ub.atemwegsverlegung),
+            ("Schnappatm.",  p.breathing.schnappatmung,             ub.schnappatmung),
+            ("Apnoe",        p.breathing.apnoe,                     ub.apnoe),
+            ("Beatmung",     p.breathing.beatmung,                  ub.beatmung),
+            ("Hypervent.",   p.breathing.hyperventilation,           ub.hyperventilation),
+            ("n.beurteilb.", p.breathing.abNichtBeurteilbar,        ub.abNichtBeurteilbar),
         ]
-        fillRect(CGRect(x:atAx,y:mvColY,width:bW2,height:CGFloat(atItems.count)*mvH), .white)
-        strokeRect(CGRect(x:atAx,y:mvColY,width:bW2,height:CGFloat(atItems.count)*mvH))
-        for (i,(label,checked)) in atItems.enumerated() {
-            let ry = mvColY + CGFloat(i)*mvH
-            if i%2 == 1 { fillRect(CGRect(x:atAx,y:ry,width:bW2,height:mvH), UIColor(white:0.97,alpha:1)) }
-            cb(label, checked, x:atAx+2, y:ry+2, bs:7, lw:bW2-12)
+        for (i,(label,ank,ueb)) in abItems.enumerated() {
+            dualCb(label, ankunft:ank, uebergabe:ueb, x:xAb, y:mvColY+CGFloat(i)*dCbH, w:bW_ab, h:dCbH)
         }
 
-        // C Cirkulation
-        let ciAx = atAx + bW2
-        let ciItems: [(String,Bool)] = [
-            ("unauffällig", p.circulation.status == .nicht_kritisch),
-            ("Pulslosigkeit", p.circulation.pulslosigkeit),
-            ("Blutung", p.circulation.blutung),
-            ("IV-Zugang", p.circulation.ivZugang),
-            ("EKG", p.circulation.ekg),
-            ("Sinusrhythmus", false),
-            ("Tachykardie", false),
-            ("Bradykardie", false),
-            ("AV-Block", false),
-            ("Kammerflattern", false),
-            ("Asystolie", p.reanimationAktiv && p.reanimation.initialRhythmus == .asystolie),
+        // ── Schmerz ──
+        let schmerzRows: [(String, String)] = [
+            ("Ank.", "\(p.disability.schmerz)/10"),
+            ("Üb.",  "\(ub.schmerz)/10"),
         ]
-        fillRect(CGRect(x:ciAx,y:mvColY,width:bW3,height:CGFloat(ciItems.count)*mvH), .white)
-        strokeRect(CGRect(x:ciAx,y:mvColY,width:bW3,height:CGFloat(ciItems.count)*mvH))
-        for (i,(label,checked)) in ciItems.enumerated() {
-            let ry = mvColY + CGFloat(i)*mvH
-            if i%2 == 1 { fillRect(CGRect(x:ciAx,y:ry,width:bW3,height:mvH), UIColor(white:0.97,alpha:1)) }
-            cb(label, checked, x:ciAx+2, y:ry+2, bs:7, lw:bW3-12)
+        fillRect(CGRect(x:xSch, y:mvColY, width:bW_sch, height:CGFloat(schmerzRows.count)*dCbH), .white)
+        strokeRect(CGRect(x:xSch, y:mvColY, width:bW_sch, height:CGFloat(schmerzRows.count)*dCbH))
+        for (i,(lbl,val)) in schmerzRows.enumerated() {
+            let ry = mvColY + CGFloat(i)*dCbH
+            if i%2==1 { fillRect(CGRect(x:xSch,y:ry,width:bW_sch,height:dCbH), UIColor(white:0.97,alpha:1)) }
+            txt(lbl, CGRect(x:xSch+1.5, y:ry+1.5, width:13, height:dCbH-3), font:f6, color:.darkGray)
+            txt(val,  CGRect(x:xSch+15,  y:ry+1.5, width:bW_sch-17, height:dCbH-3), font:f7b, align:.center)
         }
 
-        // D Neurologie / GCS
-        let neAx = c2
+        // ── C Kreislauf + EKG (dual cb) ──
+        let cItems: [(String, Bool, Bool)] = [
+            ("unauffällig",   p.circulation.status == .nicht_kritisch, ub.cUnauffaellig),
+            ("Rekap.>2Sek.",  p.circulation.rekapillierung,            ub.rekapillierung),
+            ("Sinusrhythmus", p.circulation.sinusrhythmus,             ub.sinusrhythmus),
+            ("Abs.Arrhythm.", p.circulation.absoluteArrhythmie,        ub.absoluteArrhythmie),
+            ("AV-Block",      p.circulation.avBlock,                   ub.avBlock),
+            ("QRS-Tachy br.", p.circulation.qrsTachykardieBreit,       ub.qrsTachykardieBreit),
+            ("QRS-Tachy sm.", p.circulation.qrsTachykardieSchmal,      ub.qrsTachykardieSchmal),
+            ("Kammerflattern",p.circulation.kammerflattern,            ub.kammerflattern),
+            ("PEA",           p.circulation.pea,                       ub.pea),
+            ("Asystolie",     p.circulation.asystolie,                 ub.asystolie),
+            ("Schrittmacher", p.circulation.schrittmacher,             ub.schrittmacher),
+            ("Infarkt-EKG",   p.circulation.infarktEkg,                ub.infarktEkg),
+            ("SVES",          p.circulation.sves,                      ub.sves),
+            ("VES",           p.circulation.ves,                       ub.ves),
+            ("Monomorph",     p.circulation.extrasystolenMonomorph,    ub.extrasystolenMonomorph),
+            ("Polymorph",     p.circulation.extrasystolenPolymorph,    ub.extrasystolenPolymorph),
+            ("n.beurteilb.",  p.circulation.cNichtBeurteilbar,         ub.cNichtBeurteilbar),
+        ]
+        for (i,(label,ank,ueb)) in cItems.enumerated() {
+            dualCb(label, ankunft:ank, uebergabe:ueb, x:xC, y:mvColY+CGFloat(i)*dCbH, w:bW_c, h:dCbH)
+        }
+
+        // ── D Neurologie (dual cb + GCS-Zeile) ──
         let gcs = p.disability
-        var neItems: [(String,String)] = [
-            ("Bewusstsein", p.patientDaten.ansprechbar ? "ansprechbar" : "nicht ansprechbar"),
-            ("GCS gesamt", "\(gcs.gcsGesamt)/15"),
-            ("Augen (E)", "\(gcs.gcsAugen)"),
-            ("Verbal (V)", "\(gcs.gcsVerbal)"),
-            ("Motorik (M)", "\(gcs.gcsMotor)"),
-            ("Pupille re", gcs.pupillenRechts),
-            ("Pupille li", gcs.pupillenLinks),
-            ("Lichtreaktion", gcs.pupillenReaktion ? "+" : "–"),
-            ("Schmerz NRS", "\(gcs.schmerz)/10"),
+        let dItems: [(String, Bool, Bool)] = [
+            ("unauffällig",   gcs.status == .nicht_kritisch,       ub.dUnauffaellig),
+            ("Wach",          gcs.bewWach,                          ub.bewWach),
+            ("Ansprache",     gcs.bewAnsprache,                     ub.bewAnsprache),
+            ("Schmerzreiz",   gcs.bewSchmerzreiz,                   ub.bewSchmerzreiz),
+            ("Bewusstlos",    gcs.bewusstlos,                       ub.bewusstlos),
+            ("n.b. Bew.",     gcs.dNichtBeurteilbar,                ub.dNichtBeurteilbar),
+            ("re: eng",       gcs.pupilleReEng,                     ub.pupilleReEng),
+            ("re: mittel",    gcs.pupilleReMittel,                  ub.pupilleReMittel),
+            ("re: weit",      gcs.pupilleReWeit,                    ub.pupilleReWeit),
+            ("re: entrund.",  gcs.pupilleReEntrundet,               ub.pupilleReEntrundet),
+            ("re: kein LR",   gcs.pupilleReKeineLichtreaktion,      ub.pupilleReKeineLichtreaktion),
+            ("re: n.b.",      gcs.pupilleReNichtBeurteilbar,        ub.pupilleReNichtBeurteilbar),
+            ("li: eng",       gcs.pupilleLiEng,                     ub.pupilleLiEng),
+            ("li: mittel",    gcs.pupilleLiMittel,                  ub.pupilleLiMittel),
+            ("li: weit",      gcs.pupilleLiWeit,                    ub.pupilleLiWeit),
+            ("li: entrund.",  gcs.pupilleLiEntrundet,               ub.pupilleLiEntrundet),
+            ("li: kein LR",   gcs.pupilleLiKeineLichtreaktion,      ub.pupilleLiKeineLichtreaktion),
+            ("li: n.b.",      gcs.pupilleLiNichtBeurteilbar,        ub.pupilleLiNichtBeurteilbar),
+            ("Vorb.Defizit",  gcs.neuroVorbestehendesDefizit,       ub.neuroVorbestehendesDefizit),
+            ("Facialispar.",  gcs.neuroFacialisparese,               ub.neuroFacialisparese),
+            ("Armparese",     gcs.neuroArmparese,                    ub.neuroArmparese),
+            ("Sprachstörung", gcs.neuroSprachstoerung,               ub.neuroSprachstoerung),
+            ("Sehstörung",    gcs.neuroSehstoerung,                  ub.neuroSehstoerung),
+            ("Babinski",      gcs.neuroBabinski,                     ub.neuroBabinski),
+            ("Querschnitt",   gcs.neuroQuerschnitt,                  ub.neuroQuerschnitt),
+            ("Meningismus",   gcs.neuroMeningismus,                  ub.neuroMeningismus),
+            ("Demenz",        gcs.neuroDemenz,                       ub.neuroDemenz),
+            ("n.b. Neuro",    gcs.neuroNichtBeurteilbar,             ub.neuroNichtBeurteilbar),
         ]
-        if gcs.befastAktiv {
-            let tf = DateFormatter()
-            tf.dateFormat = "HH:mm"
-            let zeitStr: String = {
-                if gcs.befastZeitUnbekannt { return "unbekannt" }
-                if let d = gcs.befastSymptombeginn { return tf.string(from: d) }
-                return "—"
-            }()
-            neItems += [
-                ("BEFAST B", gcs.befastBalance ? "+" : "–"),
-                ("BEFAST E", gcs.befastEyes    ? "+" : "–"),
-                ("BEFAST F", gcs.befastFace    ? "+" : "–"),
-                ("BEFAST A", gcs.befastArm     ? "+" : "–"),
-                ("BEFAST S", gcs.befastSpeech  ? "+" : "–"),
-                ("BEFAST T", zeitStr),
-            ]
+        for (i,(label,ank,ueb)) in dItems.enumerated() {
+            dualCb(label, ankunft:ank, uebergabe:ueb, x:xD, y:mvColY+CGFloat(i)*dCbH, w:bW_d, h:dCbH)
         }
-        for (i,(label,value)) in neItems.enumerated() {
-            let ry = mvColY + CGFloat(i)*mvH
-            let hl2 = label == "GCS gesamt"
-            let bg2: UIColor = hl2 ? hlYellow : (i%2==0 ? .white : UIColor(white:0.97,alpha:1))
-            fillRect(CGRect(x:neAx,y:ry,width:bW4,height:mvH), bg2)
-            strokeRect(CGRect(x:neAx,y:ry,width:bW4,height:mvH))
-            vline(neAx+42, ry, mvH)
-            txt(label, CGRect(x:neAx+1.5,y:ry+2,width:40,height:mvH-4), font:f6, color:.darkGray)
-            txt(value, CGRect(x:neAx+44,y:ry+2,width:bW4-46,height:mvH-4), font:f7b)
-        }
+        // GCS-Zeile (Ankunft / Übergabe als Werte, kein dual-cb)
+        let gcsRy = mvColY + CGFloat(dItems.count)*dCbH
+        fillRect(CGRect(x:xD, y:gcsRy, width:bW_d, height:dCbH), hlYellow)
+        strokeRect(CGRect(x:xD, y:gcsRy, width:bW_d, height:dCbH))
+        vline(xD + bW_d/2, gcsRy, dCbH)
+        txt("GCS Ank.: \(gcs.gcsGesamt)/15",
+            CGRect(x:xD+2, y:gcsRy+1.5, width:bW_d/2-4, height:dCbH-3), font:f6b)
+        txt("GCS Üb.: \(ub.gcsGesamt)/15",
+            CGRect(x:xD+bW_d/2+2, y:gcsRy+1.5, width:bW_d/2-4, height:dCbH-3), font:f6b)
 
-        // E / Haut
-        let haAx = c2 + bW4
-        let haItems: [(String,Bool)] = [
-            ("unauffällig", p.exposure.status == .nicht_kritisch),
-            ("Trauma", p.exposure.trauma),
-            ("Ödeme", p.exposure.oedeme),
-            ("Verletzt", !p.exposure.verletzungen.isEmpty),
-            ("Bewusstlos", p.exposure.bewusstseinsverlust),
-            ("Zyanose", p.breathing.zyanose),
-            ("Blass", false),
-            ("Gerötet", false),
-            ("Ikterisch", false),
-        ]
-        fillRect(CGRect(x:haAx,y:mvColY,width:bW5,height:CGFloat(haItems.count)*mvH), .white)
-        strokeRect(CGRect(x:haAx,y:mvColY,width:bW5,height:CGFloat(haItems.count)*mvH))
-        for (i,(label,checked)) in haItems.enumerated() {
-            let ry = mvColY + CGFloat(i)*mvH
-            if i%2 == 1 { fillRect(CGRect(x:haAx,y:ry,width:bW5,height:mvH), UIColor(white:0.97,alpha:1)) }
-            cb(label, checked, x:haAx+2, y:ry+2, bs:7, lw:bW5-12)
-        }
+        let dTotalRows = dItems.count + 1  // +1 GCS-Zeile
+        let mvAbsH  = CGFloat(mvItems.count) * mvH
+        let abAbsH  = CGFloat(abItems.count) * dCbH
+        let cAbsH   = CGFloat(cItems.count)  * dCbH
+        let dAbsH   = CGFloat(dTotalRows)    * dCbH
+        y = mvColY + max(mvAbsH, abAbsH, cAbsH, dAbsH) + 2
 
-        y = mvColY + CGFloat(max(mvItems.count, atItems.count, ciItems.count, neItems.count, haItems.count))*mvH + 2
-
-        // Hautfarbe / Verletzungen (Temp ist bereits in Messwerte)
+        // Hautfarbe / Verletzungen
         field("Hautfarbe", p.exposure.hautfarbe, x:lx, y:y, w:(rx-lx)/2, h:11, lw:42)
         field("Verletzungen", p.exposure.verletzungen, x:lx+(rx-lx)/2, y:y, w:(rx-lx)/2, h:11, lw:45)
         y += 11
