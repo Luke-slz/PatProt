@@ -139,6 +139,8 @@ class EinsatzProtokoll: ObservableObject, Identifiable {
     // Ergebnis
     @Published var ergebnis = ErgebnisData()
     @Published var uebergabeMesswerte = UebergabeMesswerte()
+    @Published var psyche = PsycheBefund()
+    @Published var uebergabeBefunde = UebergabeBefunde()
 
     // Abschluss
     @Published var uebergabeAn = ""
@@ -173,6 +175,8 @@ class EinsatzProtokoll: ObservableObject, Identifiable {
         medikamentFotos = []
         ergebnis = ErgebnisData()
         uebergabeMesswerte = UebergabeMesswerte()
+        psyche = PsycheBefund()
+        uebergabeBefunde = UebergabeBefunde()
         uebergabeAn = ""
         zustandBeiUebergabe = ""
         verfasser = .notfallsanitaeter
@@ -247,6 +251,14 @@ struct BreathingBefund: Codable {
     var sauerstoffLiter: Double? = nil
     var beatmung: Bool = false
     var beatmungsform = ""
+    // RKN-Ergänzungen
+    var spastik:            Bool = false
+    var rasselgeraeusche:   Bool = false
+    var stridor:            Bool = false
+    var schnappatmung:      Bool = false
+    var apnoe:              Bool = false
+    var hyperventilation:   Bool = false
+    var abNichtBeurteilbar: Bool = false
     var freitext = ""
 }
 
@@ -263,6 +275,23 @@ struct CirculationBefund: Codable {
     var blutungLokalisation = ""
     var ivZugang: Bool = false
     var ivLokalisation = ""
+    // RKN-Ergänzungen EKG
+    var rekapillierung:          Bool = false
+    var sinusrhythmus:           Bool = false
+    var absoluteArrhythmie:      Bool = false
+    var avBlock:                 Bool = false
+    var qrsTachykardieBreit:     Bool = false
+    var qrsTachykardieSchmal:    Bool = false
+    var kammerflattern:          Bool = false
+    var pea:                     Bool = false
+    var asystolie:               Bool = false
+    var schrittmacher:           Bool = false
+    var infarktEkg:              Bool = false
+    var sves:                    Bool = false
+    var ves:                     Bool = false
+    var extrasystolenMonomorph:  Bool = false
+    var extrasystolenPolymorph:  Bool = false
+    var cNichtBeurteilbar:       Bool = false
     var freitext = ""
 }
 
@@ -288,6 +317,37 @@ struct DisabilityBefund: Codable {
     var befastZeitUnbekannt: Bool = false
     var befastSymptombeginn: Date? = nil
 
+    // RKN-Ergänzungen Bewusstsein
+    var bewWach:            Bool = false
+    var bewAnsprache:       Bool = false
+    var bewSchmerzreiz:     Bool = false
+    var bewusstlos:         Bool = false
+    var dNichtBeurteilbar:  Bool = false
+    // Pupillen strukturiert
+    var pupilleReEng:                Bool = false
+    var pupilleReMittel:             Bool = true
+    var pupilleReWeit:               Bool = false
+    var pupilleReEntrundet:          Bool = false
+    var pupilleReNichtBeurteilbar:   Bool = false
+    var pupilleReKeineLichtreaktion: Bool = false
+    var pupilleLiEng:                Bool = false
+    var pupilleLiMittel:             Bool = true
+    var pupilleLiWeit:               Bool = false
+    var pupilleLiEntrundet:          Bool = false
+    var pupilleLiNichtBeurteilbar:   Bool = false
+    var pupilleLiKeineLichtreaktion: Bool = false
+    // Neuro
+    var neuroVorbestehendesDefizit: Bool = false
+    var neuroFacialisparese:        Bool = false
+    var neuroArmparese:             Bool = false
+    var neuroSprachstoerung:        Bool = false
+    var neuroSehstoerung:           Bool = false
+    var neuroBabinski:              Bool = false
+    var neuroQuerschnitt:           Bool = false
+    var neuroMeningismus:           Bool = false
+    var neuroDemenz:                Bool = false
+    var neuroNichtBeurteilbar:      Bool = false
+
     var gcsGesamt: Int { gcsAugen + gcsVerbal + gcsMotor }
 }
 
@@ -310,8 +370,105 @@ struct ExposureBefund: Codable {
     var blutungExtern: Bool = false
     var rueckenNackenSchmerz: Bool = false
     var bewegungseinschraenkung: Bool = false
+    // RKN-Ergänzungen Haut
+    var hautNichtUntersucht:  Bool = false
+    var stehendeHautfalten:   Bool = false
+    var kaltschweissig:       Bool = false
+    var dekubitus:            Bool = false
+    var exanthem:             Bool = false
+    var hautNichtBeurteilbar: Bool = false
 
     var freitext = ""
+}
+
+// MARK: - Psyche
+
+struct PsycheBefund: Codable {
+    var unauffaellig:     Bool = false
+    var aengstlich:       Bool = false
+    var wahnhaft:         Bool = false
+    var suizidal:         Bool = false
+    var erregt:           Bool = false
+    var verlangsamt:      Bool = false
+    var depressiv:        Bool = false
+    var euphorisch:       Bool = false
+    var verwirrt:         Bool = false
+    var motorischUnruhig: Bool = false
+    var nichtBeurteilbar: Bool = false
+    var aggressiv:        Bool = false
+}
+
+// MARK: - Übergabe-Befunde
+
+struct UebergabeBefunde: Codable {
+    // A+B Atmung
+    var abUnauffaellig:     Bool = false
+    var dyspnoe:            Bool = false
+    var zyanose:            Bool = false
+    var spastik:            Bool = false
+    var rasselgeraeusche:   Bool = false
+    var stridor:            Bool = false
+    var atemwegsverlegung:  Bool = false
+    var schnappatmung:      Bool = false
+    var apnoe:              Bool = false
+    var beatmung:           Bool = false
+    var hyperventilation:   Bool = false
+    var abNichtBeurteilbar: Bool = false
+    // C Kreislauf + EKG
+    var cUnauffaellig:           Bool = false
+    var rekapillierung:          Bool = false
+    var sinusrhythmus:           Bool = false
+    var absoluteArrhythmie:      Bool = false
+    var avBlock:                 Bool = false
+    var qrsTachykardieBreit:     Bool = false
+    var qrsTachykardieSchmal:    Bool = false
+    var kammerflattern:          Bool = false
+    var pea:                     Bool = false
+    var asystolie:               Bool = false
+    var schrittmacher:           Bool = false
+    var infarktEkg:              Bool = false
+    var sves:                    Bool = false
+    var ves:                     Bool = false
+    var extrasystolenMonomorph:  Bool = false
+    var extrasystolenPolymorph:  Bool = false
+    var cNichtBeurteilbar:       Bool = false
+    // D Neurologie
+    var dUnauffaellig:    Bool = false
+    var bewWach:          Bool = false
+    var bewAnsprache:     Bool = false
+    var bewSchmerzreiz:   Bool = false
+    var bewusstlos:       Bool = false
+    var dNichtBeurteilbar:Bool = false
+    var pupilleReEng:                Bool = false
+    var pupilleReMittel:             Bool = true
+    var pupilleReWeit:               Bool = false
+    var pupilleReEntrundet:          Bool = false
+    var pupilleReNichtBeurteilbar:   Bool = false
+    var pupilleReKeineLichtreaktion: Bool = false
+    var pupilleLiEng:                Bool = false
+    var pupilleLiMittel:             Bool = true
+    var pupilleLiWeit:               Bool = false
+    var pupilleLiEntrundet:          Bool = false
+    var pupilleLiNichtBeurteilbar:   Bool = false
+    var pupilleLiKeineLichtreaktion: Bool = false
+    var neuroVorbestehendesDefizit:  Bool = false
+    var neuroFacialisparese:         Bool = false
+    var neuroArmparese:              Bool = false
+    var neuroSprachstoerung:         Bool = false
+    var neuroSehstoerung:            Bool = false
+    var neuroBabinski:               Bool = false
+    var neuroQuerschnitt:            Bool = false
+    var neuroMeningismus:            Bool = false
+    var neuroDemenz:                 Bool = false
+    var neuroNichtBeurteilbar:       Bool = false
+    // GCS Übergabe
+    var gcsAugen:  Int = 4
+    var gcsVerbal: Int = 5
+    var gcsMotor:  Int = 6
+    // Schmerz Übergabe
+    var schmerz: Int = 0
+
+    var gcsGesamt: Int { gcsAugen + gcsVerbal + gcsMotor }
 }
 
 // MARK: - SAMPLER
@@ -704,6 +861,8 @@ struct ProtokollDaten: Codable, Identifiable {
     var reanimation: ReanimationsProtokoll
     var ergebnis: ErgebnisData
     var uebergabeMesswerte: UebergabeMesswerte
+    var psyche: PsycheBefund?
+    var uebergabeBefunde: UebergabeBefunde?
     var uebergabeAn: String
     var zustandBeiUebergabe: String
     var verfasser: ProtokollVerfasser?
@@ -722,6 +881,7 @@ extension EinsatzProtokoll {
             medikamente: medikamente, reanimationAktiv: reanimationAktiv,
             reanimation: reanimation, ergebnis: ergebnis,
             uebergabeMesswerte: uebergabeMesswerte,
+            psyche: psyche, uebergabeBefunde: uebergabeBefunde,
             uebergabeAn: uebergabeAn,
             zustandBeiUebergabe: zustandBeiUebergabe,
             verfasser: verfasser
@@ -738,6 +898,8 @@ extension EinsatzProtokoll {
         medikamente = d.medikamente; reanimationAktiv = d.reanimationAktiv
         reanimation = d.reanimation; ergebnis = d.ergebnis
         uebergabeMesswerte = d.uebergabeMesswerte
+        psyche = d.psyche ?? PsycheBefund()
+        uebergabeBefunde = d.uebergabeBefunde ?? UebergabeBefunde()
         uebergabeAn = d.uebergabeAn
         zustandBeiUebergabe = d.zustandBeiUebergabe
         verfasser = d.verfasser ?? .notfallsanitaeter
