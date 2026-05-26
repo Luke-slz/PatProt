@@ -31,6 +31,7 @@ struct iPadMainView: View {
         case sinnhaft
         case reanimation
         case bilder
+        case uebergabeBefunde
         case abschluss
         case settings
     }
@@ -234,7 +235,8 @@ struct iPadMainView: View {
                 iPadNavRow(icon: "cross.fill",                       farbe: .green,              titel: "Maßnahmen",               section: .massnahmen, badge: moduleBadge)
                 iPadNavRow(icon: "bubble.left.and.bubble.right.fill",farbe: .cyan,               titel: "SINNHAFT-Schema",          section: .sinnhaft)
                 iPadNavRow(icon: "heart.fill",                       farbe: .red,                titel: "Reanimation und Tod",      section: .reanimation)
-                iPadNavRow(icon: "photo.stack.fill",                 farbe: .brown,              titel: "Bilder & Dateien",         section: .bilder,    badge: bilderBadge)
+                iPadNavRow(icon: "photo.stack.fill",                 farbe: .brown,              titel: "Bilder & Dateien",         section: .bilder,           badge: bilderBadge)
+                iPadNavRow(icon: "cross.case.fill",                  farbe: Color("RDOrange"),   titel: "Übergabe-Befunde",          section: .uebergabeBefunde)
             }
 
             Section {
@@ -370,6 +372,10 @@ struct iPadMainView: View {
         case .bilder:
             NavigationStack {
                 BilderView(fotos: $protokoll.fotos) { selectedSection = nil }
+            }
+        case .uebergabeBefunde:
+            NavigationStack {
+                UebergabeBefundeView(protokoll: protokoll) { selectedSection = nil }
             }
         case .abschluss:
             NavigationStack {

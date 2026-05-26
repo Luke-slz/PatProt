@@ -33,6 +33,7 @@ enum iPhoneAppStep: Hashable {
     case airway, breathing, circulation, disability, exposure
     case sampler, sinnhaft, diagnose, verlauf, massnahmen, reanimation
     case bilder
+    case uebergabeBefunde
     case abschluss, settings
 }
 
@@ -164,6 +165,8 @@ struct iPhoneContentView: View {
                         .safeAreaInset(edge: .bottom) {
                             WeiterButton(label: "Einsatz beenden") { path = [.menu, .abschluss] }
                         }
+                case .uebergabeBefunde:
+                    UebergabeBefundeView(protokoll: protokoll) { path.removeLast() }
                 case .abschluss:
                     AbschlussView(protokoll: protokoll, onBack: { path = [] })
                 case .settings:

@@ -29,7 +29,8 @@ struct iPhoneMenuView: View {
                 menuRow("Maßnahmen",             icon: "cross.fill",                      color: .green,               step: .massnahmen, badge: moduleBadge)
                 menuRow("SINNHAFT-Schema",       icon: "bubble.left.and.bubble.right.fill", color: .cyan,             step: .sinnhaft,   badge: nil)
                 menuRow("Reanimation und Tod",   icon: "heart.fill",                      color: .red,                 step: .reanimation,badge: nil)
-                menuRow("Bilder & Dateien",      icon: "photo.stack.fill",               color: .brown,               step: .bilder,     badge: bilderBadge)
+                menuRow("Bilder & Dateien",      icon: "photo.stack.fill",               color: .brown,               step: .bilder,          badge: bilderBadge)
+                menuRow("Übergabe-Befunde",      icon: "cross.case.fill",                color: Color("RDOrange"),    step: .uebergabeBefunde, badge: nil)
             }
 
             // Abschluss
