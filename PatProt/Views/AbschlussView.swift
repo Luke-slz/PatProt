@@ -75,6 +75,13 @@ struct AbschlussView: View {
             } header: {
                 Label("Übergabe an anderes Rettungsmittel", systemImage: "cross.vial.fill")
             }
+            .onAppear {
+                if protokoll.uebergabeAn.isEmpty,
+                   !protokoll.einsatzOrt.weitereEinsatzmittel.isEmpty {
+                    protokoll.uebergabeAn = protokoll.einsatzOrt
+                        .weitereEinsatzmittel.joined(separator: " / ")
+                }
+            }
 
             // Transportziel Klinik
             Section {
