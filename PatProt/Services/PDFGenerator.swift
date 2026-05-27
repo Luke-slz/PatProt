@@ -604,6 +604,7 @@ struct DINPDFGenerator {
             ("Zyanose",      p.breathing.zyanose,                   ub.zyanose),
             ("Spastik",      p.breathing.spastik,                   ub.spastik),
             ("Rasselger.",   p.breathing.rasselgeraeusche,           ub.rasselgeraeusche),
+            ("Brodeln",      p.breathing.brodeln,                   ub.brodeln),
             ("Stridor",      p.breathing.stridor,                   ub.stridor),
             ("Atemw.-Verl.", p.airway.verlegung,                    ub.atemwegsverlegung),
             ("Schnappatm.",  p.breathing.schnappatmung,             ub.schnappatmung),

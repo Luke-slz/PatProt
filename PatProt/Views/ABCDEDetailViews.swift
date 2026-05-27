@@ -248,6 +248,7 @@ struct BreathingView: View {
             Section {
                 CheckboxRow("Spastik",           isOn: $befund.spastik)
                 CheckboxRow("Rasselgeräusche",   isOn: $befund.rasselgeraeusche)
+                CheckboxRow("Brodeln",           isOn: $befund.brodeln)
                 CheckboxRow("Stridor",           isOn: $befund.stridor)
                 CheckboxRow("Schnappatmung",     isOn: $befund.schnappatmung)
                 CheckboxRow("Apnoe",             isOn: $befund.apnoe)
@@ -471,8 +472,8 @@ struct DisabilityView: View {
     @State private var zeigeBzNumpad = false
 
     private var bzWarn: (String, Bool)? {
-        vitalWarnText(befund.blutzucker, normal: 3.9...7.8, warning: 3.0...10.0,
-                      lowWarn: "Hypoglykämie (< 3.9 mmol/L)", highWarn: "Hyperglykämie (> 7.8 mmol/L)")
+        vitalWarnText(befund.blutzucker, normal: 70...140, warning: 54...180,
+                      lowWarn: "Hypoglykämie (< 70 mg/dL)", highWarn: "Hyperglykämie (> 140 mg/dL)")
     }
     private var gcsBg: Color {
         // Only color once at least one subscore has been changed from minimum
@@ -605,16 +606,16 @@ struct DisabilityView: View {
             Section {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack {
-                        Text("Blutzucker (mmol/L)")
+                        Text("Blutzucker (mg/dL)")
                         Spacer()
-                        Text(befund.blutzucker.map { String(format: "%.1f", $0) } ?? "—")
+                        Text(befund.blutzucker.map { String(format: "%.0f", $0) } ?? "—")
                             .foregroundColor(befund.blutzucker == nil ? .secondary : .primary)
                     }
                     .contentShape(Rectangle())
                     .onTapGesture { zeigeBzNumpad = true }
                     .sheet(isPresented: $zeigeBzNumpad) {
-                        NumpadSheet(mode: .decimal(label: "Blutzucker", unit: "mmol/L"),
-                                    initial: befund.blutzucker.map { String(format: "%.1f", $0) } ?? "") { val in
+                        NumpadSheet(mode: .decimal(label: "Blutzucker", unit: "mg/dL"),
+                                    initial: befund.blutzucker.map { String(format: "%.0f", $0) } ?? "") { val in
                             befund.blutzucker = Double(val.replacingOccurrences(of: ",", with: "."))
                         }
                     }

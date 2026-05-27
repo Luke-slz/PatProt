@@ -64,6 +64,9 @@ struct UebergabeBefundeView: View {
                 DualCheckRow(label: "Rasselgeräusche",
                              ankunft: protokoll.breathing.rasselgeraeusche,
                              uebergabe: $protokoll.uebergabeBefunde.rasselgeraeusche)
+                DualCheckRow(label: "Brodeln",
+                             ankunft: protokoll.breathing.brodeln,
+                             uebergabe: $protokoll.uebergabeBefunde.brodeln)
                 DualCheckRow(label: "Stridor",
                              ankunft: protokoll.breathing.stridor,
                              uebergabe: $protokoll.uebergabeBefunde.stridor)
