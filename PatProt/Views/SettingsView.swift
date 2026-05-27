@@ -13,15 +13,22 @@ struct SettingsView: View {
     @State private var zeigeFahrzeugHinzufuegen = false
     @State private var zeigeFahrzeugBearbeiten = false
     @State private var neuerName = ""
+    @State private var neueQualifikation: Qualifikation = .rettungssanitaeter
     @State private var neuesFahrzeug = ""
     @State private var zuBearbeitenderIndex: Int? = nil
     @State private var bearbeitungsName = ""
 
-    private var personal: [String] {
-        (try? JSONDecoder().decode([String].self, from: Data(personalJSON.utf8))) ?? []
+    private var personal: [PersonalEintrag] {
+        let data = Data(personalJSON.utf8)
+        if let liste = try? JSONDecoder().decode([PersonalEintrag].self, from: data) { return liste }
+        // Migration: alter [String]-Format
+        if let namen = try? JSONDecoder().decode([String].self, from: data) {
+            return namen.map { PersonalEintrag(name: $0, qualifikation: .rettungssanitaeter) }
+        }
+        return []
     }
 
-    private func personalSpeichern(_ liste: [String]) {
+    private func personalSpeichern(_ liste: [PersonalEintrag]) {
         personalJSON = (try? String(data: JSONEncoder().encode(liste), encoding: .utf8)) ?? "[]"
     }
 
@@ -61,9 +68,15 @@ struct SettingsView: View {
 
             // Personal
             Section {
-                ForEach(personal, id: \.self) { person in
-                    Label(person, systemImage: "person")
-                        .foregroundStyle(.primary)
+                ForEach(personal, id: \.self) { eintrag in
+                    HStack {
+                        Label(eintrag.name, systemImage: "person")
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        Text(eintrag.qualifikation.rawValue)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 .onDelete { indexSet in
                     var liste = personal
@@ -72,6 +85,7 @@ struct SettingsView: View {
                 }
                 Button {
                     neuerName = ""
+                    neueQualifikation = .rettungssanitaeter
                     zeigePersonalHinzufuegen = true
                 } label: {
                     Label("Person hinzufügen", systemImage: "plus.circle")
@@ -141,16 +155,42 @@ struct SettingsView: View {
         }
         .navigationTitle("Einstellungen")
         .toolbar { EditButton() }
-        .alert("Person hinzufügen", isPresented: $zeigePersonalHinzufuegen) {
-            TextField("Name", text: $neuerName)
-            Button("Hinzufügen") {
-                let name = neuerName.trimmingCharacters(in: .whitespaces)
-                guard !name.isEmpty else { return }
-                var liste = personal
-                liste.append(name)
-                personalSpeichern(liste)
+        .sheet(isPresented: $zeigePersonalHinzufuegen) {
+            NavigationStack {
+                Form {
+                    Section("Name") {
+                        TextField("Name", text: $neuerName)
+                    }
+                    Section("Qualifikation") {
+                        Picker("Qualifikation", selection: $neueQualifikation) {
+                            ForEach(Qualifikation.allCases, id: \.self) { q in
+                                Text(q.rawValue).tag(q)
+                            }
+                        }
+                        .pickerStyle(.inline)
+                        .labelsHidden()
+                    }
+                }
+                .navigationTitle("Person hinzufügen")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Hinzufügen") {
+                            let name = neuerName.trimmingCharacters(in: .whitespaces)
+                            guard !name.isEmpty else { return }
+                            var liste = personal
+                            liste.append(PersonalEintrag(name: name, qualifikation: neueQualifikation))
+                            personalSpeichern(liste)
+                            zeigePersonalHinzufuegen = false
+                        }
+                        .disabled(neuerName.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Abbrechen") { zeigePersonalHinzufuegen = false }
+                    }
+                }
             }
-            Button("Abbrechen", role: .cancel) {}
+            .presentationDetents([.medium])
         }
         .alert("Fahrzeug hinzufügen", isPresented: $zeigeFahrzeugHinzufuegen) {
             TextField("Bezeichnung", text: $neuesFahrzeug)
