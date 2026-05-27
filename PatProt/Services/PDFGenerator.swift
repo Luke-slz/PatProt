@@ -446,6 +446,10 @@ struct DINPDFGenerator {
             field("Verlaufsbemerkungen", ng.verlaufsbemerkungen, x:lx, y:y, w:rx-lx, h:11, lw:85)
             y += 11
         }
+        if !ng.notfallFreitext.isEmpty {
+            field("Ergänzungen", ng.notfallFreitext, x:lx, y:y, w:rx-lx, h:11, lw:55)
+            y += 11
+        }
 
         // ABCDE grid
         let abcdeLetters = ["A","B","C","D","E"]

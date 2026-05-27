@@ -94,6 +94,12 @@ struct NotfallgeschehenView: View {
             } header: {
                 Label("NACA-Score", systemImage: "chart.bar.fill")
             }
+            Section {
+                TextField("Ergänzungen / Sonstiges", text: $befund.notfallFreitext, axis: .vertical)
+                    .lineLimit(3...6)
+            } header: {
+                Label("Freitext", systemImage: "text.alignleft")
+            }
         }
         .navigationTitle("Notfallgeschehen")
         .navigationBarTitleDisplayMode(.large)
