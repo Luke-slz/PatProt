@@ -88,7 +88,7 @@ enum TransportZiel: String, CaseIterable, Codable {
 // MARK: - Models
 
 class EinsatzProtokoll: ObservableObject, Identifiable {
-    let id = UUID()
+    var id = UUID()
 
     // Einsatzdaten
     @Published var einsatzOrt = EinsatzOrt()
@@ -749,6 +749,7 @@ struct NotfallgeschehenBefund: Codable {
     var erstbefundAuswahl: [String] = []
     var verlaufsbemerkungen: String = ""
     var dynamischeErweiterung: String = ""
+    var notfallFreitext: String = ""
 
     var manvGesamtSK: Int { manvSK1 + manvSK2 + manvSK3 + manvSK4 + manvVerstorben }
 }
@@ -949,6 +950,7 @@ extension EinsatzProtokoll {
     }
 
     func apply(from d: ProtokollDaten) {
+        id = d.id
         einsatzOrt = d.einsatzOrt; patientDaten = d.patientDaten; besatzung = d.besatzung
         notfallGeschehen = d.notfallGeschehen; kritisch = d.kritisch
         airway = d.airway; breathing = d.breathing; circulation = d.circulation

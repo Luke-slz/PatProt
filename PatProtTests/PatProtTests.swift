@@ -123,4 +123,18 @@ struct PatProtTests {
         #expect(nach.first(where: { $0.id == daten.id }) != nil)
     }
 
+    @Test func applyFromRestoresId() {
+        let protokoll = EinsatzProtokoll()
+        var daten = ProtokollDaten()
+        daten.id = UUID()
+        #expect(daten.id != protokoll.id)
+        protokoll.apply(from: daten)
+        #expect(protokoll.id == daten.id)
+    }
+
+    @Test func notfallgeschehenBefundHatNotfallFreitext() {
+        let befund = NotfallgeschehenBefund()
+        #expect(befund.notfallFreitext == "")
+    }
+
 }
