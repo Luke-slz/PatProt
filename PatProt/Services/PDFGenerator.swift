@@ -254,6 +254,7 @@ struct DINPDFGenerator {
                 drawFotoPages(ctx: ctx,
                               mediFotos: protokoll.medikamentFotos,
                               patFotos: protokoll.fotos,
+                              kvFotos: protokoll.kvFotos,
                               erstelltAm: protokoll.erstelltAm)
             }
             return url
@@ -299,6 +300,10 @@ struct DINPDFGenerator {
                   x:x, y:y+26, w:fw2, h:12, lw:fw2*0.5)
             let gewStr = p.patientDaten.gewicht.map { String(format: "%.0f kg", $0) } ?? ""
             field("Gewicht", gewStr, x:x+fw2, y:y+26, w:fw2, h:12, lw:fw2*0.5)
+            if !p.patientDaten.kostentraeger.isEmpty {
+                field("Krankenkasse", p.patientDaten.kostentraeger,
+                      x:x, y:y+38, w:w, h:11, lw:55)
+            }
         }
 
         // Right: Section 1 Rettungstechnische Daten
@@ -358,7 +363,8 @@ struct DINPDFGenerator {
             labeledVal("Einsatz-Nr.", p.einsatzOrt.einsatzNummer,
                        x:x+tW2, y:y, w:tW2, labelH:7, valH:11)
             y += 18
-            let adresseText = [p.einsatzOrt.adresse, p.einsatzOrt.zusatz].filter { !$0.isEmpty }.joined(separator: ", ")
+            let plzOrt = [p.einsatzOrt.plz, p.einsatzOrt.ort].filter { !$0.isEmpty }.joined(separator: " ")
+            let adresseText = [p.einsatzOrt.adresse, p.einsatzOrt.zusatz, plzOrt].filter { !$0.isEmpty }.joined(separator: ", ")
             let stichwortText = [p.einsatzOrt.stichwort, p.einsatzOrt.einsatzArt]
                 .filter { !$0.isEmpty }.joined(separator: " · ")
             field("Einsatzort", adresseText, x:x, y:y, w:w/2, h:11, lw:42)
@@ -1384,10 +1390,12 @@ struct DINPDFGenerator {
     private static func drawFotoPages(ctx: UIGraphicsPDFRendererContext,
                                        mediFotos: [FotoEintrag],
                                        patFotos: [FotoEintrag],
+                                       kvFotos: [FotoEintrag],
                                        erstelltAm: Date) {
         let groups: [(String, [FotoEintrag])] = [
             ("Medikamentenplan", mediFotos),
             ("Patientenfoto",    patFotos),
+            ("KV-Karte",         kvFotos),
         ].filter { !$1.isEmpty }
 
         for (label, fotos) in groups {
