@@ -6,6 +6,9 @@ import Combine
 class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     private let manager = CLLocationManager()
     @Published var address: String = ""
+    @Published var street: String = ""
+    @Published var postalCode: String = ""
+    @Published var city: String = ""
     @Published var isLoading = false
     @Published var locationError: String? = nil
 
@@ -37,11 +40,16 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
                     self.isLoading = false
                     return
                 }
-                let street = placemark.thoroughfare ?? ""
+                let streetName = placemark.thoroughfare ?? ""
                 let number = placemark.subThoroughfare ?? ""
-                let postalCode = placemark.postalCode ?? ""
-                let city = placemark.locality ?? ""
-                self.address = "\(street) \(number), \(postalCode) \(city)"
+                let pc = placemark.postalCode ?? ""
+                let c = placemark.locality ?? ""
+                let streetFull = [streetName, number].filter { !$0.isEmpty }.joined(separator: " ")
+                self.street = streetFull
+                self.postalCode = pc
+                self.city = c
+                self.address = [streetFull, [pc, c].filter { !$0.isEmpty }.joined(separator: " ")]
+                    .filter { !$0.isEmpty }.joined(separator: ", ")
                 self.isLoading = false
             }
         }

@@ -55,6 +55,12 @@ struct EinsatzOrtView: View {
             Section {
                 TextField("Straße und Hausnummer", text: $protokoll.einsatzOrt.adresse)
                 TextField("Zusatz (Stockwerk, Wohnung...)", text: $protokoll.einsatzOrt.zusatz)
+                HStack(spacing: 8) {
+                    TextField("PLZ", text: $protokoll.einsatzOrt.plz)
+                        .keyboardType(.numberPad)
+                        .frame(maxWidth: 90)
+                    TextField("Ort / Stadt", text: $protokoll.einsatzOrt.ort)
+                }
                 HStack {
                     Text("Einsatz-Nr.")
                     Spacer()
@@ -235,7 +241,13 @@ struct EinsatzOrtView: View {
         }
         .onChange(of: locationManager.address) { _, newAddress in
             if !newAddress.isEmpty {
-                protokoll.einsatzOrt.adresse = newAddress
+                if !locationManager.street.isEmpty {
+                    protokoll.einsatzOrt.adresse = locationManager.street
+                    protokoll.einsatzOrt.plz = locationManager.postalCode
+                    protokoll.einsatzOrt.ort = locationManager.city
+                } else {
+                    protokoll.einsatzOrt.adresse = newAddress
+                }
             }
         }
         .navigationTitle("Rettungstechnische Daten")
