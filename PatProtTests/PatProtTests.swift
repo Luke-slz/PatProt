@@ -179,6 +179,11 @@ struct PatProtTests {
         #expect(b.brodeln == false)
     }
 
+    @Test func uebergabeBefundHatBrodeln() {
+        let u = UebergabeBefunde()
+        #expect(u.brodeln == false)
+    }
+
     @Test func massnahmenHatGuedelWendl() {
         let m = MassnahmenBefund()
         #expect(m.guedelTubus == false)
