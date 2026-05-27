@@ -76,6 +76,20 @@ enum NacaScore: Int, CaseIterable, Codable {
     }
 }
 
+enum Qualifikation: String, CaseIterable, Codable {
+    case ersthelfer         = "EH"
+    case ersthelferE        = "EH-E"
+    case rettungssanitaeter = "RS"
+    case rettungsassistent  = "RA"
+    case notfallsanitaeter  = "NotSan"
+    case arzt               = "Arzt"
+}
+
+struct PersonalEintrag: Codable, Hashable {
+    var name: String
+    var qualifikation: Qualifikation = .rettungssanitaeter
+}
+
 enum ProtokollVerfasser: String, CaseIterable, Codable {
     case notfallsanitaeter = "Notfallsanitäter"
     case rettungssanitaeter = "Rettungssanitäter"
@@ -136,6 +150,9 @@ class EinsatzProtokoll: ObservableObject, Identifiable {
     // Medikamentenplan-Fotos (in-app only, nicht archiviert)
     @Published var medikamentFotos: [FotoEintrag] = []
 
+    // KV-Karten-Foto (in-app only, nicht archiviert)
+    @Published var kvFotos: [FotoEintrag] = []
+
     // Ergebnis
     @Published var ergebnis = ErgebnisData()
     @Published var uebergabeMesswerte = UebergabeMesswerte()
@@ -174,6 +191,8 @@ class EinsatzProtokoll: ObservableObject, Identifiable {
         fotos = []
         medikamentFotos.forEach { $0.loeschen() }
         medikamentFotos = []
+        kvFotos.forEach { $0.loeschen() }
+        kvFotos = []
         ergebnis = ErgebnisData()
         uebergabeMesswerte = UebergabeMesswerte()
         psyche = PsycheBefund()
@@ -188,6 +207,8 @@ class EinsatzProtokoll: ObservableObject, Identifiable {
 struct EinsatzOrt: Codable {
     var adresse = ""
     var zusatz = ""
+    var plz = ""
+    var ort = ""
     var einsatzArt = ""
     var stichwort = ""
     var fahrzeugName: String = ""  // war: fahrzeugTyp + customFahrzeugName

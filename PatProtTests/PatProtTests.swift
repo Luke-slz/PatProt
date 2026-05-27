@@ -147,4 +147,31 @@ struct PatProtTests {
         #expect(protokoll.id != daten.id)
     }
 
+    @Test func einsatzOrtHatPlzUndOrt() {
+        let ort = EinsatzOrt()
+        #expect(ort.plz == "")
+        #expect(ort.ort == "")
+    }
+
+    @Test func personalEintragMigration() {
+        let altJSON = "[\"Max Muster\",\"Jane Doe\"]"
+        let data = Data(altJSON.utf8)
+        // Must fail to decode as [PersonalEintrag]
+        let alsPE = try? JSONDecoder().decode([PersonalEintrag].self, from: data)
+        #expect(alsPE == nil)
+        // Must succeed via String migration
+        let alsStrings = (try? JSONDecoder().decode([String].self, from: data)) ?? []
+        let migriert = alsStrings.map { PersonalEintrag(name: $0, qualifikation: .rettungssanitaeter) }
+        #expect(migriert.count == 2)
+        #expect(migriert[0].name == "Max Muster")
+        #expect(migriert[0].qualifikation == .rettungssanitaeter)
+    }
+
+    @Test func kvFotosResetLeert() {
+        let protokoll = EinsatzProtokoll()
+        protokoll.kvFotos.append(FotoEintrag(bildDateiname: "test.jpg"))
+        protokoll.reset()
+        #expect(protokoll.kvFotos.isEmpty)
+    }
+
 }
