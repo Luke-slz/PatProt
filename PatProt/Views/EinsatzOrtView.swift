@@ -716,6 +716,15 @@ struct ZeitFeld: View {
                 .buttonStyle(.bordered)
                 .tint(Color("RDOrange"))
                 .controlSize(.small)
+            if datum != nil {
+                Button {
+                    datum = nil
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
         }
         .contentShape(Rectangle())
         .onTapGesture { zeigeNumpad = true }
