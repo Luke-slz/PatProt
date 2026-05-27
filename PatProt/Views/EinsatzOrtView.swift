@@ -334,7 +334,7 @@ struct BesatzungsFeld: View {
             }
         }
         .sheet(isPresented: $zeigePickerSheet) {
-            PersonalPickerSheet(ausgewählt: $text, personal: personal.map { $0.name })
+            PersonalPickerSheet(ausgewählt: $text, personal: personal)
         }
     }
 }
@@ -343,7 +343,7 @@ struct BesatzungsFeld: View {
 
 struct PersonalPickerSheet: View {
     @Binding var ausgewählt: String
-    let personal: [String]
+    let personal: [PersonalEintrag]
     @Environment(\.dismiss) private var dismiss
     @State private var manuell = ""
 
@@ -352,15 +352,19 @@ struct PersonalPickerSheet: View {
             List {
                 if !personal.isEmpty {
                     Section("Gespeichertes Personal") {
-                        ForEach(personal, id: \.self) { person in
+                        ForEach(personal, id: \.self) { eintrag in
+                            let anzeige = "\(eintrag.name) (\(eintrag.qualifikation.rawValue))"
                             Button {
-                                ausgewählt = person
+                                ausgewählt = anzeige
                                 dismiss()
                             } label: {
                                 HStack {
-                                    Text(person)
+                                    Text(eintrag.name)
                                     Spacer()
-                                    if ausgewählt == person {
+                                    Text(eintrag.qualifikation.rawValue)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    if ausgewählt == anzeige {
                                         Image(systemName: "checkmark").foregroundStyle(Color("RDOrange"))
                                     }
                                 }
