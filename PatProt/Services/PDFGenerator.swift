@@ -221,6 +221,22 @@ struct DINPDFGenerator {
     }
 
     // ─────────────────────────────────────────────────────
+    // MARK: - Compact diagnosis group helper
+    // ─────────────────────────────────────────────────────
+
+    @discardableResult
+    private static func diagGruppe(
+        _ title: String, items: [(String, Bool)],
+        x: CGFloat, y: CGFloat, w: CGFloat
+    ) -> CGFloat {
+        let names = items.filter { $0.1 }.map { $0.0 }
+        guard !names.isEmpty else { return 0 }
+        subHeader(title, x: x, y: y, w: w)
+        field("", names.joined(separator: " · "), x: x, y: y + 9.5, w: w, h: 11, lw: 0)
+        return 9.5 + 11
+    }
+
+    // ─────────────────────────────────────────────────────
     // MARK: - MAIN GENERATE
     // ─────────────────────────────────────────────────────
 
@@ -698,14 +714,6 @@ struct DINPDFGenerator {
             y += 11
         }
 
-        // 4.1 Three-column erkrankung layout
-        let dW = (rx-lx)/3
-        let d1x = lx; let d2x = lx+dW; let d3x = lx+dW*2
-        subHeader("ZNS / Neurologie", x:d1x, y:y, w:dW)
-        subHeader("Herz-Kreislauf", x:d2x, y:y, w:dW)
-        subHeader("Infektionen / Sonstiges", x:d3x, y:y, w:dW)
-        y += 9.5
-
         let col1Items: [(String,Bool)] = [
             ("Akutes neurol. Defizit", p.diagnose.znsAkutNeuro),
             ("SAB / ICB", p.diagnose.znsSab),
@@ -752,39 +760,6 @@ struct DINPDFGenerator {
             ("Urologisch", p.diagnose.infektUrologisch),
         ]
 
-        let cbH: CGFloat = 10
-        let allCol1 = col1Items + col1b
-        let maxRows = max(allCol1.count, col2Items.count, col3Items.count)
-
-        for (i,(label,checked)) in allCol1.enumerated() {
-            let ry = y + CGFloat(i)*cbH
-            let bg: UIColor = i%2==0 ? .white : UIColor(white:0.97,alpha:1)
-            fillRect(CGRect(x:d1x,y:ry,width:dW,height:cbH), bg)
-            strokeRect(CGRect(x:d1x,y:ry,width:dW,height:cbH))
-            cb(label, checked, x:d1x+2, y:ry+1, bs:7, lw:dW-12)
-        }
-        for (i,(label,checked)) in col2Items.enumerated() {
-            let ry = y + CGFloat(i)*cbH
-            let bg: UIColor = i%2==0 ? .white : UIColor(white:0.97,alpha:1)
-            fillRect(CGRect(x:d2x,y:ry,width:dW,height:cbH), bg)
-            strokeRect(CGRect(x:d2x,y:ry,width:dW,height:cbH))
-            cb(label, checked, x:d2x+2, y:ry+1, bs:7, lw:dW-12)
-        }
-        for (i,(label,checked)) in col3Items.enumerated() {
-            let ry = y + CGFloat(i)*cbH
-            let bg: UIColor = i%2==0 ? .white : UIColor(white:0.97,alpha:1)
-            fillRect(CGRect(x:d3x,y:ry,width:dW,height:cbH), bg)
-            strokeRect(CGRect(x:d3x,y:ry,width:dW,height:cbH))
-            cb(label, checked, x:d3x+2, y:ry+1, bs:7, lw:dW-12)
-        }
-        y += CGFloat(maxRows)*cbH + 2
-
-        // Psychiatrie + Gyn + Stoffwechsel + Abdomen
-        subHeader("Psychiatrie", x:d1x, y:y, w:dW)
-        subHeader("Gyn / Geburtshilfe", x:d2x, y:y, w:dW)
-        subHeader("Stoffwechsel / Abdomen", x:d3x, y:y, w:dW)
-        y += 9.5
-
         let psyItems: [(String,Bool)] = [
             ("Psych. Akutzustand", p.diagnose.psychAkut),
             ("Psych. Krise", p.diagnose.psychKrise),
@@ -812,29 +787,16 @@ struct DINPDFGenerator {
             ("GIB unten", p.diagnose.abdoGibUnten),
             ("Gallen-/Nierenstein", p.diagnose.abdoGalleNiere),
         ]
-        let maxRows2 = max(psyItems.count, gynItems.count, stoffItems.count)
-        for (i,(label,checked)) in psyItems.enumerated() {
-            let ry = y + CGFloat(i)*cbH
-            let bg: UIColor = i%2==0 ? .white : UIColor(white:0.97,alpha:1)
-            fillRect(CGRect(x:d1x,y:ry,width:dW,height:cbH), bg)
-            strokeRect(CGRect(x:d1x,y:ry,width:dW,height:cbH))
-            cb(label, checked, x:d1x+2, y:ry+1, bs:7, lw:dW-12)
-        }
-        for (i,(label,checked)) in gynItems.enumerated() {
-            let ry = y + CGFloat(i)*cbH
-            let bg: UIColor = i%2==0 ? .white : UIColor(white:0.97,alpha:1)
-            fillRect(CGRect(x:d2x,y:ry,width:dW,height:cbH), bg)
-            strokeRect(CGRect(x:d2x,y:ry,width:dW,height:cbH))
-            cb(label, checked, x:d2x+2, y:ry+1, bs:7, lw:dW-12)
-        }
-        for (i,(label,checked)) in stoffItems.enumerated() {
-            let ry = y + CGFloat(i)*cbH
-            let bg: UIColor = i%2==0 ? .white : UIColor(white:0.97,alpha:1)
-            fillRect(CGRect(x:d3x,y:ry,width:dW,height:cbH), bg)
-            strokeRect(CGRect(x:d3x,y:ry,width:dW,height:cbH))
-            cb(label, checked, x:d3x+2, y:ry+1, bs:7, lw:dW-12)
-        }
-        y += CGFloat(maxRows2)*cbH + 2
+
+        // Section 4 compact diagnosis groups
+        var dy: CGFloat = 0
+        dy += diagGruppe("ZNS / Neurologie",        items: col1Items + col1b, x: lx, y: y + dy, w: rx-lx)
+        dy += diagGruppe("Herz-Kreislauf",          items: col2Items,          x: lx, y: y + dy, w: rx-lx)
+        dy += diagGruppe("Infektionen / Sonstiges", items: col3Items,          x: lx, y: y + dy, w: rx-lx)
+        dy += diagGruppe("Psychiatrie",             items: psyItems,           x: lx, y: y + dy, w: rx-lx)
+        dy += diagGruppe("Gyn / Geburtshilfe",      items: gynItems,           x: lx, y: y + dy, w: rx-lx)
+        dy += diagGruppe("Stoffwechsel / Abdomen",  items: stoffItems,         x: lx, y: y + dy, w: rx-lx)
+        y += dy + 2
 
         // Footer
         drawFooter(erstelltAm: p.erstelltAm)
@@ -1155,20 +1117,29 @@ struct DINPDFGenerator {
             (maItems3, m6x3, m6W3), (maItems4, m6x4, m6W4),
         ]
         let maY0 = y
+        var maxColH: CGFloat = 0
         for (items, cx, cw) in allCols {
-            for (i,(label,checked)) in items.enumerated() {
-                let ry = maY0 + CGFloat(i)*maH
-                let bg: UIColor = i%2==0 ? .white : UIColor(white:0.97,alpha:1)
-                fillRect(CGRect(x:cx,y:ry,width:cw,height:maH), bg)
-                strokeRect(CGRect(x:cx,y:ry,width:cw,height:maH))
-                cb(label, checked, x:cx+2, y:ry+1, bs:7, lw:cw-12)
+            let visible = items.filter { $0.1 }
+            let rows: [(String, Bool)]
+            if visible.isEmpty {
+                rows = [("—", false)]
+            } else {
+                rows = visible
             }
+            for (i, (label, checked)) in rows.enumerated() {
+                let ry = maY0 + CGFloat(i) * maH
+                let bg: UIColor = i%2==0 ? .white : UIColor(white:0.97,alpha:1)
+                fillRect(CGRect(x:cx, y:ry, width:cw, height:maH), bg)
+                strokeRect(CGRect(x:cx, y:ry, width:cw, height:maH))
+                if label == "—" {
+                    txt("—", CGRect(x:cx+3, y:ry+1.5, width:cw-6, height:maH-3), font:f7, color:.lightGray)
+                } else {
+                    cb(label, checked, x:cx+2, y:ry+1, bs:7, lw:cw-12)
+                }
+            }
+            maxColH = max(maxColH, CGFloat(rows.count) * maH)
         }
-        y = maY0 + CGFloat(max(maItems1.count, maItems2.count, maItems3.count, maItems4.count))*maH + 1
-
-        // Monitoring row
-        subHeader("Monitoring", x:m6x1, y:y, w:m6W1)
-        y += 9.5
+        y = maY0 + maxColH + 1
 
         let monItems: [(String,Bool)] = [
             ("SpO₂", p.massnahmen.monSpo2),
@@ -1177,15 +1148,15 @@ struct DINPDFGenerator {
             ("EKG / AED-Monitor", p.massnahmen.monEkg),
             ("Temperatur", p.massnahmen.monTemperatur),
         ]
-        let maY1 = y
-        let monColW = (rx - lx) / CGFloat(monItems.count)
-        for (i,(label,checked)) in monItems.enumerated() {
-            let col = lx + CGFloat(i) * monColW
-            fillRect(CGRect(x:col,y:maY1,width:monColW,height:maH), i%2==0 ? .white : UIColor(white:0.97,alpha:1))
-            strokeRect(CGRect(x:col,y:maY1,width:monColW,height:maH))
-            cb(label, checked, x:col+2, y:maY1+1, bs:7, lw:monColW-12)
+        // Monitoring — checked items as single text line
+        let monChecked = monItems.filter { $0.1 }.map { $0.0 }
+        if !monChecked.isEmpty {
+            subHeader("Monitoring", x: m6x1, y: y, w: m6W1)
+            let monText = monChecked.joined(separator: " · ")
+            field("", monText, x: m6x1 + m6W1, y: y, w: rx - lx - m6W1, h: 9.5, lw: 0)
+            y += 9.5
         }
-        y = maY1 + maH + 2
+        y += 2
 
         // Maßnahmen-Details (nicht-leere Textfelder)
         var maDetails: [(String,String)] = []
@@ -1226,84 +1197,89 @@ struct DINPDFGenerator {
         }
 
         // ── SECTION 7 Reanimation / Tod ───────────────────
-        let r7W = (rx-lx) * 0.55
-        let r8W = (rx-lx) * 0.45
-        let r8x = lx + r7W
-
-        secHeader("7. Reanimation / Tod", x:lx, y:y, w:r7W)
-        secHeader("8. Ergebnis / NACA", x:r8x, y:y, w:r8W)
-        y += 11
-
-        // Reanimation content
         let rea = p.reanimation
-        let r7H: CGFloat = 10
-        let r7items: [(String,Bool)] = [
-            ("Beginn CPR Ersthelfer", rea.erstHelfer),
-            ("Vorab Telefon-Rea", rea.vorabTelefonRea),
-            ("Rettungsdienst", !p.reanimationAktiv ? false : true),
-            ("AED eingesetzt", rea.aed),
-            ("DNR-Order", rea.dnrOrder),
-            ("KH-Aufnahme v. ROSC", rea.khAufnahmeVorROSC),
-        ]
-        let r7y0 = y
-        for (i,(label,checked)) in r7items.enumerated() {
-            let ry = r7y0 + CGFloat(i)*r7H
-            let bg: UIColor = i%2==0 ? .white : UIColor(white:0.97,alpha:1)
-            fillRect(CGRect(x:lx,y:ry,width:r7W/2,height:r7H), bg)
-            strokeRect(CGRect(x:lx,y:ry,width:r7W/2,height:r7H))
-            cb(label, checked, x:lx+2, y:ry+1, bs:7, lw:r7W/2-12)
-        }
+        let reaRelevant = p.reanimationAktiv || rea.erstHelfer || rea.vorabTelefonRea || rea.aed || rea.dnrOrder || rea.khAufnahmeVorROSC
 
-        // Times column
-        let r7tx = lx + r7W/2
-        let r7tW = r7W/2
-        field("Kollaps-Zeit", rea.kollapsZeitUnbekannt ? "Unbekannt" : t(rea.kollapsZeit),
-              x:r7tx, y:r7y0, w:r7tW, h:r7H, lw:r7tW*0.55)
-        field("Init. Rhythmus", rea.initialRhythmus.rawValue,
-              x:r7tx, y:r7y0+r7H, w:r7tW, h:r7H, lw:r7tW*0.55)
-        field("Start Ersthelfer", rea.startErsthelferUnbekannt ? "Unbek." : t(rea.startErsthelferCPR),
-              x:r7tx, y:r7y0+r7H*2, w:r7tW, h:r7H, lw:r7tW*0.55)
-        field("Start RD-CPR", rea.startRDUnbekannt ? "Unbekannt" : t(rea.startRettungsdienst),
-              x:r7tx, y:r7y0+r7H*3, w:r7tW, h:r7H, lw:r7tW*0.55)
-        field("Ende RD-CPR", t(rea.endeRettungsdienst),
-              x:r7tx, y:r7y0+r7H*4, w:r7tW, h:r7H, lw:r7tW*0.55)
-        field("Outcome", p.reanimationAktiv ? rea.outcome.rawValue : "–",
-              x:r7tx, y:r7y0+r7H*5, w:r7tW, h:r7H, lw:r7tW*0.55, hl:p.reanimationAktiv)
+        if reaRelevant {
+            let r7W = (rx-lx) * 0.55
+            let r8W = (rx-lx) * 0.45
+            let r8x = lx + r7W
 
-        if rea.defiAnzahl > 0 {
-            let defY = r7y0 + CGFloat(r7items.count)*r7H
-            field("Defi Anzahl", "\(rea.defiAnzahl)", x:lx, y:defY, w:r7W/2, h:r7H, lw:r7W*0.22)
-            field("Defi Joule", "\(rea.defiJoule) J", x:r7tx, y:defY, w:r7tW, h:r7H, lw:r7tW*0.55)
-        }
-
-        // Outcome-spezifische Zeiten
-        if rea.outcome == .rosc, let roscT = rea.roscZeit {
-            let roscY = r7y0 + CGFloat(r7items.count + (rea.defiAnzahl > 0 ? 1 : 0))*r7H
-            field("ROSC-Zeitpunkt", t(roscT), x:r7tx, y:roscY, w:r7tW, h:r7H, lw:r7tW*0.55)
-        }
-        if rea.outcome == .verstorben, let todT = rea.todFeststellungsZeit {
-            let todY = r7y0 + CGFloat(r7items.count + (rea.defiAnzahl > 0 ? 1 : 0))*r7H
-            field("Todeszeitpunkt", t(todT), x:r7tx, y:todY, w:r7tW, h:r7H, lw:r7tW*0.55)
-        }
-
-        // NACA Score (right side)
-        let nacaRows: [(String,Bool)] = NacaScore.allCases.map {
-            ($0.beschreibung, p.notfallGeschehen.nacaScoreWert == $0)
-        }
-        let nacaH: CGFloat = r7H
-        for (i,(label,active)) in nacaRows.enumerated() {
-            let ry = r7y0 + CGFloat(i)*nacaH
-            let bg: UIColor = active ? hlYellow : (i%2==0 ? .white : UIColor(white:0.97,alpha:1))
-            fillRect(CGRect(x:r8x,y:ry,width:r8W,height:nacaH), bg)
-            strokeRect(CGRect(x:r8x,y:ry,width:r8W,height:nacaH))
-            cb(label, active, x:r8x+2, y:ry+1, bs:7, lw:r8W-12)
-        }
-
-        let maxR78 = max(r7items.count + (rea.defiAnzahl>0 ? 1 : 0), nacaRows.count)
-        y = r7y0 + CGFloat(maxR78)*r7H + 2
-        if !rea.freitext.isEmpty && y + 11 < pageSize.height - 15 {
-            field("Reanimation – Notizen", rea.freitext, x:lx, y:y, w:rx-lx, h:11, lw:90)
+            secHeader("7. Reanimation / Tod", x:lx, y:y, w:r7W)
+            secHeader("8. Ergebnis / NACA", x:r8x, y:y, w:r8W)
             y += 11
+
+            let r7H: CGFloat = 10
+            let r7items: [(String,Bool)] = [
+                ("Beginn CPR Ersthelfer", rea.erstHelfer),
+                ("Vorab Telefon-Rea", rea.vorabTelefonRea),
+                ("Rettungsdienst", !p.reanimationAktiv ? false : true),
+                ("AED eingesetzt", rea.aed),
+                ("DNR-Order", rea.dnrOrder),
+                ("KH-Aufnahme v. ROSC", rea.khAufnahmeVorROSC),
+            ]
+            let r7y0 = y
+            for (i,(label,checked)) in r7items.enumerated() {
+                let ry = r7y0 + CGFloat(i)*r7H
+                let bg: UIColor = i%2==0 ? .white : UIColor(white:0.97,alpha:1)
+                fillRect(CGRect(x:lx,y:ry,width:r7W/2,height:r7H), bg)
+                strokeRect(CGRect(x:lx,y:ry,width:r7W/2,height:r7H))
+                cb(label, checked, x:lx+2, y:ry+1, bs:7, lw:r7W/2-12)
+            }
+
+            // Times column
+            let r7tx = lx + r7W/2
+            let r7tW = r7W/2
+            field("Kollaps-Zeit", rea.kollapsZeitUnbekannt ? "Unbekannt" : t(rea.kollapsZeit),
+                  x:r7tx, y:r7y0, w:r7tW, h:r7H, lw:r7tW*0.55)
+            field("Init. Rhythmus", rea.initialRhythmus.rawValue,
+                  x:r7tx, y:r7y0+r7H, w:r7tW, h:r7H, lw:r7tW*0.55)
+            field("Start Ersthelfer", rea.startErsthelferUnbekannt ? "Unbek." : t(rea.startErsthelferCPR),
+                  x:r7tx, y:r7y0+r7H*2, w:r7tW, h:r7H, lw:r7tW*0.55)
+            field("Start RD-CPR", rea.startRDUnbekannt ? "Unbekannt" : t(rea.startRettungsdienst),
+                  x:r7tx, y:r7y0+r7H*3, w:r7tW, h:r7H, lw:r7tW*0.55)
+            field("Ende RD-CPR", t(rea.endeRettungsdienst),
+                  x:r7tx, y:r7y0+r7H*4, w:r7tW, h:r7H, lw:r7tW*0.55)
+            field("Outcome", p.reanimationAktiv ? rea.outcome.rawValue : "–",
+                  x:r7tx, y:r7y0+r7H*5, w:r7tW, h:r7H, lw:r7tW*0.55, hl:p.reanimationAktiv)
+
+            if rea.defiAnzahl > 0 {
+                let defY = r7y0 + CGFloat(r7items.count)*r7H
+                field("Defi Anzahl", "\(rea.defiAnzahl)", x:lx, y:defY, w:r7W/2, h:r7H, lw:r7W*0.22)
+                field("Defi Joule", "\(rea.defiJoule) J", x:r7tx, y:defY, w:r7tW, h:r7H, lw:r7tW*0.55)
+            }
+
+            // Outcome-spezifische Zeiten
+            if rea.outcome == .rosc, let roscT = rea.roscZeit {
+                let roscY = r7y0 + CGFloat(r7items.count + (rea.defiAnzahl > 0 ? 1 : 0))*r7H
+                field("ROSC-Zeitpunkt", t(roscT), x:r7tx, y:roscY, w:r7tW, h:r7H, lw:r7tW*0.55)
+            }
+            if rea.outcome == .verstorben, let todT = rea.todFeststellungsZeit {
+                let todY = r7y0 + CGFloat(r7items.count + (rea.defiAnzahl > 0 ? 1 : 0))*r7H
+                field("Todeszeitpunkt", t(todT), x:r7tx, y:todY, w:r7tW, h:r7H, lw:r7tW*0.55)
+            }
+
+            // Section 8 NACA — single line instead of 8-row radio list
+            if let naca = p.notfallGeschehen.nacaScoreWert {
+                field("NACA", naca.beschreibung, x:r8x, y:r7y0, w:r8W, h:10, lw:20)
+            }
+
+            // Update final y — use only Section 7 height (NACA is now max 1 row)
+            let r7RowsCount = r7items.count + (rea.defiAnzahl > 0 ? 1 : 0)
+                + (rea.outcome == .rosc && rea.roscZeit != nil ? 1 : 0)
+                + (rea.outcome == .verstorben && rea.todFeststellungsZeit != nil ? 1 : 0)
+            y = r7y0 + CGFloat(r7RowsCount) * r7H + 2
+
+            if !rea.freitext.isEmpty && y + 11 < pageSize.height - 15 {
+                field("Reanimation – Notizen", rea.freitext, x:lx, y:y, w:rx-lx, h:11, lw:90)
+                y += 11
+            }
+        } else if let naca = p.notfallGeschehen.nacaScoreWert {
+            // Section 7 skipped — show NACA standalone at full width
+            secHeader("8. Ergebnis / NACA", x:lx, y:y, w:rx-lx)
+            y += 11
+            field("NACA", naca.beschreibung, x:lx, y:y, w:rx-lx, h:10, lw:20)
+            y += 12
         }
 
         // ── SECTION 9 Übergabe ────────────────────────────
