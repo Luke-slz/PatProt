@@ -276,6 +276,7 @@ struct BreathingBefund: Codable {
     // RKN-Ergänzungen
     var spastik:            Bool = false
     var rasselgeraeusche:   Bool = false
+    var brodeln:            Bool = false
     var stridor:            Bool = false
     var schnappatmung:      Bool = false
     var apnoe:              Bool = false
@@ -429,6 +430,7 @@ struct UebergabeBefunde: Codable {
     var zyanose:            Bool = false
     var spastik:            Bool = false
     var rasselgeraeusche:   Bool = false
+    var brodeln:            Bool = false
     var stridor:            Bool = false
     var atemwegsverlegung:  Bool = false
     var schnappatmung:      Bool = false
@@ -640,6 +642,8 @@ struct MassnahmenBefund: Codable {
     var atemwegFreimachen: Bool = false
     var cervikalStuetze: Bool = false
     var absaugung: Bool = false
+    var guedelTubus: Bool = false
+    var wendlTubus:  Bool = false
     var sauerstoffgabe: Bool = false
     var sauerstoffLitMin: String = ""
     var maskenbeatmung: Bool = false

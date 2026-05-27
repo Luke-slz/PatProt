@@ -174,4 +174,15 @@ struct PatProtTests {
         #expect(protokoll.kvFotos.isEmpty)
     }
 
+    @Test func breathingBefundHatBrodeln() {
+        let b = BreathingBefund()
+        #expect(b.brodeln == false)
+    }
+
+    @Test func massnahmenHatGuedelWendl() {
+        let m = MassnahmenBefund()
+        #expect(m.guedelTubus == false)
+        #expect(m.wendlTubus  == false)
+    }
+
 }
