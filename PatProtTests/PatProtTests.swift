@@ -137,4 +137,14 @@ struct PatProtTests {
         #expect(befund.notfallFreitext == "")
     }
 
+    @Test func resetGeneratesNewId() {
+        let protokoll = EinsatzProtokoll()
+        var daten = ProtokollDaten()
+        daten.id = UUID()
+        protokoll.apply(from: daten)
+        #expect(protokoll.id == daten.id)
+        protokoll.reset()
+        #expect(protokoll.id != daten.id)
+    }
+
 }

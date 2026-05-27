@@ -150,6 +150,7 @@ class EinsatzProtokoll: ObservableObject, Identifiable {
     var erstelltAm: Date = Date()
 
     func reset() {
+        id = UUID()
         einsatzOrt = EinsatzOrt()
         einsatzOrt.alarmzeit = Date()
         patientDaten = PatientDaten()
