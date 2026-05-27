@@ -398,6 +398,7 @@ struct CirculationView: View {
                         }
                     }
                 }
+                CheckboxRow("Rekap. > 2 Sek.", isOn: $befund.rekapillierung)
             } header: { Label("Kreislauf", systemImage: "heart.fill") }
 
             Section {
@@ -407,27 +408,28 @@ struct CirculationView: View {
                 }
             } header: { Label("EKG", systemImage: "waveform.path.ecg") }
 
-            Section {
-                CheckboxRow("Sinusrhythmus",            isOn: $befund.sinusrhythmus)
-                CheckboxRow("Absolute Arrhythmie",      isOn: $befund.absoluteArrhythmie)
-                CheckboxRow("AV-Block II°/III°",        isOn: $befund.avBlock)
-                CheckboxRow("QRS-Tachykardie breit",    isOn: $befund.qrsTachykardieBreit)
-                CheckboxRow("QRS-Tachykardie schmal",   isOn: $befund.qrsTachykardieSchmal)
-                CheckboxRow("Kammerflattern/-flimmern", isOn: $befund.kammerflattern)
-                CheckboxRow("Pulslose elektr. Akt.",    isOn: $befund.pea)
-                CheckboxRow("Asystolie",                isOn: $befund.asystolie)
-                CheckboxRow("Schrittmacherrhythmus",    isOn: $befund.schrittmacher)
-                CheckboxRow("Infarkt-EKG (STEMI/LSB)", isOn: $befund.infarktEkg)
-                CheckboxRow("Rekap. > 2 Sek.",          isOn: $befund.rekapillierung)
-                CheckboxRow("Nicht beurteilbar",        isOn: $befund.cNichtBeurteilbar)
-            } header: { Label("EKG-Rhythmus", systemImage: "waveform") }
+            if befund.ekg {
+                Section {
+                    CheckboxRow("Sinusrhythmus",            isOn: $befund.sinusrhythmus)
+                    CheckboxRow("Absolute Arrhythmie",      isOn: $befund.absoluteArrhythmie)
+                    CheckboxRow("AV-Block II°/III°",        isOn: $befund.avBlock)
+                    CheckboxRow("QRS-Tachykardie breit",    isOn: $befund.qrsTachykardieBreit)
+                    CheckboxRow("QRS-Tachykardie schmal",   isOn: $befund.qrsTachykardieSchmal)
+                    CheckboxRow("Kammerflattern/-flimmern", isOn: $befund.kammerflattern)
+                    CheckboxRow("Pulslose elektr. Akt.",    isOn: $befund.pea)
+                    CheckboxRow("Asystolie",                isOn: $befund.asystolie)
+                    CheckboxRow("Schrittmacherrhythmus",    isOn: $befund.schrittmacher)
+                    CheckboxRow("Infarkt-EKG (STEMI/LSB)", isOn: $befund.infarktEkg)
+                    CheckboxRow("Nicht beurteilbar",        isOn: $befund.cNichtBeurteilbar)
+                } header: { Label("EKG-Rhythmus", systemImage: "waveform") }
 
-            Section {
-                CheckboxRow("SVES",      isOn: $befund.sves)
-                CheckboxRow("VES",       isOn: $befund.ves)
-                CheckboxRow("Monomorph", isOn: $befund.extrasystolenMonomorph)
-                CheckboxRow("Polymorph", isOn: $befund.extrasystolenPolymorph)
-            } header: { Text("Extrasystolen") }
+                Section {
+                    CheckboxRow("SVES",      isOn: $befund.sves)
+                    CheckboxRow("VES",       isOn: $befund.ves)
+                    CheckboxRow("Monomorph", isOn: $befund.extrasystolenMonomorph)
+                    CheckboxRow("Polymorph", isOn: $befund.extrasystolenPolymorph)
+                } header: { Text("Extrasystolen") }
+            }
 
             Section {
                 Toggle("Blutung vorhanden", isOn: $befund.blutung)
