@@ -197,6 +197,29 @@ struct DINPDFGenerator {
         strokeRect(uebBox)
     }
 
+    /// Renders only checked dual-checkbox rows (ankunft || uebergabe).
+    /// Returns the total height rendered.
+    @discardableResult
+    private static func filteredDualCb(
+        _ items: [(String, Bool, Bool)],
+        x: CGFloat, y: CGFloat, w: CGFloat, h: CGFloat
+    ) -> CGFloat {
+        let visible = items.filter { $0.1 || $0.2 }
+        if visible.isEmpty {
+            // single "o.B." row
+            let r = CGRect(x: x, y: y, width: w, height: h)
+            fillRect(r, .white)
+            strokeRect(r)
+            txt("o.B.", CGRect(x: x+3, y: y+1.5, width: w-6, height: h-3),
+                font: UIFont.italicSystemFont(ofSize: 7), color: .lightGray)
+            return h
+        }
+        for (i, (label, ank, ueb)) in visible.enumerated() {
+            dualCb(label, ankunft: ank, uebergabe: ueb, x: x, y: y + CGFloat(i)*h, w: w, h: h)
+        }
+        return CGFloat(visible.count) * h
+    }
+
     // ─────────────────────────────────────────────────────
     // MARK: - MAIN GENERATE
     // ─────────────────────────────────────────────────────
@@ -408,23 +431,6 @@ struct DINPDFGenerator {
             y += 11
         }
 
-        // SAMPLER — immer alle 7 Zeilen anzeigen
-        let samplerAllRows: [(String, String)] = [
-            ("S – Symptome",       p.sampler.symptome),
-            ("A – Allergien",      p.sampler.allergien),
-            ("M – Medikamente",    p.medikamentFotos.isEmpty
-                                    ? p.sampler.medikamente
-                                    : "Medikamentenplan: Foto-Anhang (S. 3ff.)"),
-            ("P – Vorgeschichte",  p.sampler.patientenVorgeschichte),
-            ("L – Letztes Essen",  p.sampler.letztesMahl),
-            ("E – Ereignis",       p.sampler.ereignis),
-            ("R – Risikofaktoren", p.sampler.risikofaktoren),
-        ]
-        for (label, value) in samplerAllRows {
-            field(label, value, x:lx, y:y, w:rx-lx, h:11, lw:85)
-            y += 11
-        }
-
         // ABCDE grid
         let abcdeLetters = ["A","B","C","D","E"]
         func buildAirwayDetail() -> String {
@@ -464,7 +470,7 @@ struct DINPDFGenerator {
         let abcdeRaw = [buildAirwayDetail(), buildBreathingDetail(), buildCirculationDetail(), p.disability.freitext, buildExposureDetail()]
         let abcdeVals   = abcdeRaw.map { $0.isEmpty ? "o.B." : $0 }
         let abcdeColors = abcdeRaw.map { $0.isEmpty ? UIColor.lightGray : UIColor.black }
-        let rowH: CGFloat = 15
+        let rowH: CGFloat = 11
         for i in 0..<5 {
             let ry = y + CGFloat(i)*rowH
             // Letter box A-E (12pt)
@@ -482,6 +488,23 @@ struct DINPDFGenerator {
                 color: abcdeColors[i])
         }
         y += CGFloat(5)*rowH
+
+        // SAMPLER — immer alle 7 Zeilen anzeigen
+        let samplerAllRows: [(String, String)] = [
+            ("S – Symptome",       p.sampler.symptome),
+            ("A – Allergien",      p.sampler.allergien),
+            ("M – Medikamente",    p.medikamentFotos.isEmpty
+                                    ? p.sampler.medikamente
+                                    : "Medikamentenplan: Foto-Anhang (S. 3ff.)"),
+            ("P – Vorgeschichte",  p.sampler.patientenVorgeschichte),
+            ("L – Letztes Essen",  p.sampler.letztesMahl),
+            ("E – Ereignis",       p.sampler.ereignis),
+            ("R – Risikofaktoren", p.sampler.risikofaktoren),
+        ]
+        for (label, value) in samplerAllRows {
+            field(label, value, x:lx, y:y, w:rx-lx, h:11, lw:85)
+            y += 11
+        }
 
         // ── SECTION 3 ──────────────────────────────────────
         secHeader("3. Befunde", x:lx, y:y, w:rx-lx)
@@ -562,22 +585,22 @@ struct DINPDFGenerator {
             ("Hypervent.",   p.breathing.hyperventilation,           ub.hyperventilation),
             ("n.beurteilb.", p.breathing.abNichtBeurteilbar,        ub.abNichtBeurteilbar),
         ]
-        for (i,(label,ank,ueb)) in abItems.enumerated() {
-            dualCb(label, ankunft:ank, uebergabe:ueb, x:xAb, y:mvColY+CGFloat(i)*dCbH, w:bW_ab, h:dCbH)
-        }
+        let abRenderedH = filteredDualCb(abItems, x: xAb, y: mvColY, w: bW_ab, h: dCbH)
 
         // ── Schmerz ──
-        let schmerzRows: [(String, String)] = [
-            ("Ank.", "\(p.disability.schmerz)/10"),
-            ("Üb.",  "\(ub.schmerz)/10"),
-        ]
-        fillRect(CGRect(x:xSch, y:mvColY, width:bW_sch, height:CGFloat(schmerzRows.count)*dCbH), .white)
-        strokeRect(CGRect(x:xSch, y:mvColY, width:bW_sch, height:CGFloat(schmerzRows.count)*dCbH))
-        for (i,(lbl,val)) in schmerzRows.enumerated() {
-            let ry = mvColY + CGFloat(i)*dCbH
-            if i%2==1 { fillRect(CGRect(x:xSch,y:ry,width:bW_sch,height:dCbH), UIColor(white:0.97,alpha:1)) }
-            txt(lbl, CGRect(x:xSch+1.5, y:ry+1.5, width:13, height:dCbH-3), font:f6, color:.darkGray)
-            txt(val,  CGRect(x:xSch+15,  y:ry+1.5, width:bW_sch-17, height:dCbH-3), font:f7b, align:.center)
+        if p.disability.schmerz > 0 || ub.schmerz > 0 {
+            let schmerzRows: [(String, String)] = [
+                ("Ank.", "\(p.disability.schmerz)/10"),
+                ("Üb.",  "\(ub.schmerz)/10"),
+            ]
+            fillRect(CGRect(x:xSch, y:mvColY, width:bW_sch, height:CGFloat(schmerzRows.count)*dCbH), .white)
+            strokeRect(CGRect(x:xSch, y:mvColY, width:bW_sch, height:CGFloat(schmerzRows.count)*dCbH))
+            for (i,(lbl,val)) in schmerzRows.enumerated() {
+                let ry = mvColY + CGFloat(i)*dCbH
+                if i%2==1 { fillRect(CGRect(x:xSch,y:ry,width:bW_sch,height:dCbH), UIColor(white:0.97,alpha:1)) }
+                txt(lbl, CGRect(x:xSch+1.5, y:ry+1.5, width:13, height:dCbH-3), font:f6, color:.darkGray)
+                txt(val,  CGRect(x:xSch+15,  y:ry+1.5, width:bW_sch-17, height:dCbH-3), font:f7b, align:.center)
+            }
         }
 
         // ── C Kreislauf + EKG (dual cb) ──
@@ -600,9 +623,7 @@ struct DINPDFGenerator {
             ("Polymorph",     p.circulation.extrasystolenPolymorph,    ub.extrasystolenPolymorph),
             ("n.beurteilb.",  p.circulation.cNichtBeurteilbar,         ub.cNichtBeurteilbar),
         ]
-        for (i,(label,ank,ueb)) in cItems.enumerated() {
-            dualCb(label, ankunft:ank, uebergabe:ueb, x:xC, y:mvColY+CGFloat(i)*dCbH, w:bW_c, h:dCbH)
-        }
+        let cRenderedH = filteredDualCb(cItems, x: xC, y: mvColY, w: bW_c, h: dCbH)
 
         // ── D Neurologie (dual cb + GCS-Zeile) ──
         let gcs = p.disability
@@ -636,11 +657,9 @@ struct DINPDFGenerator {
             ("Demenz",        gcs.neuroDemenz,                       ub.neuroDemenz),
             ("n.b. Neuro",    gcs.neuroNichtBeurteilbar,             ub.neuroNichtBeurteilbar),
         ]
-        for (i,(label,ank,ueb)) in dItems.enumerated() {
-            dualCb(label, ankunft:ank, uebergabe:ueb, x:xD, y:mvColY+CGFloat(i)*dCbH, w:bW_d, h:dCbH)
-        }
+        let dRenderedH = filteredDualCb(dItems, x: xD, y: mvColY, w: bW_d, h: dCbH)
         // GCS-Zeile (Ankunft / Übergabe als Werte, kein dual-cb)
-        let gcsRy = mvColY + CGFloat(dItems.count)*dCbH
+        let gcsRy = mvColY + dRenderedH
         fillRect(CGRect(x:xD, y:gcsRy, width:bW_d, height:dCbH), hlYellow)
         strokeRect(CGRect(x:xD, y:gcsRy, width:bW_d, height:dCbH))
         vline(xD + bW_d/2, gcsRy, dCbH)
@@ -649,12 +668,9 @@ struct DINPDFGenerator {
         txt("GCS Üb.: \(ub.gcsGesamt)/15",
             CGRect(x:xD+bW_d/2+2, y:gcsRy+1.5, width:bW_d/2-4, height:dCbH-3), font:f6b)
 
-        let dTotalRows = dItems.count + 1  // +1 GCS-Zeile
-        let mvAbsH  = CGFloat(mvItems.count) * mvH
-        let abAbsH  = CGFloat(abItems.count) * dCbH
-        let cAbsH   = CGFloat(cItems.count)  * dCbH
-        let dAbsH   = CGFloat(dTotalRows)    * dCbH
-        y = mvColY + max(mvAbsH, abAbsH, cAbsH, dAbsH) + 2
+        let mvAbsH = CGFloat(mvItems.count) * mvH
+        let dAbsH  = dRenderedH + dCbH   // +1 for GCS row
+        y = mvColY + max(mvAbsH, abRenderedH, cRenderedH, dAbsH) + 2
 
         // Hautfarbe / Verletzungen
         field("Hautfarbe", p.exposure.hautfarbe, x:lx, y:y, w:(rx-lx)/2, h:11, lw:42)
@@ -1001,7 +1017,7 @@ struct DINPDFGenerator {
             ("HF /min", { $0.puls.map          { "\($0)" } ?? "" }),
             ("SpO₂ %",  { $0.spo2.map          { "\($0)" } ?? "" }),
             ("AF /min", { $0.atemFrequenz.map  { "\($0)" } ?? "" }),
-            ("BZ",      { $0.blutzucker.map    { String(format:"%.1f",$0) } ?? "" }),
+            ("BZ",      { $0.blutzucker.map    { String(format:"%.0f",$0) } ?? "" }),
             ("Temp °C", { $0.temperatur.map    { String(format:"%.1f",$0) } ?? "" }),
             ("GCS",     { $0.gcsGesamt.map     { "\($0)" } ?? "" }),
         ]
