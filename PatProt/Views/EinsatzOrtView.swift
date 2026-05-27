@@ -35,8 +35,13 @@ struct EinsatzOrtView: View {
         return fehler
     }
 
-    private var gespeichertesPersonal: [String] {
-        (try? JSONDecoder().decode([String].self, from: Data(personalJSON.utf8))) ?? []
+    private var gespeichertesPersonal: [PersonalEintrag] {
+        let data = Data(personalJSON.utf8)
+        if let liste = try? JSONDecoder().decode([PersonalEintrag].self, from: data) { return liste }
+        if let namen = try? JSONDecoder().decode([String].self, from: data) {
+            return namen.map { PersonalEintrag(name: $0, qualifikation: .rettungssanitaeter) }
+        }
+        return []
     }
 
     private var customFahrzeuge: [String] {
@@ -294,8 +299,13 @@ struct BesatzungsFeld: View {
     @AppStorage("gespeichertesPersonal") private var personalJSON: String = "[]"
     @State private var zeigePickerSheet = false
 
-    private var personal: [String] {
-        (try? JSONDecoder().decode([String].self, from: Data(personalJSON.utf8))) ?? []
+    private var personal: [PersonalEintrag] {
+        let data = Data(personalJSON.utf8)
+        if let liste = try? JSONDecoder().decode([PersonalEintrag].self, from: data) { return liste }
+        if let namen = try? JSONDecoder().decode([String].self, from: data) {
+            return namen.map { PersonalEintrag(name: $0, qualifikation: .rettungssanitaeter) }
+        }
+        return []
     }
 
     var body: some View {
@@ -312,7 +322,7 @@ struct BesatzungsFeld: View {
             }
         }
         .sheet(isPresented: $zeigePickerSheet) {
-            PersonalPickerSheet(ausgewählt: $text, personal: personal)
+            PersonalPickerSheet(ausgewählt: $text, personal: personal.map { $0.name })
         }
     }
 }
