@@ -19,6 +19,8 @@ struct MassnahmenView: View {
                 CheckboxRow("Atemweg freimachen / freihalten", isOn: $befund.atemwegFreimachen)
                 CheckboxRow("Cervikalstütze / HWS-Stabilisierung", isOn: $befund.cervikalStuetze)
                 CheckboxRow("Absaugung", isOn: $befund.absaugung)
+                CheckboxRow("Guedel-Tubus (OPA)", isOn: $befund.guedelTubus)
+                CheckboxRow("Wendl-Tubus (NPA)",  isOn: $befund.wendlTubus)
                 CheckboxRow("Sauerstoffgabe", isOn: $befund.sauerstoffgabe)
                 if befund.sauerstoffgabe {
                     HStack {

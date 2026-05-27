@@ -1089,6 +1089,8 @@ struct DINPDFGenerator {
             ("Atemweg freimachen",  p.massnahmen.atemwegFreimachen),
             ("Cervikalstütze/HWS",  p.massnahmen.cervikalStuetze),
             ("Absaugung",           p.massnahmen.absaugung),
+            ("Guedel-Tubus (OPA)", p.massnahmen.guedelTubus),
+            ("Wendl-Tubus (NPA)",  p.massnahmen.wendlTubus),
             ("Sauerstoffgabe",      p.massnahmen.sauerstoffgabe),
             ("Maskenbeatmung",      p.massnahmen.maskenbeatmung),
             ("Mask.beat. unmöglich",p.massnahmen.maskenbeatmungUnmoeglich),
