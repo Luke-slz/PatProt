@@ -374,7 +374,8 @@ struct DINPDFGenerator {
         let rightY = y   // Section 1 right column bottom
 
         // ── EINSATZPROTOKOLL title block (directly below patient block) ──
-        let titleY = hh + 38
+        // Shift down 11pt when Krankenkasse row is present (Name14+geb12+VersNr12+KK11)
+        let titleY: CGFloat = hh + 38 + (p.patientDaten.kostentraeger.isEmpty ? 0 : 11)
         do {
             let x = lx; let w = c1 - lx; let bh: CGFloat = 36
             fillRect(CGRect(x:x,y:titleY,width:w,height:bh), vLightB)
