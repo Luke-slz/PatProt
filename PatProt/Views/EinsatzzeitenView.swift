@@ -10,8 +10,8 @@ struct EinsatzzeitenView: View {
         let ende     = protokoll.einsatzOrt.abfahrtzeit
         var fehler: [String] = []
         if let a = alarm,     let b = ankunft,   b < a { fehler.append("Ankunft liegt vor der Alarmzeit") }
-        if let a = ankunft,   let b = uebergabe, b < a { fehler.append("Übergabe liegt vor der Ankunft") }
-        if let a = uebergabe, let b = ende,      b < a { fehler.append("Einsatz Ende liegt vor der Übergabe") }
+        if let a = ankunft, let b = ende,      b < a { fehler.append("Einsatz Ende liegt vor der Ankunft") }
+        if let a = ende,    let b = uebergabe, b < a { fehler.append("Übergabe liegt vor dem Einsatz Ende") }
         return fehler
     }
 
@@ -27,9 +27,9 @@ struct EinsatzzeitenView: View {
                     displayedComponents: .date
                 )
                 ZeitFeld(label: "Alarmzeit",        datum: $protokoll.einsatzOrt.alarmzeit)
-                ZeitFeld(label: "Ankunft Patient", datum: $protokoll.einsatzOrt.ankunftzeit)
-                ZeitFeld(label: "Übergabe an RD",  datum: $protokoll.einsatzOrt.krankenHausAnkunft)
-                ZeitFeld(label: "Einsatz Ende",    datum: $protokoll.einsatzOrt.abfahrtzeit)
+                ZeitFeld(label: "Ankunft Patient",  datum: $protokoll.einsatzOrt.ankunftzeit)
+                ZeitFeld(label: "Einsatz Ende",     datum: $protokoll.einsatzOrt.abfahrtzeit)
+                ZeitFeld(label: "Übergabe an RD",   datum: $protokoll.einsatzOrt.krankenHausAnkunft)
             } header: {
                 Label("Zeiten", systemImage: "clock")
             } footer: {
