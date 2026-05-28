@@ -91,8 +91,6 @@ struct NotfallgeschehenView: View {
                         Label("Auswahl aufheben", systemImage: "xmark.circle")
                     }
                 }
-            } header: {
-                Label("NACA-Score", systemImage: "chart.bar.fill")
             }
             Section {
                 TextField("Ergänzungen / Sonstiges", text: $befund.notfallFreitext, axis: .vertical)
