@@ -201,6 +201,9 @@ struct AbschlussView: View {
                 Text("Das Protokoll bleibt 24 Stunden nach dem Export im Archiv.").font(.footnote).foregroundStyle(.secondary)
             }
         }
+        .onAppear {
+            protokoll.prefillUebergabeMesswerteAusVerlauf()
+        }
         .navigationTitle("Abschluss & Export")
         .navigationBarTitleDisplayMode(.large)
         .toolbar {

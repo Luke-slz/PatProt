@@ -279,6 +279,9 @@ struct UebergabeBefundeView: View {
         }
         .navigationTitle("Übergabe-Befunde")
         .navigationBarBackButtonHidden(true)
+        .onAppear {
+            protokoll.prefillGCSAusDisability()
+        }
         .safeAreaInset(edge: .bottom) {
             Button(action: onBack) {
                 Label("Zurück zur Übersicht", systemImage: "checkmark.circle.fill")
