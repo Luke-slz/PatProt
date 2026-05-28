@@ -503,7 +503,7 @@ struct SAMPLERBefund: Codable {
     var medikamente = ""
     var patientenVorgeschichte = ""
     var letztesMahl = ""
-    var letztesMahlZeit: Date = Date()
+    var letztesMahlZeit: Date? = nil
     var letztesMahlUnbekannt: Bool = false
     var ereignis = ""
     var risikofaktoren = ""

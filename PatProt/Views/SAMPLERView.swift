@@ -79,7 +79,11 @@ struct SAMPLERView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("L — Letzte Mahlzeit").font(.subheadline.bold())
                     Text("Wann und was zuletzt gegessen/getrunken").font(.caption).foregroundColor(.secondary)
-                    TextField("z.B. heute Morgen, Brot und Kaffee", text: $befund.letztesMahl)
+                    Toggle("Unbekannt", isOn: $befund.letztesMahlUnbekannt)
+                    if !befund.letztesMahlUnbekannt {
+                        ZeitFeld(label: "Uhrzeit", datum: $befund.letztesMahlZeit)
+                    }
+                    TextField("z.B. Brot und Kaffee", text: $befund.letztesMahl)
                     Text("→ PDF S. 1 · SAMPLER · L").font(.caption2).foregroundColor(.secondary)
                 }
             }
@@ -99,6 +103,14 @@ struct SAMPLERView: View {
                     Text("→ PDF S. 1 · SAMPLER · R").font(.caption2).foregroundColor(.secondary)
                 }
             }
+            Section {
+                Toggle("Schwangerschaft bekannt", isOn: $befund.schwangerschaft)
+                if befund.schwangerschaft {
+                    Stepper(befund.schwangerschaftSSW == 0 ? "SSW unbekannt"
+                                                           : "SSW \(befund.schwangerschaftSSW)",
+                            value: $befund.schwangerschaftSSW, in: 0...42)
+                }
+            } header: { Label("Schwangerschaft", systemImage: "figure.and.child.holdinghands") }
         }
         .keyboardDismissToolbar()
         .navigationTitle("SAMPLER")
