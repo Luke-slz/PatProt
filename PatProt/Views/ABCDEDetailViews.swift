@@ -122,7 +122,7 @@ struct AirwayView: View {
                 if massnahmen.cervikalStuetze   { items.append("Cervikalstütze") }
                 if massnahmen.absaugung         { items.append("Absaugung") }
                 if massnahmen.guedelTubus       { items.append("Guedel-Tubus (OPA)") }
-                if massnahmen.wendlTubus        { items.append("Wendl-Tubus (NPA)") }
+                if massnahmen.wendlTubus        { items.append("Wendel-Tubus (NPA)") }
                 if massnahmen.supraglottisch    {
                     let t = massnahmen.supraglottischTyp
                     items.append("Supraglottischer AW\(t.isEmpty ? "" : " (\(t))")")
@@ -157,7 +157,6 @@ struct AirwayView: View {
         }
         .navigationTitle("A — Airway")
         .navigationBarTitleDisplayMode(.large)
-        .navigationBarBackButtonHidden(true)
         .swipeBackEnabled()
     }
 }
@@ -240,14 +239,20 @@ struct BreathingView: View {
                         befund.spo2 = Int(val)
                     }
                 }
-                Picker("Atemgeräusche", selection: $befund.atemgeraeusche) {
+                Picker("Atemgeräusche / Atemstörung", selection: $befund.atemgeraeusche) {
                     Text("").tag("")
                     Text("Vesikulär (normal)").tag("Vesikulär (normal)")
                     Text("Giemen").tag("Giemen")
                     Text("Rasseln").tag("Rasseln")
+                    Text("Brodeln").tag("Brodeln")
                     Text("Stridor").tag("Stridor")
                     Text("Brummen").tag("Brummen")
+                    Text("Spastik").tag("Spastik")
+                    Text("Schnappatmung").tag("Schnappatmung")
+                    Text("Apnoe").tag("Apnoe")
+                    Text("Hyperventilation").tag("Hyperventilation")
                     Text("Kein Atemgeräusch").tag("Kein Atemgeräusch")
+                    Text("Nicht beurteilbar").tag("Nicht beurteilbar")
                     Text("Andere …").tag("Andere")
                 }
 
@@ -259,7 +264,8 @@ struct BreathingView: View {
                 }
             } header: { Label("Vitalparameter", systemImage: "lungs") }
             .onAppear {
-                if befund.atemgeraeusche != "Andere" && !["", "Vesikulär (normal)", "Giemen", "Rasseln", "Stridor", "Brummen", "Kein Atemgeräusch"].contains(befund.atemgeraeusche) {
+                let knownOptions = ["", "Vesikulär (normal)", "Giemen", "Rasseln", "Brodeln", "Stridor", "Brummen", "Spastik", "Schnappatmung", "Apnoe", "Hyperventilation", "Kein Atemgeräusch", "Nicht beurteilbar", "Andere"]
+                if !knownOptions.contains(befund.atemgeraeusche) {
                     andereAtemgeraeusche = befund.atemgeraeusche
                 }
             }
@@ -273,17 +279,6 @@ struct BreathingView: View {
                 Label("Maßnahmen (O₂, Beatmung etc.) werden unter \"Maßnahmen\" dokumentiert.", systemImage: "info.circle")
                     .font(.caption).foregroundColor(.secondary)
             }
-
-            Section {
-                CheckboxRow("Spastik",           isOn: $befund.spastik)
-                CheckboxRow("Rasselgeräusche",   isOn: $befund.rasselgeraeusche)
-                CheckboxRow("Brodeln",           isOn: $befund.brodeln)
-                CheckboxRow("Stridor",           isOn: $befund.stridor)
-                CheckboxRow("Schnappatmung",     isOn: $befund.schnappatmung)
-                CheckboxRow("Apnoe",             isOn: $befund.apnoe)
-                CheckboxRow("Hyperventilation",  isOn: $befund.hyperventilation)
-                CheckboxRow("Nicht beurteilbar", isOn: $befund.abNichtBeurteilbar)
-            } header: { Label("Atemstörungen", systemImage: "wind") }
 
             Section {
                 TextEditor(text: $befund.freitext).frame(minHeight: 80)
@@ -332,7 +327,6 @@ struct BreathingView: View {
         }
         .navigationTitle("B — Breathing")
         .navigationBarTitleDisplayMode(.large)
-        .navigationBarBackButtonHidden(true)
         .swipeBackEnabled()
     }
 }
@@ -544,7 +538,6 @@ struct CirculationView: View {
         }
         .navigationTitle("C — Circulation")
         .navigationBarTitleDisplayMode(.large)
-        .navigationBarBackButtonHidden(true)
         .swipeBackEnabled()
     }
 }
@@ -724,7 +717,6 @@ struct DisabilityView: View {
         }
         .navigationTitle("D — Disability")
         .navigationBarTitleDisplayMode(.large)
-        .navigationBarBackButtonHidden(true)
         .swipeBackEnabled()
     }
 }
@@ -910,20 +902,8 @@ struct ExposureView: View {
             }
 
         }
-        .safeAreaInset(edge: .bottom) {
-            Button(action: onZurueck) {
-                Label("Zurück zur Übersicht", systemImage: "checkmark.circle.fill")
-                    .frame(maxWidth: .infinity)
-                    .padding()
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(Color("RDOrange"))
-            .padding([.horizontal, .bottom])
-            .background(.bar)
-        }
         .navigationTitle("E — Exposure")
         .navigationBarTitleDisplayMode(.large)
-        .navigationBarBackButtonHidden(true)
         .swipeBackEnabled()
     }
 }

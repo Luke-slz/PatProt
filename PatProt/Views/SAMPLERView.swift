@@ -253,16 +253,8 @@ struct ReanimationView: View {
                 TextEditor(text: $protokoll.freitext).frame(minHeight: 80)
             } header: { Text("Freitext / Notizen") }
 
-            Section {
-                Button(action: onWeiter) {
-                    Label("Weiter zum Abschluss", systemImage: "arrow.right.circle.fill")
-                        .frame(maxWidth: .infinity).padding(.vertical, 4)
-                }
-                .buttonStyle(.borderedProminent).tint(Color("RDOrange"))
-            }
         }
         .navigationTitle("Reanimationsprotokoll")
         .navigationBarTitleDisplayMode(.large)
-        .navigationBarBackButtonHidden(true)
     }
 }

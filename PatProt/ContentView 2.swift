@@ -128,6 +128,9 @@ struct iPhoneContentView: View {
                     ExposureView(protokoll: protokoll) {
                         path.removeAll { [.airway,.breathing,.circulation,.disability,.exposure].contains($0) }
                     }
+                    .safeAreaInset(edge: .bottom) {
+                        WeiterButton { path = [.menu, .sampler] }
+                    }
                 case .sampler:
                     SAMPLERView(befund: $protokoll.sampler,
                                 medikamentFotos: $protokoll.medikamentFotos) { path.removeLast() }
@@ -167,6 +170,9 @@ struct iPhoneContentView: View {
                         }
                 case .uebergabeBefunde:
                     UebergabeBefundeView(protokoll: protokoll) { path.removeLast() }
+                        .safeAreaInset(edge: .bottom) {
+                            WeiterButton { path = [.menu, .abschluss] }
+                        }
                 case .abschluss:
                     AbschlussView(protokoll: protokoll, onBack: { path = [] })
                 case .settings:

@@ -24,7 +24,7 @@ struct MassnahmenView: View {
                 CheckboxRow("Cervikalstütze / HWS-Stabilisierung", isOn: $befund.cervikalStuetze)
                 CheckboxRow("Absaugung", isOn: $befund.absaugung)
                 CheckboxRow("Guedel-Tubus (OPA)", isOn: $befund.guedelTubus)
-                CheckboxRow("Wendl-Tubus (NPA)",  isOn: $befund.wendlTubus)
+                CheckboxRow("Wendel-Tubus (NPA)",  isOn: $befund.wendlTubus)
                 CheckboxRow("Sauerstoffgabe", isOn: $befund.sauerstoffgabe)
                 if befund.sauerstoffgabe {
                     HStack {
@@ -260,17 +260,5 @@ struct MassnahmenView: View {
         .keyboardDismissToolbar()
         .navigationTitle("Maßnahmen")
         .navigationBarTitleDisplayMode(.large)
-        .navigationBarBackButtonHidden(true)
-        .safeAreaInset(edge: .bottom) {
-            Button(action: onBack) {
-                Label("Zurück zur Übersicht", systemImage: "checkmark.circle.fill")
-                    .frame(maxWidth: .infinity)
-                    .padding()
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(Color("RDOrange"))
-            .padding([.horizontal, .bottom])
-            .background(.bar)
-        }
     }
 }

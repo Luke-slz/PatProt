@@ -50,18 +50,6 @@ struct MedikamenteView: View {
         }
         .navigationTitle("Medikamente")
         .navigationBarTitleDisplayMode(.large)
-        .navigationBarBackButtonHidden(true)
-        .safeAreaInset(edge: .bottom) {
-            Button(action: onBack) {
-                Label("Zurück zur Übersicht", systemImage: "checkmark.circle.fill")
-                    .frame(maxWidth: .infinity)
-                    .padding()
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(Color("RDOrange"))
-            .padding([.horizontal, .bottom])
-            .background(.bar)
-        }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 EditButton()
