@@ -516,7 +516,22 @@ struct DINPDFGenerator {
         }
         y += CGFloat(5)*rowH
 
-        // SAMPLER — immer alle 7 Zeilen anzeigen
+        // SAMPLER — immer alle 8 Zeilen anzeigen
+        let letztesMahlText: String = {
+            if p.sampler.letztesMahlUnbekannt { return "Unbekannt" }
+            let fmt = DateFormatter()
+            fmt.dateFormat = "HH:mm"
+            let was = p.sampler.letztesMahl.isEmpty ? "–" : p.sampler.letztesMahl
+            if let zeit = p.sampler.letztesMahlZeit {
+                return "\(was) · \(fmt.string(from: zeit)) Uhr"
+            }
+            return was
+        }()
+        let schwangerschaftText: String = {
+            guard p.sampler.schwangerschaft else { return "Nein" }
+            return p.sampler.schwangerschaftSSW == 0 ? "Ja – SSW unbekannt"
+                                                     : "Ja – SSW \(p.sampler.schwangerschaftSSW)"
+        }()
         let samplerAllRows: [(String, String)] = [
             ("S – Symptome",       p.sampler.symptome),
             ("A – Allergien",      p.sampler.allergien),
@@ -524,9 +539,10 @@ struct DINPDFGenerator {
                                     ? p.sampler.medikamente
                                     : "Medikamentenplan: Foto-Anhang (S. 3ff.)"),
             ("P – Vorgeschichte",  p.sampler.patientenVorgeschichte),
-            ("L – Letztes Essen",  p.sampler.letztesMahl),
+            ("L – Letztes Essen",  letztesMahlText),
             ("E – Ereignis",       p.sampler.ereignis),
             ("R – Risikofaktoren", p.sampler.risikofaktoren),
+            ("Schwangerschaft",    schwangerschaftText),
         ]
         for (label, value) in samplerAllRows {
             field(label, value, x:lx, y:y, w:rx-lx, h:11, lw:85)
