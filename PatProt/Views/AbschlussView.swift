@@ -68,6 +68,31 @@ struct AbschlussView: View {
                 Label("Übergabe-Messwerte", systemImage: "waveform.path.ecg")
             }
 
+            // Verlaufstrend — nur wenn ≥2 Verlaufs-Messungen
+            if protokoll.verlaufMessungen.count >= 2,
+               let ersteMsg = protokoll.verlaufMessungen.sorted(by: { $0.zeitpunkt < $1.zeitpunkt }).first,
+               let letzteMsg = protokoll.verlaufMessungen.sorted(by: { $0.zeitpunkt < $1.zeitpunkt }).last {
+                Section {
+                    trendRow("Puls",  ersteMsg.puls,      letzteMsg.puls,      "/min", normal: 60...100)
+                    trendRow("SpO₂",  ersteMsg.spo2,      letzteMsg.spo2,      "%",    normal: 95...100)
+                    trendRow("GCS",   ersteMsg.gcsGesamt, letzteMsg.gcsGesamt, "",     normal: 13...15)
+                    if let es = ersteMsg.blutdruckSys, let ed = ersteMsg.blutdruckDia,
+                       let ls = letzteMsg.blutdruckSys, let ld = letzteMsg.blutdruckDia {
+                        let pfeil = ls > es ? "↑" : ls < es ? "↓" : "→"
+                        let farbe: Color = (100...140).contains(ls) ? .green : .red
+                        HStack {
+                            Text("RR").foregroundColor(.secondary).font(.subheadline)
+                            Spacer()
+                            Text("\(es)/\(ed) \(pfeil) \(ls)/\(ld) mmHg")
+                                .font(.subheadline.monospacedDigit())
+                                .foregroundColor(farbe)
+                        }
+                    }
+                } header: {
+                    Label("Verlaufstrend (Anfang → Aktuell)", systemImage: "waveform.path.ecg")
+                }
+            }
+
             // Transportziel
             Section {
                 TextField("Rettungsmittel / Kennung (z.B. RTW 10/83-2)", text: $protokoll.uebergabeAn)
@@ -293,6 +318,21 @@ struct AbschlussView: View {
         }
         protokoll.reset()
         onBack()
+    }
+
+    @ViewBuilder
+    private func trendRow(_ label: String, _ erst: Int?, _ letzt: Int?, _ einheit: String, normal: ClosedRange<Int>) -> some View {
+        if let e = erst, let l = letzt {
+            let pfeil = l > e ? "↑" : l < e ? "↓" : "→"
+            let farbe: Color = normal.contains(l) ? .green : .red
+            HStack {
+                Text(label).foregroundColor(.secondary).font(.subheadline)
+                Spacer()
+                Text("\(e) \(pfeil) \(l) \(einheit)")
+                    .font(.subheadline.monospacedDigit())
+                    .foregroundColor(farbe)
+            }
+        }
     }
 }
 
