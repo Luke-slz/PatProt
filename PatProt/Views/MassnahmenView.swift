@@ -217,10 +217,7 @@ struct MassnahmenView: View {
             Section {
                 CheckboxRow("Tourniquet", isOn: $befund.tourniquet)
                 if befund.tourniquet {
-                    DatePicker("Tourniquet Zeit", selection: Binding(
-                        get: { befund.tourniquetZeit ?? Date() },
-                        set: { befund.tourniquetZeit = $0 }
-                    ), displayedComponents: .hourAndMinute)
+                    ZeitFeld(label: "Tourniquet Zeit", datum: $befund.tourniquetZeit)
                 }
                 CheckboxRow("Wärmeerhalt", isOn: $befund.waermeerhalt)
                 CheckboxRow("Kühlung", isOn: $befund.kuehlung)
