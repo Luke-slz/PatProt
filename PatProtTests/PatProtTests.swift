@@ -255,4 +255,16 @@ struct PatProtTests {
         #expect(p.uebergabeBefunde.gcsAugen == 2)
     }
 
+    @Test func notfallgeschehenHatManvEigeneSK() {
+        let n = NotfallgeschehenBefund()
+        #expect(n.manvEigeneSK == "")
+    }
+
+    @Test func massnahmenHatMaschinelleBeatmungFelder() {
+        let m = MassnahmenBefund()
+        #expect(m.maschinelleBeatmung == false)
+        #expect(m.tidalvolumen == "")
+        #expect(m.peep == "")
+    }
+
 }

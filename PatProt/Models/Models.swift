@@ -674,6 +674,11 @@ struct MassnahmenBefund: Codable {
     var sauerstoffLitMin: String = ""
     var maskenbeatmung: Bool = false
     var maskenbeatmungUnmoeglich: Bool = false
+    var maschinelleBeatmung:    Bool   = false
+    var tidalvolumen:           String = ""
+    var peep:                   String = ""
+    var fio2:                   String = ""
+    var beatmungsfrequenzMasch: String = ""
     var supraglottisch: Bool = false
     var supraglottischTyp: String = ""
     var supraglottischGr: String = ""
@@ -790,6 +795,7 @@ struct NotfallgeschehenBefund: Codable {
     var manvVerstorben: Int = 0 // T    — Schwarz— verstorben
     var manvLagemeldung: String = ""
     var manvNachforderung: String = ""
+    var manvEigeneSK: String = ""
 
     // Neue Felder
     var unfallhergangAuswahl: [String] = []
