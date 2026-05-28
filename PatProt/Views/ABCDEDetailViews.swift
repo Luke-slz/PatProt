@@ -84,6 +84,7 @@ struct StatusPickerView: View {
 
 struct AirwayView: View {
     @Binding var befund: AirwayBefund
+    var massnahmen: MassnahmenBefund
     var onZurueck: () -> Void
 
     let massnahmenOptionen = ["Kopf überstrecken", "Mundinspektion", "Absaugen", "Stabile Seitenlage", "Esmarch-Handgriff"]
@@ -115,6 +116,33 @@ struct AirwayView: View {
                     .font(.caption).foregroundColor(.secondary)
             }
 
+            let airwayMassnahmen: [String] = {
+                var items: [String] = []
+                if massnahmen.atemwegFreimachen { items.append("Atemweg freimachen") }
+                if massnahmen.cervikalStuetze   { items.append("Cervikalstütze") }
+                if massnahmen.absaugung         { items.append("Absaugung") }
+                if massnahmen.guedelTubus       { items.append("Guedel-Tubus (OPA)") }
+                if massnahmen.wendlTubus        { items.append("Wendl-Tubus (NPA)") }
+                if massnahmen.supraglottisch    {
+                    let t = massnahmen.supraglottischTyp
+                    items.append("Supraglottischer AW\(t.isEmpty ? "" : " (\(t))")")
+                }
+                if massnahmen.atemwegErschwert  { items.append("Erschwerter Atemweg") }
+                if massnahmen.heimlich          { items.append("Heimlich-Manöver") }
+                return items
+            }()
+            if !airwayMassnahmen.isEmpty {
+                Section {
+                    ForEach(airwayMassnahmen, id: \.self) { item in
+                        Label(item, systemImage: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                            .font(.subheadline)
+                    }
+                } header: {
+                    Label("Dokumentierte Maßnahmen", systemImage: "cross.fill")
+                }
+            }
+
         }
         .safeAreaInset(edge: .bottom) {
             Button(action: onZurueck) {
@@ -138,6 +166,7 @@ struct AirwayView: View {
 
 struct BreathingView: View {
     @Binding var befund: BreathingBefund
+    var massnahmen: MassnahmenBefund
     var onZurueck: () -> Void
 
     @State private var andereAtemgeraeusche: String = ""
@@ -263,6 +292,32 @@ struct BreathingView: View {
                     .foregroundColor(.secondary)
             } header: { Text("Freitext / Notizen") }
 
+            let breathingMassnahmen: [String] = {
+                var items: [String] = []
+                if massnahmen.sauerstoffgabe {
+                    let l = massnahmen.sauerstoffLitMin
+                    items.append("O₂\(l.isEmpty ? "" : " \(l) l/min")")
+                }
+                if massnahmen.maskenbeatmung      { items.append("Maskenbeatmung") }
+                if massnahmen.maschinelleBeatmung { items.append("Maschinelle Beatmung") }
+                if massnahmen.cpap {
+                    let p = massnahmen.cpapMbar
+                    items.append("CPAP\(p.isEmpty ? "" : " \(p) mbar")")
+                }
+                return items
+            }()
+            if !breathingMassnahmen.isEmpty {
+                Section {
+                    ForEach(breathingMassnahmen, id: \.self) { item in
+                        Label(item, systemImage: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                            .font(.subheadline)
+                    }
+                } header: {
+                    Label("Dokumentierte Maßnahmen", systemImage: "cross.fill")
+                }
+            }
+
         }
         .safeAreaInset(edge: .bottom) {
             Button(action: onZurueck) {
@@ -286,6 +341,7 @@ struct BreathingView: View {
 
 struct CirculationView: View {
     @Binding var befund: CirculationBefund
+    var massnahmen: MassnahmenBefund
     var onZurueck: () -> Void
 
     @State private var zeigePulsNumpad = false
@@ -447,6 +503,33 @@ struct CirculationView: View {
                     .foregroundColor(.secondary)
             } header: { Text("Freitext / Notizen") }
 
+            let circMassnahmen: [String] = {
+                var items: [String] = []
+                if massnahmen.peripherVenoes {
+                    let o = massnahmen.peripherVenoesOrt
+                    items.append("Peripher-venöser Zugang\(o.isEmpty ? "" : " (\(o))")")
+                }
+                if massnahmen.intraossaer {
+                    let o = massnahmen.intraossaerOrt
+                    items.append("Intraossärer Zugang\(o.isEmpty ? "" : " (\(o))")")
+                }
+                if massnahmen.defibrillation  { items.append("Defibrillation") }
+                if massnahmen.kardioversion   { items.append("Kardioversion") }
+                if massnahmen.tourniquet      { items.append("Tourniquet") }
+                return items
+            }()
+            if !circMassnahmen.isEmpty {
+                Section {
+                    ForEach(circMassnahmen, id: \.self) { item in
+                        Label(item, systemImage: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                            .font(.subheadline)
+                    }
+                } header: {
+                    Label("Dokumentierte Maßnahmen", systemImage: "cross.fill")
+                }
+            }
+
         }
         .safeAreaInset(edge: .bottom) {
             Button(action: onZurueck) {
@@ -470,6 +553,7 @@ struct CirculationView: View {
 
 struct DisabilityView: View {
     @Binding var befund: DisabilityBefund
+    var massnahmen: MassnahmenBefund
     var onZurueck: () -> Void
     @State private var zeigeBzNumpad = false
 
@@ -606,6 +690,25 @@ struct DisabilityView: View {
                     .font(.caption2)
                     .foregroundColor(.secondary)
             } header: { Text("Freitext / Notizen") }
+
+            let disabilityMassnahmen: [String] = {
+                var items: [String] = []
+                if massnahmen.monBz              { items.append("BZ-Monitoring") }
+                if massnahmen.monEkg             { items.append("EKG-Monitoring") }
+                if massnahmen.krisenintervention { items.append("Krisenintervention") }
+                return items
+            }()
+            if !disabilityMassnahmen.isEmpty {
+                Section {
+                    ForEach(disabilityMassnahmen, id: \.self) { item in
+                        Label(item, systemImage: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                            .font(.subheadline)
+                    }
+                } header: {
+                    Label("Dokumentierte Maßnahmen", systemImage: "cross.fill")
+                }
+            }
 
         }
         .safeAreaInset(edge: .bottom) {
@@ -782,6 +885,29 @@ struct ExposureView: View {
                     .font(.caption2)
                     .foregroundColor(.secondary)
             } header: { Text("Freitext / Notizen") }
+
+            let exposureMassnahmen: [String] = {
+                let m = protokoll.massnahmen
+                var items: [String] = []
+                if m.kuehlung               { items.append("Kühlung") }
+                if m.waermeerhalt           { items.append("Wärmeerhalt") }
+                if m.verband                { items.append("Verband") }
+                if m.beckenschlinge         { items.append("Beckenschlinge") }
+                if m.extremitaetenschienung { items.append("Extremitätenschienung") }
+                if m.vakuummatratze         { items.append("Vakuummatratze") }
+                return items
+            }()
+            if !exposureMassnahmen.isEmpty {
+                Section {
+                    ForEach(exposureMassnahmen, id: \.self) { item in
+                        Label(item, systemImage: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                            .font(.subheadline)
+                    }
+                } header: {
+                    Label("Dokumentierte Maßnahmen", systemImage: "cross.fill")
+                }
+            }
 
         }
         .safeAreaInset(edge: .bottom) {

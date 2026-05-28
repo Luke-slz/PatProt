@@ -330,19 +330,19 @@ struct iPadMainView: View {
             }
         case .airway:
             NavigationStack {
-                AirwayView(befund: $protokoll.airway) { selectedSection = .breathing }
+                AirwayView(befund: $protokoll.airway, massnahmen: protokoll.massnahmen) { selectedSection = .breathing }
             }
         case .breathing:
             NavigationStack {
-                BreathingView(befund: $protokoll.breathing) { selectedSection = .circulation }
+                BreathingView(befund: $protokoll.breathing, massnahmen: protokoll.massnahmen) { selectedSection = .circulation }
             }
         case .circulation:
             NavigationStack {
-                CirculationView(befund: $protokoll.circulation) { selectedSection = .disability }
+                CirculationView(befund: $protokoll.circulation, massnahmen: protokoll.massnahmen) { selectedSection = .disability }
             }
         case .disability:
             NavigationStack {
-                DisabilityView(befund: $protokoll.disability) { selectedSection = .exposure }
+                DisabilityView(befund: $protokoll.disability, massnahmen: protokoll.massnahmen) { selectedSection = .exposure }
             }
         case .exposure:
             NavigationStack {
