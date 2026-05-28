@@ -365,6 +365,20 @@ struct DynamischeErweiterungView: View {
 
             if befund.manv {
                 Section {
+                    Picker("Eigene Sichtungskategorie", selection: $befund.manvEigeneSK) {
+                        Text("–").tag("")
+                        Text("SK I – Rot (sofort)").tag("SK I")
+                        Text("SK II – Gelb (aufgeschoben)").tag("SK II")
+                        Text("SK III – Grün (leicht verletzt)").tag("SK III")
+                        Text("SK IV – Blau (ohne Überlebenschance)").tag("SK IV")
+                        Text("T – Schwarz (verstorben)").tag("T")
+                    }
+                    .pickerStyle(.menu)
+                } header: { Label("Eigene Sichtungskategorie", systemImage: "tag.fill") }
+            }
+
+            if befund.manv {
+                Section {
                     TextField("Lagemeldung an Leitstelle", text: $befund.manvLagemeldung, axis: .vertical)
                         .lineLimit(2...5)
                     TextField("Nachgeforderte Kräfte / Mittel", text: $befund.manvNachforderung)

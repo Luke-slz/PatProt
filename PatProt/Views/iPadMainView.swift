@@ -17,6 +17,9 @@ struct iPadMainView: View {
     @State private var showingStart = true
     @State private var zeigeArchiv = false
 
+    @AppStorage("einheitenname") private var einheitenname: String = "First Responder Geesthacht"
+    @AppStorage("startseiteUntertitel") private var startseiteUntertitel: String = "Einsatzprotokollierung First Responder"
+
     enum iPadSection: Hashable {
         case konfiguration
         case einsatzzeiten
@@ -55,10 +58,12 @@ struct iPadMainView: View {
                     Image(systemName: "cross.circle.fill")
                         .font(.system(size: 80))
                         .foregroundColor(Color("RDOrange"))
-                    Text("RD Protokoll")
+                    Text(einheitenname.isEmpty ? "First Responder Geesthacht" : einheitenname)
                         .font(.largeTitle).fontWeight(.bold)
-                    Text("Einsatzprotokollierung Rettungsdienst")
+                        .multilineTextAlignment(.center)
+                    Text(startseiteUntertitel.isEmpty ? "Einsatzprotokollierung First Responder" : startseiteUntertitel)
                         .font(.subheadline).foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
                 }
                 Spacer()
                 VStack(spacing: 14) {
