@@ -32,7 +32,13 @@ struct SAMPLERView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("A — Allergien").font(.subheadline.bold())
                     Text("Bekannte Allergien und Unverträglichkeiten").font(.caption).foregroundColor(.secondary)
-                    TextEditor(text: $befund.allergien).frame(minHeight: 60)
+                    Toggle("Unbekannt", isOn: $befund.allergienUnbekannt)
+                        .onChange(of: befund.allergienUnbekannt) { _, isUnknown in
+                            if isUnknown { befund.allergien = "" }
+                        }
+                    if !befund.allergienUnbekannt {
+                        TextEditor(text: $befund.allergien).frame(minHeight: 60)
+                    }
                     Text("→ PDF S. 1 · SAMPLER · A").font(.caption2).foregroundColor(.secondary)
                 }
             }
@@ -40,8 +46,14 @@ struct SAMPLERView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("M — Medikamente").font(.subheadline.bold())
                     Text("Aktuelle Medikation (Text und/oder Foto)").font(.caption).foregroundColor(.secondary)
-                    TextField("z.B. Metoprolol 50mg, ASS 100mg", text: $befund.medikamente, axis: .vertical)
-                        .lineLimit(3...6)
+                    Toggle("Unbekannt", isOn: $befund.medikamenteUnbekannt)
+                        .onChange(of: befund.medikamenteUnbekannt) { _, isUnknown in
+                            if isUnknown { befund.medikamente = "" }
+                        }
+                    if !befund.medikamenteUnbekannt {
+                        TextField("z.B. Metoprolol 50mg, ASS 100mg", text: $befund.medikamente, axis: .vertical)
+                            .lineLimit(3...6)
+                    }
                     if let fehler = scanFehler {
                         Text(fehler).font(.caption).foregroundColor(.red)
                     }
@@ -71,7 +83,13 @@ struct SAMPLERView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("P — Patientenvorgeschichte").font(.subheadline.bold())
                     Text("Relevante Vorerkrankungen und Operationen").font(.caption).foregroundColor(.secondary)
-                    TextEditor(text: $befund.patientenVorgeschichte).frame(minHeight: 70)
+                    Toggle("Unbekannt", isOn: $befund.patientenVorgeschichteUnbekannt)
+                        .onChange(of: befund.patientenVorgeschichteUnbekannt) { _, isUnknown in
+                            if isUnknown { befund.patientenVorgeschichte = "" }
+                        }
+                    if !befund.patientenVorgeschichteUnbekannt {
+                        TextEditor(text: $befund.patientenVorgeschichte).frame(minHeight: 70)
+                    }
                     Text("→ PDF S. 1 · SAMPLER · P").font(.caption2).foregroundColor(.secondary)
                 }
             }
@@ -87,6 +105,36 @@ struct SAMPLERView: View {
                         ZeitFeld(label: "Uhrzeit", datum: $befund.letztesMahlZeit)
                     }
                     TextField("z.B. Brot und Kaffee", text: $befund.letztesMahl)
+                    Text("→ PDF S. 1 · SAMPLER · L").font(.caption2).foregroundColor(.secondary)
+                }
+            }
+            Section {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("L — Letzter Stuhlgang").font(.subheadline.bold())
+                    Text("Wann zuletzt Stuhlgang").font(.caption).foregroundColor(.secondary)
+                    Toggle("Unbekannt", isOn: $befund.letzterStuhlgangUnbekannt)
+                        .onChange(of: befund.letzterStuhlgangUnbekannt) { _, isUnknown in
+                            if isUnknown { befund.letzterStuhlgangZeit = nil }
+                        }
+                    if !befund.letzterStuhlgangUnbekannt {
+                        ZeitFeld(label: "Uhrzeit", datum: $befund.letzterStuhlgangZeit)
+                    }
+                    TextField("Freitext", text: $befund.letzterStuhlgang)
+                    Text("→ PDF S. 1 · SAMPLER · L").font(.caption2).foregroundColor(.secondary)
+                }
+            }
+            Section {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("L — Letzte Regelblutung").font(.subheadline.bold())
+                    Text("Wann letzte Regelblutung").font(.caption).foregroundColor(.secondary)
+                    Toggle("Unbekannt", isOn: $befund.letzteRegelblutungUnbekannt)
+                        .onChange(of: befund.letzteRegelblutungUnbekannt) { _, isUnknown in
+                            if isUnknown { befund.letzteRegelblutungZeit = nil }
+                        }
+                    if !befund.letzteRegelblutungUnbekannt {
+                        ZeitFeld(label: "Uhrzeit", datum: $befund.letzteRegelblutungZeit)
+                    }
+                    TextField("Freitext", text: $befund.letzteRegelblutung)
                     Text("→ PDF S. 1 · SAMPLER · L").font(.caption2).foregroundColor(.secondary)
                 }
             }
