@@ -232,9 +232,9 @@ struct UebergabeBefundeView: View {
                         .foregroundColor(.secondary)
                     Spacer()
                 }
-                GCSStepper(titel: "Augen (E)", wert: $protokoll.uebergabeBefunde.gcsAugen, min: 1, max: 4)
-                GCSStepper(titel: "Verbal (V)", wert: $protokoll.uebergabeBefunde.gcsVerbal, min: 1, max: 5)
-                GCSStepper(titel: "Motorik (M)", wert: $protokoll.uebergabeBefunde.gcsMotor, min: 1, max: 6)
+                GCSStepper(titel: "Augen (E)", wert: $protokoll.uebergabeBefunde.gcsAugen, min: 1, max: 4, labelFor: labelForGCSAugen)
+                GCSStepper(titel: "Verbal (V)", wert: $protokoll.uebergabeBefunde.gcsVerbal, min: 1, max: 5, labelFor: labelForGCSVerbal)
+                GCSStepper(titel: "Motorik (M)", wert: $protokoll.uebergabeBefunde.gcsMotor, min: 1, max: 6, labelFor: labelForGCSMotor)
                 HStack {
                     Text("Übergabe gesamt:")
                     Spacer()

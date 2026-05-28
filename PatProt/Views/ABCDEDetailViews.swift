@@ -506,45 +506,9 @@ struct DisabilityView: View {
                         .foregroundColor(gcsBg == .clear ? .primary : (befund.gcsGesamt >= 13 ? Color.green : (befund.gcsGesamt >= 9 ? Color.orange : Color.red)))
                         .padding(.bottom, 4)
 
-                    HStack {
-                        Text("Augen öffnen (E)").font(.subheadline).foregroundColor(.secondary)
-                        Spacer()
-                        Menu {
-                            Button("Spontan (4)") { befund.gcsAugen = 4 }
-                            Button("Auf Ansprache (3)") { befund.gcsAugen = 3 }
-                            Button("Auf Schmerz (2)") { befund.gcsAugen = 2 }
-                            Button("Keine Reaktion (1)") { befund.gcsAugen = 1 }
-                        } label: {
-                            Text(labelForGCSAugen(befund.gcsAugen)).font(.subheadline)
-                        }
-                    }
-                    HStack {
-                        Text("Verbale Reaktion (V)").font(.subheadline).foregroundColor(.secondary)
-                        Spacer()
-                        Menu {
-                            Button("Orientiert (5)") { befund.gcsVerbal = 5 }
-                            Button("Verwirrt (4)") { befund.gcsVerbal = 4 }
-                            Button("Unangemessene Worte (3)") { befund.gcsVerbal = 3 }
-                            Button("Unverständliche Laute (2)") { befund.gcsVerbal = 2 }
-                            Button("Keine Reaktion (1)") { befund.gcsVerbal = 1 }
-                        } label: {
-                            Text(labelForGCSVerbal(befund.gcsVerbal)).font(.subheadline)
-                        }
-                    }
-                    HStack {
-                        Text("Motorische Reaktion (M)").font(.subheadline).foregroundColor(.secondary)
-                        Spacer()
-                        Menu {
-                            Button("Folgt Aufforderungen (6)") { befund.gcsMotor = 6 }
-                            Button("Gezielte Schmerzabwehr (5)") { befund.gcsMotor = 5 }
-                            Button("Beugesynergismen (4)") { befund.gcsMotor = 4 }
-                            Button("Strecksynergismen (3)") { befund.gcsMotor = 3 }
-                            Button("Auf Schmerz verzieht (2)") { befund.gcsMotor = 2 }
-                            Button("Keine Reaktion (1)") { befund.gcsMotor = 1 }
-                        } label: {
-                            Text(labelForGCSMotor(befund.gcsMotor)).font(.subheadline)
-                        }
-                    }
+                    GCSStepper(titel: "Augen öffnen (E)",           wert: $befund.gcsAugen,  min: 1, max: 4, labelFor: labelForGCSAugen)
+                    GCSStepper(titel: "Verbale Reaktion (V)",        wert: $befund.gcsVerbal, min: 1, max: 5, labelFor: labelForGCSVerbal)
+                    GCSStepper(titel: "Motorische Reaktion (M)",     wert: $befund.gcsMotor,  min: 1, max: 6, labelFor: labelForGCSMotor)
                 }
                 .padding(.vertical, 4)
             } header: { Label("Glasgow Coma Scale", systemImage: "brain.head.profile") }
@@ -662,7 +626,7 @@ struct DisabilityView: View {
     }
 }
 
-fileprivate func labelForGCSAugen(_ score: Int) -> String {
+func labelForGCSAugen(_ score: Int) -> String {
     switch score {
     case 4: return "Spontan (4)"
     case 3: return "Auf Ansprache (3)"
@@ -672,7 +636,7 @@ fileprivate func labelForGCSAugen(_ score: Int) -> String {
     }
 }
 
-fileprivate func labelForGCSVerbal(_ score: Int) -> String {
+func labelForGCSVerbal(_ score: Int) -> String {
     switch score {
     case 5: return "Orientiert (5)"
     case 4: return "Verwirrt (4)"
@@ -683,7 +647,7 @@ fileprivate func labelForGCSVerbal(_ score: Int) -> String {
     }
 }
 
-fileprivate func labelForGCSMotor(_ score: Int) -> String {
+func labelForGCSMotor(_ score: Int) -> String {
     switch score {
     case 6: return "Folgt Aufforderungen (6)"
     case 5: return "Gezielte Schmerzabwehr (5)"
@@ -700,14 +664,23 @@ struct GCSStepper: View {
     @Binding var wert: Int
     let min: Int
     let max: Int
+    let labelFor: (Int) -> String
 
     var body: some View {
-        HStack {
-            Text(titel).font(.subheadline).foregroundColor(.secondary)
-            Spacer()
-            Stepper("\(wert)", value: $wert, in: min...max)
-                .labelsHidden()
-            Text("\(wert)").frame(width: 24).font(.subheadline.monospacedDigit())
+        VStack(alignment: .leading, spacing: 2) {
+            HStack {
+                Text(titel).font(.subheadline).foregroundColor(.secondary)
+                Spacer()
+                Stepper(value: $wert, in: min...max) {
+                    Text("\(wert)")
+                        .font(.subheadline.monospacedDigit())
+                        .frame(minWidth: 24, alignment: .trailing)
+                }
+            }
+            Text(labelFor(wert))
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding(.leading, 2)
         }
     }
 }
