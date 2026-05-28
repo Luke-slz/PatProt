@@ -14,6 +14,10 @@ struct SettingsView: View {
     @State private var zeigeFahrzeugBearbeiten = false
     @State private var neuerName = ""
     @State private var neueQualifikation: Qualifikation = .rettungssanitaeter
+    @State private var zeigePersonalBearbeiten = false
+    @State private var bearbeitungsPersonIndex: Int? = nil
+    @State private var bearbeitungsPersonName = ""
+    @State private var bearbeitungsPersonQualifikation: Qualifikation = .rettungssanitaeter
     @State private var neuesFahrzeug = ""
     @State private var zuBearbeitenderIndex: Int? = nil
     @State private var bearbeitungsName = ""
@@ -68,15 +72,26 @@ struct SettingsView: View {
 
             // Personal
             Section {
-                ForEach(personal, id: \.self) { eintrag in
-                    HStack {
-                        Label(eintrag.name, systemImage: "person")
-                            .foregroundStyle(.primary)
-                        Spacer()
-                        Text(eintrag.qualifikation.rawValue)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                ForEach(Array(personal.enumerated()), id: \.offset) { index, eintrag in
+                    Button {
+                        bearbeitungsPersonIndex = index
+                        bearbeitungsPersonName = eintrag.name
+                        bearbeitungsPersonQualifikation = eintrag.qualifikation
+                        zeigePersonalBearbeiten = true
+                    } label: {
+                        HStack {
+                            Label(eintrag.name, systemImage: "person")
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            Text(eintrag.qualifikation.rawValue)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Image(systemName: "pencil")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
+                    .buttonStyle(.plain)
                 }
                 .onDelete { indexSet in
                     var liste = personal
@@ -93,7 +108,7 @@ struct SettingsView: View {
             } header: {
                 Label("Gespeichertes Personal", systemImage: "person.2")
             } footer: {
-                Text("Namen werden beim Ausfüllen der Besatzung zur Auswahl angeboten. Mit Wischgeste löschen.")
+                Text("Antippen zum Bearbeiten. Wischgeste zum Löschen.")
                     .font(.footnote).foregroundStyle(.secondary)
             }
 
@@ -187,6 +202,48 @@ struct SettingsView: View {
                     }
                     ToolbarItem(placement: .cancellationAction) {
                         Button("Abbrechen") { zeigePersonalHinzufuegen = false }
+                    }
+                }
+            }
+            .presentationDetents([.medium])
+        }
+        .sheet(isPresented: $zeigePersonalBearbeiten) {
+            NavigationStack {
+                Form {
+                    Section("Name") {
+                        TextField("Name", text: $bearbeitungsPersonName)
+                    }
+                    Section("Qualifikation") {
+                        Picker("Qualifikation", selection: $bearbeitungsPersonQualifikation) {
+                            ForEach(Qualifikation.allCases, id: \.self) { q in
+                                Text(q.rawValue).tag(q)
+                            }
+                        }
+                        .pickerStyle(.inline)
+                        .labelsHidden()
+                    }
+                }
+                .navigationTitle("Person bearbeiten")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Speichern") {
+                            let name = bearbeitungsPersonName.trimmingCharacters(in: .whitespaces)
+                            guard !name.isEmpty, let idx = bearbeitungsPersonIndex else { return }
+                            var liste = personal
+                            guard idx < liste.count else { return }
+                            liste[idx] = PersonalEintrag(name: name, qualifikation: bearbeitungsPersonQualifikation)
+                            personalSpeichern(liste)
+                            zeigePersonalBearbeiten = false
+                            bearbeitungsPersonIndex = nil
+                        }
+                        .disabled(bearbeitungsPersonName.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Abbrechen") {
+                            zeigePersonalBearbeiten = false
+                            bearbeitungsPersonIndex = nil
+                        }
                     }
                 }
             }
