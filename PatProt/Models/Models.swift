@@ -1106,6 +1106,15 @@ extension SINNHAFTBefund {
         if m.beckenschlinge     { massnahmenList.append("Beckenschlinge") }
         if m.extremitaetenschienung { massnahmenList.append("Extremitätenschienung") }
         if m.verband            { massnahmenList.append("Verband") }
+        for med in protokoll.medikamente {
+            let fmt = DateFormatter(); fmt.dateFormat = "HH:mm"
+            var parts: [String] = [med.name]
+            if !med.dosis.isEmpty {
+                parts.append("\(med.dosis)\(med.einheit.isEmpty ? "" : " \(med.einheit)")")
+            }
+            if !med.route.isEmpty { parts.append(med.route) }
+            massnahmenList.append("\(parts.joined(separator: " ")) · \(fmt.string(from: med.zeit))")
+        }
         befund.notwendigeMassnahmen = massnahmenList.joined(separator: "\n")
 
         var hintParts: [String] = []

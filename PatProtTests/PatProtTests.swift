@@ -305,4 +305,16 @@ struct PatProtTests {
         #expect(ProtokollVerfasser.rettungssanitaeter.rawValue == "Rettungssanitäter")
     }
 
+    @Test func sinnhaftAutoFillIncludesMedikamente() {
+        let p = EinsatzProtokoll()
+        var med = MedikamentEintrag()
+        med.name = "Midazolam"
+        med.dosis = "2"
+        med.einheit = "mg"
+        med.route = "IV"
+        p.medikamente = [med]
+        let s = SINNHAFTBefund.autoFilled(from: p)
+        #expect(s.notwendigeMassnahmen.contains("Midazolam"))
+    }
+
 }
