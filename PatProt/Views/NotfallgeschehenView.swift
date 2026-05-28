@@ -526,16 +526,12 @@ struct AuffindewerteView: View {
                 .contentShape(Rectangle())
                 .onTapGesture { zeigeRRNumpad = true }
                 .sheet(isPresented: $zeigeRRNumpad) {
-                    NumpadSheet(mode: .bloodPressure,
-                                initial: befund.auffindeRRSys.isEmpty ? "" : "\(befund.auffindeRRSys)/\(befund.auffindeRRDia)") { val in
-                        let parts = val.split(separator: "/")
-                        if parts.count == 2 {
-                            befund.auffindeRRSys = String(parts[0])
-                            befund.auffindeRRDia = String(parts[1])
-                        } else if val.isEmpty {
-                            befund.auffindeRRSys = ""
-                            befund.auffindeRRDia = ""
-                        }
+                    NumpadSheet(
+                        initialSys: befund.auffindeRRSys,
+                        initialDia: befund.auffindeRRDia
+                    ) { sys, dia in
+                        befund.auffindeRRSys = sys
+                        befund.auffindeRRDia = dia
                     }
                 }
 
