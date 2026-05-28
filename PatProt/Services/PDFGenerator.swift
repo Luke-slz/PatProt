@@ -400,7 +400,7 @@ struct DINPDFGenerator {
         }
         if !ng.patientGefunden.isEmpty || ng.manv {
             let beteiligteLabel = ng.manv
-                ? "MANV\(ng.ersteEintreffendeKraft ? " · 1. Eintreffend" : "") · \(ng.anzahlBeteiligte) Bet."
+                ? "MANV\(ng.ersteEintreffendeKraft ? " · 1. Eintreffend" : "") · \(ng.anzahlBeteiligte) Bet.\(ng.manvEigeneSK.isEmpty ? "" : " · \(ng.manvEigeneSK)")"
                 : "\(ng.anzahlBeteiligte) Beteiligter"
             let halbW = (rx - lx) / 2
             field("Pat. vorgef.", ng.patientGefunden, x:lx, y:y, w:halbW, h:11, lw:52)
@@ -1109,6 +1109,7 @@ struct DINPDFGenerator {
             ("Wendl-Tubus (NPA)",  p.massnahmen.wendlTubus),
             ("Sauerstoffgabe",      p.massnahmen.sauerstoffgabe),
             ("Maskenbeatmung",      p.massnahmen.maskenbeatmung),
+            ("Masch. Beatmung",     p.massnahmen.maschinelleBeatmung),
             ("Mask.beat. unmöglich",p.massnahmen.maskenbeatmungUnmoeglich),
             ("EGA supraglottisch",  p.massnahmen.supraglottisch),
             ("Atemweg erschwert",   p.massnahmen.atemwegErschwert),
@@ -1214,6 +1215,17 @@ struct DINPDFGenerator {
         }
         if p.massnahmen.intraossaer && !p.massnahmen.intraossaerOrt.isEmpty {
             maDetails.append(("IO-Zugang", p.massnahmen.intraossaerOrt))
+        }
+        if p.massnahmen.maschinelleBeatmung {
+            let beatTeile: [String] = [
+                p.massnahmen.tidalvolumen.isEmpty ? nil : "TV \(p.massnahmen.tidalvolumen)ml",
+                p.massnahmen.peep.isEmpty         ? nil : "PEEP \(p.massnahmen.peep)cmH₂O",
+                p.massnahmen.fio2.isEmpty         ? nil : "FiO₂ \(p.massnahmen.fio2)%",
+                p.massnahmen.beatmungsfrequenzMasch.isEmpty ? nil : "AF \(p.massnahmen.beatmungsfrequenzMasch)/min",
+            ].compactMap { $0 }
+            if !beatTeile.isEmpty {
+                maDetails.append(("Masch. Beatmung", beatTeile.joined(separator: " · ")))
+            }
         }
         if !p.massnahmen.sauerstoffLitMin.isEmpty { maDetails.append(("O₂ (l/min)", p.massnahmen.sauerstoffLitMin)) }
         if !p.massnahmen.airwaySonstige.isEmpty  { maDetails.append(("Airway sonstige", p.massnahmen.airwaySonstige)) }
