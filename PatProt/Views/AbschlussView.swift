@@ -69,15 +69,16 @@ struct AbschlussView: View {
             }
 
             // Verlaufstrend — nur wenn ≥2 Verlaufs-Messungen
-            if protokoll.verlaufMessungen.count >= 2,
-               let ersteMsg = protokoll.verlaufMessungen.sorted(by: { $0.zeitpunkt < $1.zeitpunkt }).first,
-               let letzteMsg = protokoll.verlaufMessungen.sorted(by: { $0.zeitpunkt < $1.zeitpunkt }).last {
+            let sortedMessungen = protokoll.verlaufMessungen.sorted(by: { $0.zeitpunkt < $1.zeitpunkt })
+            if sortedMessungen.count >= 2,
+               let ersteMessung = sortedMessungen.first,
+               let letzteMessung = sortedMessungen.last {
                 Section {
-                    trendRow("Puls",  ersteMsg.puls,      letzteMsg.puls,      "/min", normal: 60...100)
-                    trendRow("SpO₂",  ersteMsg.spo2,      letzteMsg.spo2,      "%",    normal: 95...100)
-                    trendRow("GCS",   ersteMsg.gcsGesamt, letzteMsg.gcsGesamt, "",     normal: 13...15)
-                    if let es = ersteMsg.blutdruckSys, let ed = ersteMsg.blutdruckDia,
-                       let ls = letzteMsg.blutdruckSys, let ld = letzteMsg.blutdruckDia {
+                    trendRow("Puls",  ersteMessung.puls,      letzteMessung.puls,      "/min", normal: 60...100)
+                    trendRow("SpO₂",  ersteMessung.spo2,      letzteMessung.spo2,      "%",    normal: 95...100)
+                    trendRow("GCS",   ersteMessung.gcsGesamt, letzteMessung.gcsGesamt, "",     normal: 13...15)
+                    if let es = ersteMessung.blutdruckSys, let ed = ersteMessung.blutdruckDia,
+                       let ls = letzteMessung.blutdruckSys, let ld = letzteMessung.blutdruckDia {
                         let pfeil = ls > es ? "↑" : ls < es ? "↓" : "→"
                         let farbe: Color = (100...140).contains(ls) ? .green : .red
                         HStack {
@@ -89,7 +90,7 @@ struct AbschlussView: View {
                         }
                     }
                 } header: {
-                    Label("Verlaufstrend (Anfang → Aktuell)", systemImage: "waveform.path.ecg")
+                    Label("Verlaufstrend (Anfang → Aktuell)", systemImage: "chart.line.uptrend.xyaxis")
                 }
             }
 

@@ -251,7 +251,7 @@ private struct MessungsKarte: View {
                     VitalBadge(label: "GCS", wert: "\(gcs)", farbe: gcsFarbe(gcs))
                 }
                 if let bz = messung.blutzucker {
-                    VitalBadge(label: "BZ", wert: String(format: "%.1f", bz), farbe: .blue)
+                    VitalBadge(label: "BZ", wert: String(format: "%.0f", bz), farbe: .blue)
                 }
                 if let temp = messung.temperatur {
                     VitalBadge(label: "Temp", wert: String(format: "%.1f°C", temp), farbe: .orange)
@@ -420,7 +420,7 @@ struct MessungEingabeSheet: View {
                         ZahlenFeld(label: "RR diast.", text: $rrDia, placeholder: "80")
                     }
                     ZahlenFeld(label: "GCS (3–15)", text: $gcs, placeholder: "z.B. 15")
-                    ZahlenFeld(label: "BZ (mmol/L)", text: $bz, placeholder: "z.B. 5.4", istDezimal: true)
+                    ZahlenFeld(label: "BZ (mg/dL)", text: $bz, placeholder: "z.B. 95", istDezimal: true)
                     ZahlenFeld(label: "Temp (°C)", text: $temp, placeholder: "z.B. 36.8", istDezimal: true)
                 }
 
