@@ -527,6 +527,15 @@ struct SAMPLERBefund: Codable {
     var letztesMahl = ""
     var letztesMahlZeit: Date? = nil
     var letztesMahlUnbekannt: Bool = false
+    var letzterStuhlgang: String = ""
+    var letzterStuhlgangZeit: Date? = nil
+    var letzterStuhlgangUnbekannt: Bool = false
+    var letzteRegelblutung: String = ""
+    var letzteRegelblutungZeit: Date? = nil
+    var letzteRegelblutungUnbekannt: Bool = false
+    var allergienUnbekannt: Bool = false
+    var medikamenteUnbekannt: Bool = false
+    var patientenVorgeschichteUnbekannt: Bool = false
     var ereignis = ""
     var risikofaktoren = ""
     var schwangerschaft: Bool = false
@@ -808,6 +817,13 @@ struct NotfallgeschehenBefund: Codable {
     var verlaufsbemerkungen: String = ""
     var dynamischeErweiterung: String = ""
     var notfallFreitext: String = ""
+    var auffindePuls: String = ""
+    var auffindeSpO2: String = ""
+    var auffindeRRSys: String = ""
+    var auffindeRRDia: String = ""
+    var auffindeAF: String = ""
+    var auffindeBewusstsein: String = ""
+    var auffindeFreitext: String = ""
 
     var manvGesamtSK: Int { manvSK1 + manvSK2 + manvSK3 + manvSK4 + manvVerstorben }
 }

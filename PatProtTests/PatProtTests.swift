@@ -272,4 +272,26 @@ struct PatProtTests {
         #expect(result == "—")
     }
 
+    @Test func samplerBefundHatStuhlgangUndRegelblutung() {
+        let s = SAMPLERBefund()
+        #expect(s.letzterStuhlgang == "")
+        #expect(s.letzterStuhlgangUnbekannt == false)
+        #expect(s.letzteRegelblutung == "")
+        #expect(s.letzteRegelblutungUnbekannt == false)
+    }
+
+    @Test func samplerBefundHatUnbekanntFelder() {
+        let s = SAMPLERBefund()
+        #expect(s.allergienUnbekannt == false)
+        #expect(s.medikamenteUnbekannt == false)
+        #expect(s.patientenVorgeschichteUnbekannt == false)
+    }
+
+    @Test func notfallgeschehenHatAuffindewerte() {
+        let n = NotfallgeschehenBefund()
+        #expect(n.auffindePuls == "")
+        #expect(n.auffindeSpO2 == "")
+        #expect(n.auffindeRRSys == "")
+    }
+
 }
