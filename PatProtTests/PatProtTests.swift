@@ -299,4 +299,10 @@ struct PatProtTests {
         #expect(m.maximaldosis == "")
     }
 
+    @Test func protokollVerfasserHatSechsFaelle() {
+        #expect(ProtokollVerfasser.allCases.count == 6)
+        #expect(ProtokollVerfasser.notfallsanitaeter.rawValue == "Notfallsanitäter")
+        #expect(ProtokollVerfasser.rettungssanitaeter.rawValue == "Rettungssanitäter")
+    }
+
 }

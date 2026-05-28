@@ -50,7 +50,7 @@ struct AbschlussView: View {
                         Text(v.rawValue).tag(v as ProtokollVerfasser)
                     }
                 }
-                .pickerStyle(.segmented)
+                .pickerStyle(.menu)
             } header: {
                 Label("Protokoll geschrieben von", systemImage: "person.text.rectangle")
             }

@@ -91,8 +91,12 @@ struct PersonalEintrag: Codable, Hashable {
 }
 
 enum ProtokollVerfasser: String, CaseIterable, Codable {
-    case notfallsanitaeter = "Notfallsanitäter"
+    case ersthelfer         = "Ersthelfer"
+    case ersthelferE        = "Ersthelfer (E)"
     case rettungssanitaeter = "Rettungssanitäter"
+    case rettungsassistent  = "Rettungsassistent"
+    case notfallsanitaeter  = "Notfallsanitäter"
+    case arzt               = "Arzt"
 }
 
 enum TransportZiel: String, CaseIterable, Codable {

@@ -382,8 +382,12 @@ struct DINPDFGenerator {
             strokeRect(CGRect(x:x,y:titleY,width:w,height:bh))
             txt("EINSATZPROTOKOLL",
                 CGRect(x:x+3,y:titleY+3,width:w-6,height:14), font:f13b, color:colBlue)
-            cb("Notfallsanitäter", p.verfasser == .notfallsanitaeter, x:x+3, y:titleY+19, bs:7, lw:80)
-            cb("Rettungssanitäter", p.verfasser == .rettungssanitaeter, x:x+95, y:titleY+19, bs:7, lw:80)
+            cb("EH",     p.verfasser == .ersthelfer,          x:x+3,   y:titleY+19, bs:7, lw:28)
+            cb("EH-E",   p.verfasser == .ersthelferE,         x:x+45,  y:titleY+19, bs:7, lw:33)
+            cb("RS",     p.verfasser == .rettungssanitaeter,  x:x+95,  y:titleY+19, bs:7, lw:22)
+            cb("RA",     p.verfasser == .rettungsassistent,   x:x+3,   y:titleY+28, bs:7, lw:22)
+            cb("NotSan", p.verfasser == .notfallsanitaeter,   x:x+45,  y:titleY+28, bs:7, lw:40)
+            cb("Arzt",   p.verfasser == .arzt,                x:x+95,  y:titleY+28, bs:7, lw:25)
         }
 
         y = max(rightY, titleY + 36)
