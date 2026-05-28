@@ -202,7 +202,7 @@ struct NumpadSheet: View {
                 Button("Abbrechen") { dismiss() }
             }
         }
-        .presentationDetents([.medium])
+        .presentationDetents(UIDevice.current.userInterfaceIdiom == .pad ? [.height(560)] : [.medium])
         .onAppear {
             switch mode {
             case .bloodPressure:
