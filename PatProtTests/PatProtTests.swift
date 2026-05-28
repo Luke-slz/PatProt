@@ -294,4 +294,9 @@ struct PatProtTests {
         #expect(n.auffindeRRSys == "")
     }
 
+    @Test func medikamentEintragHatMaximaldosis() {
+        let m = MedikamentEintrag()
+        #expect(m.maximaldosis == "")
+    }
+
 }

@@ -1086,7 +1086,7 @@ struct DINPDFGenerator {
             y += 11
             let mTotW = rx - lx
             let mC: [CGFloat] = [mTotW*0.32, mTotW*0.14, mTotW*0.12, mTotW*0.20, mTotW*0.11, mTotW*0.11]
-            let mHdr = ["Medikament","Dosis","Einheit","Applikationsweg","Zeit",""]
+            let mHdr = ["Medikament","Dosis","Einheit","Applikationsweg","Zeit","Max.Dos."]
             fillRect(CGRect(x:lx,y:y,width:mTotW,height:9), vLightB)
             strokeRect(CGRect(x:lx,y:y,width:mTotW,height:9))
             var hx = lx
@@ -1102,7 +1102,7 @@ struct DINPDFGenerator {
                 fillRect(CGRect(x:lx,y:y,width:mTotW,height:medH), bg)
                 strokeRect(CGRect(x:lx,y:y,width:mTotW,height:medH))
                 var mx2 = lx
-                let vals2 = [med.name, med.dosis, med.einheit, med.route, t(med.zeit), ""]
+                let vals2 = [med.name, med.dosis, med.einheit, med.route, t(med.zeit), med.maximaldosis]
                 for (j,val2) in vals2.enumerated() {
                     if j < vals2.count-1 { vline(mx2+mC[j], y, medH) }
                     txt(val2, CGRect(x:mx2+1.5,y:y+1.5,width:mC[j]-3,height:medH-3), font:f7)

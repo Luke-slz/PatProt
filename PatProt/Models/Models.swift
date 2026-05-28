@@ -668,6 +668,7 @@ struct MedikamentEintrag: Codable, Identifiable {
     var einheit: String = "mg"
     var route: String = ""
     var zeit: Date = Date()
+    var maximaldosis: String = ""
 }
 
 // MARK: - Maßnahmen (Sektion 6)

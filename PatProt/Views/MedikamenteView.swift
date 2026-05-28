@@ -81,6 +81,7 @@ private struct MedikamentRow: View {
     let einheiten: [String]
     let routen: [String]
     @State private var zeigeDosisNumpad = false
+    @State private var zeigeMaxDosisNumpad = false
 
     var body: some View {
         Section {
@@ -114,6 +115,19 @@ private struct MedikamentRow: View {
                     }
                 }
                 .pickerStyle(.menu)
+            }
+            HStack(spacing: 8) {
+                Text("Max. Dosis").foregroundColor(.secondary).font(.subheadline)
+                Spacer()
+                Text(med.maximaldosis.isEmpty ? "–" : "\(med.maximaldosis) \(med.einheit)")
+                    .foregroundColor(med.maximaldosis.isEmpty ? .secondary : .primary)
+                    .font(.subheadline)
+                    .contentShape(Rectangle())
+                    .onTapGesture { zeigeMaxDosisNumpad = true }
+                    .sheet(isPresented: $zeigeMaxDosisNumpad) {
+                        NumpadSheet(mode: .decimal(label: "Max. Dosis", unit: med.einheit),
+                                    initial: med.maximaldosis) { val in med.maximaldosis = val }
+                    }
             }
             DatePicker("Uhrzeit", selection: $med.zeit, displayedComponents: .hourAndMinute)
         }
