@@ -527,6 +527,22 @@ struct DINPDFGenerator {
             }
             return was
         }()
+        let letzterStuhlgangText: String = {
+            if p.sampler.letzterStuhlgangUnbekannt { return "Unbekannt" }
+            let fmt = DateFormatter()
+            fmt.dateFormat = "HH:mm"
+            let was = p.sampler.letzterStuhlgang.isEmpty ? "–" : p.sampler.letzterStuhlgang
+            if let zeit = p.sampler.letzterStuhlgangZeit { return "\(was) · \(fmt.string(from: zeit)) Uhr" }
+            return was
+        }()
+        let letzteRegelblutungText: String = {
+            if p.sampler.letzteRegelblutungUnbekannt { return "Unbekannt" }
+            let fmt = DateFormatter()
+            fmt.dateFormat = "HH:mm"
+            let was = p.sampler.letzteRegelblutung.isEmpty ? "–" : p.sampler.letzteRegelblutung
+            if let zeit = p.sampler.letzteRegelblutungZeit { return "\(was) · \(fmt.string(from: zeit)) Uhr" }
+            return was
+        }()
         let schwangerschaftText: String = {
             guard p.sampler.schwangerschaft else { return "Nein" }
             return p.sampler.schwangerschaftSSW == 0 ? "Ja – SSW unbekannt"
@@ -534,18 +550,35 @@ struct DINPDFGenerator {
         }()
         let samplerAllRows: [(String, String)] = [
             ("S – Symptome",       p.sampler.symptome),
-            ("A – Allergien",      p.sampler.allergien),
-            ("M – Medikamente",    p.medikamentFotos.isEmpty
-                                    ? p.sampler.medikamente
-                                    : "Medikamentenplan: Foto-Anhang (S. 3ff.)"),
-            ("P – Vorgeschichte",  p.sampler.patientenVorgeschichte),
+            ("A – Allergien",      p.sampler.allergienUnbekannt ? "Unbekannt" : p.sampler.allergien),
+            ("M – Medikamente",    p.sampler.medikamenteUnbekannt ? "Unbekannt"
+                                    : (p.medikamentFotos.isEmpty
+                                        ? p.sampler.medikamente
+                                        : "Medikamentenplan: Foto-Anhang (S. 3ff.)")),
+            ("P – Vorgeschichte",  p.sampler.patientenVorgeschichteUnbekannt ? "Unbekannt" : p.sampler.patientenVorgeschichte),
             ("L – Letztes Essen",  letztesMahlText),
+            ("L – Letzter Stuhlgang",   letzterStuhlgangText),
+            ("L – Letzte Regelblutung", letzteRegelblutungText),
             ("E – Ereignis",       p.sampler.ereignis),
             ("R – Risikofaktoren", p.sampler.risikofaktoren),
             ("Schwangerschaft",    schwangerschaftText),
         ]
         for (label, value) in samplerAllRows {
             field(label, value, x:lx, y:y, w:rx-lx, h:11, lw:85)
+            y += 11
+        }
+
+        // Auffindewerte — nur wenn mindestens ein Wert gesetzt
+        let auffindeNG = p.notfallGeschehen
+        var auffindeTeile: [String] = []
+        if !auffindeNG.auffindePuls.isEmpty    { auffindeTeile.append("Puls \(auffindeNG.auffindePuls)/min") }
+        if !auffindeNG.auffindeSpO2.isEmpty    { auffindeTeile.append("SpO₂ \(auffindeNG.auffindeSpO2)%") }
+        if !auffindeNG.auffindeRRSys.isEmpty   { auffindeTeile.append("RR \(auffindeNG.auffindeRRSys)/\(auffindeNG.auffindeRRDia)") }
+        if !auffindeNG.auffindeAF.isEmpty      { auffindeTeile.append("AF \(auffindeNG.auffindeAF)/min") }
+        if !auffindeNG.auffindeBewusstsein.isEmpty { auffindeTeile.append("Bew. \(auffindeNG.auffindeBewusstsein)") }
+        if !auffindeTeile.isEmpty {
+            field("Auffindewerte", auffindeTeile.joined(separator: " · "),
+                  x:lx, y:y, w:rx-lx, h:11, lw:70)
             y += 11
         }
 
