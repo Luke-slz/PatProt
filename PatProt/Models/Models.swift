@@ -503,8 +503,12 @@ struct SAMPLERBefund: Codable {
     var medikamente = ""
     var patientenVorgeschichte = ""
     var letztesMahl = ""
+    var letztesMahlZeit: Date = Date()
+    var letztesMahlUnbekannt: Bool = false
     var ereignis = ""
     var risikofaktoren = ""
+    var schwangerschaft: Bool = false
+    var schwangerschaftSSW: Int = 0
 }
 
 // MARK: - Diagnose (Sektion 4 des Formulars)

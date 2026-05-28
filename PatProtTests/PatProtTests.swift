@@ -190,4 +190,15 @@ struct PatProtTests {
         #expect(m.wendlTubus  == false)
     }
 
+    @Test func samplerBefundHatLetztesMahlFelder() {
+        let s = SAMPLERBefund()
+        #expect(s.letztesMahlUnbekannt == false)
+    }
+
+    @Test func samplerBefundHatSchwangerschaft() {
+        let s = SAMPLERBefund()
+        #expect(s.schwangerschaft == false)
+        #expect(s.schwangerschaftSSW == 0)
+    }
+
 }
