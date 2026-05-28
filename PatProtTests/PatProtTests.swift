@@ -209,6 +209,8 @@ struct PatProtTests {
         m.puls         = 72
         m.spo2         = 98
         m.atemFrequenz = 16
+        m.blutzucker   = 120.0
+        m.temperatur   = 36.8
         p.verlaufMessungen = [m]
         p.prefillUebergabeMesswerteAusVerlauf()
         #expect(p.uebergabeMesswerte.rrSys == "120")
@@ -216,6 +218,20 @@ struct PatProtTests {
         #expect(p.uebergabeMesswerte.hf    == "72")
         #expect(p.uebergabeMesswerte.spo2  == "98")
         #expect(p.uebergabeMesswerte.af    == "16")
+        #expect(p.uebergabeMesswerte.bz    == "120")
+        #expect(p.uebergabeMesswerte.temp  == "36.8")
+    }
+
+    @Test func prefillMesswerteUeberschreibtNichtVorhandeneWerte() {
+        let p = EinsatzProtokoll()
+        p.uebergabeMesswerte.rrSys = "110"   // bereits eingetragen
+        var m = VerlaufsMessung()
+        m.blutdruckSys = 120
+        m.spo2         = 98
+        p.verlaufMessungen = [m]
+        p.prefillUebergabeMesswerteAusVerlauf()
+        #expect(p.uebergabeMesswerte.rrSys == "110")   // bleibt unverändert
+        #expect(p.uebergabeMesswerte.spo2  == "98")    // leeres Feld wird gefüllt
     }
 
     @Test func prefillGCSAusDisabilityWennDefault() {
