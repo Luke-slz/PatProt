@@ -267,4 +267,9 @@ struct PatProtTests {
         #expect(m.peep == "")
     }
 
+    @Test func numpadFormatDisplayLeer() {
+        let result = NumpadSheet.formatDisplay(digits: "", mode: .integer(label: "X", unit: "Y"))
+        #expect(result == "—")
+    }
+
 }

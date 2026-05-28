@@ -144,8 +144,7 @@ struct NumpadSheet: View {
             onConfirm(d)
             dismiss()
         default:
-            guard !digits.isEmpty else { return }
-            onConfirm(displayText)
+            onConfirm(digits.isEmpty ? "" : displayText)
             dismiss()
         }
     }
@@ -184,22 +183,14 @@ struct NumpadSheet: View {
 
                 HStack(spacing: 10) {
                     if case .decimal = mode {
-                        NumpadKey(label: ".") { appendDecimalPoint() }
+                        NumpadKey(label: ".", wide: true) { appendDecimalPoint() }
+                        NumpadKey(label: "0", wide: true) { appendDigit("0") }
+                        NumpadKey(label: "⌫", style: .secondary, wide: true) { delete() }
+                        NumpadKey(label: "✓", style: .primary, wide: true) { confirm() }
                     } else {
                         NumpadKey(label: "⌫", style: .secondary) { delete() }
-                    }
-                    NumpadKey(label: "0") { appendDigit("0") }
-                    if case .decimal = mode {
-                        NumpadKey(label: "⌫", style: .secondary) { delete() }
-                    } else {
+                        NumpadKey(label: "0") { appendDigit("0") }
                         NumpadKey(label: "✓", style: .primary) { confirm() }
-                    }
-                }
-
-                if case .decimal = mode {
-                    HStack(spacing: 10) {
-                        NumpadKey(label: "⌫", style: .secondary) { delete() }
-                        NumpadKey(label: "Bestätigen", style: .primary, wide: true) { confirm() }
                     }
                 }
             }
