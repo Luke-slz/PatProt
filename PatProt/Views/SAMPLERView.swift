@@ -80,6 +80,9 @@ struct SAMPLERView: View {
                     Text("L — Letzte Mahlzeit").font(.subheadline.bold())
                     Text("Wann und was zuletzt gegessen/getrunken").font(.caption).foregroundColor(.secondary)
                     Toggle("Unbekannt", isOn: $befund.letztesMahlUnbekannt)
+                        .onChange(of: befund.letztesMahlUnbekannt) { _, isUnknown in
+                            if isUnknown { befund.letztesMahlZeit = nil }
+                        }
                     if !befund.letztesMahlUnbekannt {
                         ZeitFeld(label: "Uhrzeit", datum: $befund.letztesMahlZeit)
                     }
