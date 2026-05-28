@@ -72,9 +72,9 @@ struct SettingsView: View {
 
             // Personal
             Section {
-                ForEach(Array(personal.enumerated()), id: \.offset) { index, eintrag in
+                ForEach(personal, id: \.self) { eintrag in
                     Button {
-                        bearbeitungsPersonIndex = index
+                        bearbeitungsPersonIndex = personal.firstIndex(of: eintrag)
                         bearbeitungsPersonName = eintrag.name
                         bearbeitungsPersonQualifikation = eintrag.qualifikation
                         zeigePersonalBearbeiten = true
