@@ -166,6 +166,28 @@ class EinsatzProtokoll: ObservableObject, Identifiable {
 
     var erstelltAm: Date = Date()
 
+    func prefillUebergabeMesswerteAusVerlauf() {
+        guard let letzte = verlaufMessungen
+            .sorted(by: { $0.zeitpunkt < $1.zeitpunkt }).last else { return }
+        if uebergabeMesswerte.rrSys.isEmpty, let v = letzte.blutdruckSys  { uebergabeMesswerte.rrSys = "\(v)" }
+        if uebergabeMesswerte.rrDia.isEmpty, let v = letzte.blutdruckDia  { uebergabeMesswerte.rrDia = "\(v)" }
+        if uebergabeMesswerte.hf.isEmpty,    let v = letzte.puls          { uebergabeMesswerte.hf    = "\(v)" }
+        if uebergabeMesswerte.spo2.isEmpty,  let v = letzte.spo2          { uebergabeMesswerte.spo2  = "\(v)" }
+        if uebergabeMesswerte.af.isEmpty,    let v = letzte.atemFrequenz  { uebergabeMesswerte.af    = "\(v)" }
+        if uebergabeMesswerte.bz.isEmpty,    let v = letzte.blutzucker    { uebergabeMesswerte.bz    = String(format: "%.0f", v) }
+        if uebergabeMesswerte.temp.isEmpty,  let v = letzte.temperatur    { uebergabeMesswerte.temp  = String(format: "%.1f", v) }
+    }
+
+    func prefillGCSAusDisability() {
+        guard disability.status != .unbewertet else { return }
+        guard uebergabeBefunde.gcsAugen  == 4,
+              uebergabeBefunde.gcsVerbal == 5,
+              uebergabeBefunde.gcsMotor  == 6 else { return }
+        uebergabeBefunde.gcsAugen  = disability.gcsAugen
+        uebergabeBefunde.gcsVerbal = disability.gcsVerbal
+        uebergabeBefunde.gcsMotor  = disability.gcsMotor
+    }
+
     func reset() {
         id = UUID()
         einsatzOrt = EinsatzOrt()

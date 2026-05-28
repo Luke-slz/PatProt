@@ -201,4 +201,42 @@ struct PatProtTests {
         #expect(s.schwangerschaftSSW == 0)
     }
 
+    @Test func prefillFuelltUebergabeMesswerteAusVerlauf() {
+        let p = EinsatzProtokoll()
+        var m = VerlaufsMessung()
+        m.blutdruckSys = 120
+        m.blutdruckDia = 80
+        m.puls         = 72
+        m.spo2         = 98
+        m.atemFrequenz = 16
+        p.verlaufMessungen = [m]
+        p.prefillUebergabeMesswerteAusVerlauf()
+        #expect(p.uebergabeMesswerte.rrSys == "120")
+        #expect(p.uebergabeMesswerte.rrDia == "80")
+        #expect(p.uebergabeMesswerte.hf    == "72")
+        #expect(p.uebergabeMesswerte.spo2  == "98")
+        #expect(p.uebergabeMesswerte.af    == "16")
+    }
+
+    @Test func prefillGCSAusDisabilityWennDefault() {
+        let p = EinsatzProtokoll()
+        p.disability.status    = .nicht_kritisch
+        p.disability.gcsAugen  = 3
+        p.disability.gcsVerbal = 4
+        p.disability.gcsMotor  = 5
+        p.prefillGCSAusDisability()
+        #expect(p.uebergabeBefunde.gcsAugen  == 3)
+        #expect(p.uebergabeBefunde.gcsVerbal == 4)
+        #expect(p.uebergabeBefunde.gcsMotor  == 5)
+    }
+
+    @Test func prefillGCSUeberschreibtNichtManuelleWerte() {
+        let p = EinsatzProtokoll()
+        p.disability.status     = .nicht_kritisch
+        p.disability.gcsAugen   = 3
+        p.uebergabeBefunde.gcsAugen = 2
+        p.prefillGCSAusDisability()
+        #expect(p.uebergabeBefunde.gcsAugen == 2)
+    }
+
 }
