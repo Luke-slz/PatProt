@@ -75,6 +75,23 @@ struct NotfallgeschehenView: View {
             }
 
             Section {
+                NavigationLink {
+                    AuffindewerteView(befund: $befund)
+                } label: {
+                    NfgZeile(
+                        titel: "Auffindewerte",
+                        wert: (befund.auffindePuls.isEmpty && befund.auffindeSpO2.isEmpty
+                               && befund.auffindeRRSys.isEmpty && befund.auffindeBewusstsein.isEmpty)
+                            ? nil
+                            : [befund.auffindePuls.isEmpty ? nil : "Puls \(befund.auffindePuls)",
+                               befund.auffindeSpO2.isEmpty ? nil : "SpO₂ \(befund.auffindeSpO2)%",
+                               befund.auffindeRRSys.isEmpty ? nil : "RR \(befund.auffindeRRSys)/\(befund.auffindeRRDia)"]
+                               .compactMap { $0 }.joined(separator: " · ")
+                    )
+                }
+            }
+
+            Section {
                 Picker("NACA-Score", selection: Binding(
                     get: { befund.nacaScoreWert ?? NacaScore.naca3 },
                     set: { befund.nacaScoreWert = $0 }
@@ -458,5 +475,94 @@ private struct AuswahlSection: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Auffindewerte
+
+struct AuffindewerteView: View {
+    @Binding var befund: NotfallgeschehenBefund
+
+    @State private var zeigePulsNumpad  = false
+    @State private var zeigeSpO2Numpad  = false
+    @State private var zeigeAFNumpad    = false
+    @State private var zeigeRRNumpad    = false
+
+    var body: some View {
+        Form {
+            Section {
+                HStack {
+                    Text("Puls (/min)").foregroundStyle(.secondary)
+                    Spacer()
+                    Text(befund.auffindePuls.isEmpty ? "–" : "\(befund.auffindePuls) /min")
+                        .foregroundStyle(befund.auffindePuls.isEmpty ? Color(.tertiaryLabel) : .primary)
+                }
+                .contentShape(Rectangle())
+                .onTapGesture { zeigePulsNumpad = true }
+                .sheet(isPresented: $zeigePulsNumpad) {
+                    NumpadSheet(mode: .integer(label: "Puls", unit: "/min", maxDigits: 3),
+                                initial: befund.auffindePuls) { val in befund.auffindePuls = val }
+                }
+
+                HStack {
+                    Text("SpO₂ (%)").foregroundStyle(.secondary)
+                    Spacer()
+                    Text(befund.auffindeSpO2.isEmpty ? "–" : "\(befund.auffindeSpO2) %")
+                        .foregroundStyle(befund.auffindeSpO2.isEmpty ? Color(.tertiaryLabel) : .primary)
+                }
+                .contentShape(Rectangle())
+                .onTapGesture { zeigeSpO2Numpad = true }
+                .sheet(isPresented: $zeigeSpO2Numpad) {
+                    NumpadSheet(mode: .integer(label: "SpO₂", unit: "%", maxDigits: 3),
+                                initial: befund.auffindeSpO2) { val in befund.auffindeSpO2 = val }
+                }
+
+                HStack {
+                    Text("RR (mmHg)").foregroundStyle(.secondary)
+                    Spacer()
+                    Text(befund.auffindeRRSys.isEmpty ? "–" : "\(befund.auffindeRRSys)/\(befund.auffindeRRDia) mmHg")
+                        .foregroundStyle(befund.auffindeRRSys.isEmpty ? Color(.tertiaryLabel) : .primary)
+                }
+                .contentShape(Rectangle())
+                .onTapGesture { zeigeRRNumpad = true }
+                .sheet(isPresented: $zeigeRRNumpad) {
+                    NumpadSheet(mode: .bloodPressure,
+                                initial: befund.auffindeRRSys.isEmpty ? "" : "\(befund.auffindeRRSys)/\(befund.auffindeRRDia)") { val in
+                        let parts = val.split(separator: "/")
+                        if parts.count == 2 {
+                            befund.auffindeRRSys = String(parts[0])
+                            befund.auffindeRRDia = String(parts[1])
+                        } else if val.isEmpty {
+                            befund.auffindeRRSys = ""
+                            befund.auffindeRRDia = ""
+                        }
+                    }
+                }
+
+                HStack {
+                    Text("AF (/min)").foregroundStyle(.secondary)
+                    Spacer()
+                    Text(befund.auffindeAF.isEmpty ? "–" : "\(befund.auffindeAF) /min")
+                        .foregroundStyle(befund.auffindeAF.isEmpty ? Color(.tertiaryLabel) : .primary)
+                }
+                .contentShape(Rectangle())
+                .onTapGesture { zeigeAFNumpad = true }
+                .sheet(isPresented: $zeigeAFNumpad) {
+                    NumpadSheet(mode: .integer(label: "AF", unit: "/min", maxDigits: 2),
+                                initial: befund.auffindeAF) { val in befund.auffindeAF = val }
+                }
+            } header: { Text("Messwerte bei Erstkontakt") }
+
+            Section {
+                TextField("AVPU / Freitext (z.B. A, V, P, U)", text: $befund.auffindeBewusstsein)
+            } header: { Text("Bewusstsein") }
+
+            Section {
+                TextField("Ergänzungen", text: $befund.auffindeFreitext, axis: .vertical)
+                    .lineLimit(3...6)
+            } header: { Text("Freitext") }
+        }
+        .navigationTitle("Auffindewerte")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
