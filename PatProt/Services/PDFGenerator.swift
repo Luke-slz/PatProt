@@ -997,8 +997,15 @@ struct DINPDFGenerator {
 
         // Body silhouette (left of table)
         let silhH = 9 + CGFloat(regions.count)*regH + 20
-        drawBodySilhouette(p.diagnose.verletzungsMatrix,
-                           rect: CGRect(x:lx+2, y:y+1, width:v2BodyW-4, height:silhH-2))
+        let silhRect = CGRect(x:lx+2, y:y+1, width:v2BodyW-4, height:silhH-2)
+        if let cgCtx = UIGraphicsGetCurrentContext() {
+            cgCtx.saveGState()
+            cgCtx.clip(to: silhRect)
+            drawBodySilhouette(p.diagnose.verletzungsMatrix, rect: silhRect)
+            cgCtx.restoreGState()
+        } else {
+            drawBodySilhouette(p.diagnose.verletzungsMatrix, rect: silhRect)
+        }
 
         // Spezielle Traumen (right side)
         let spezItems: [(String,Bool)] = [
