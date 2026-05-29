@@ -168,7 +168,7 @@ struct iPadMainView: View {
     private var hauptProtokoll: some View {
         NavigationSplitView(columnVisibility: .constant(.all)) {
             sidebarContent
-                .navigationTitle("RD Protokoll")
+                .navigationTitle(einheitenname.isEmpty ? "RD Protokoll" : einheitenname)
                 .navigationBarTitleDisplayMode(.large)
                 .toolbar {
                     ToolbarItem(placement: .navigationBarTrailing) {
