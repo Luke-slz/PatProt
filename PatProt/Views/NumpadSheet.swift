@@ -183,10 +183,10 @@ struct NumpadSheet: View {
 
                 HStack(spacing: 10) {
                     if case .decimal = mode {
-                        NumpadKey(label: ".", wide: true) { appendDecimalPoint() }
-                        NumpadKey(label: "0", wide: true) { appendDigit("0") }
-                        NumpadKey(label: "⌫", style: .secondary, wide: true) { delete() }
-                        NumpadKey(label: "✓", style: .primary, wide: true) { confirm() }
+                        NumpadKey(label: ".") { appendDecimalPoint() }
+                        NumpadKey(label: "0") { appendDigit("0") }
+                        NumpadKey(label: "⌫", style: .secondary) { delete() }
+                        NumpadKey(label: "✓", style: .primary) { confirm() }
                     } else {
                         NumpadKey(label: "⌫", style: .secondary) { delete() }
                         NumpadKey(label: "0") { appendDigit("0") }
@@ -202,7 +202,7 @@ struct NumpadSheet: View {
                 Button("Abbrechen") { dismiss() }
             }
         }
-        .presentationDetents(UIDevice.current.userInterfaceIdiom == .pad ? [.height(560)] : [.medium])
+        .presentationDetents(UIDevice.current.userInterfaceIdiom == .pad ? [.height(650)] : [.medium])
         .onAppear {
             switch mode {
             case .bloodPressure:
@@ -222,15 +222,17 @@ private struct NumpadKey: View {
     enum Style { case normal, primary, secondary }
     let label: String
     var style: Style = .normal
-    var wide: Bool = false
     let action: () -> Void
+
+    private var keyHeight: CGFloat {
+        UIDevice.current.userInterfaceIdiom == .pad ? 88 : 72
+    }
 
     var body: some View {
         Button(action: action) {
             Text(label)
                 .font(.title2.weight(.medium))
-                .frame(maxWidth: wide ? .infinity : nil)
-                .frame(width: wide ? nil : 100, height: 72)
+                .frame(maxWidth: .infinity, minHeight: keyHeight)
                 .background(background)
                 .foregroundColor(style == .primary ? .white : .primary)
                 .cornerRadius(14)
