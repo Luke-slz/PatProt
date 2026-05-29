@@ -17,6 +17,12 @@ struct KonfigurationView: View {
         Form {
             Section {
                 TextField("Straße und Hausnummer", text: $protokoll.einsatzOrt.adresse)
+                HStack(spacing: 8) {
+                    TextField("PLZ", text: $protokoll.einsatzOrt.plz)
+                        .keyboardType(.numberPad)
+                        .frame(maxWidth: 80)
+                    TextField("Ort / Stadt", text: $protokoll.einsatzOrt.ort)
+                }
                 TextField("Zusatz (Stockwerk, Wohnung...)", text: $protokoll.einsatzOrt.zusatz)
                 HStack {
                     Text("Einsatz-Nr.")

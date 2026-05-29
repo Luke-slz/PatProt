@@ -45,6 +45,16 @@ struct PatientView: View {
                 Label("Klinische Angaben", systemImage: "stethoscope")
             }
 
+
+            Section {
+                MedikamentFotoSektion(fotos: $protokoll.kvFotos)
+            } header: {
+                Label("KV-Karte / Versichertenkarte", systemImage: "creditcard")
+            } footer: {
+                Text("Foto der Versichertenkarte – wird nur lokal gespeichert (DSGVO).")
+                    .font(.footnote).foregroundStyle(.secondary)
+            }
+
         }
         .navigationTitle("Patient")
         .navigationBarTitleDisplayMode(.large)

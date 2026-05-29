@@ -41,57 +41,55 @@ struct MassnahmenView: View {
                     }
                 }
                 CheckboxRow("Maskenbeatmung (BVM)", isOn: $befund.maskenbeatmung)
-                if befund.maskenbeatmung {
-                    CheckboxRow("Maschinelle Beatmung", isOn: $befund.maschinelleBeatmung)
-                    if befund.maschinelleBeatmung {
-                        HStack {
-                            Text("Tidalvolumen (ml)")
-                            Spacer()
-                            Text(befund.tidalvolumen.isEmpty ? "—" : befund.tidalvolumen)
-                                .foregroundColor(befund.tidalvolumen.isEmpty ? .secondary : .primary)
-                        }
-                        .contentShape(Rectangle())
-                        .onTapGesture { zeigeTvNumpad = true }
-                        .sheet(isPresented: $zeigeTvNumpad) {
-                            NumpadSheet(mode: .integer(label: "Tidalvolumen", unit: "ml"),
-                                        initial: befund.tidalvolumen) { val in befund.tidalvolumen = val }
-                        }
-                        HStack {
-                            Text("PEEP (cmH₂O)")
-                            Spacer()
-                            Text(befund.peep.isEmpty ? "—" : befund.peep)
-                                .foregroundColor(befund.peep.isEmpty ? .secondary : .primary)
-                        }
-                        .contentShape(Rectangle())
-                        .onTapGesture { zeigePeepNumpad = true }
-                        .sheet(isPresented: $zeigePeepNumpad) {
-                            NumpadSheet(mode: .integer(label: "PEEP", unit: "cmH₂O"),
-                                        initial: befund.peep) { val in befund.peep = val }
-                        }
-                        HStack {
-                            Text("FiO₂ (%)")
-                            Spacer()
-                            Text(befund.fio2.isEmpty ? "—" : befund.fio2)
-                                .foregroundColor(befund.fio2.isEmpty ? .secondary : .primary)
-                        }
-                        .contentShape(Rectangle())
-                        .onTapGesture { zeigeFio2Numpad = true }
-                        .sheet(isPresented: $zeigeFio2Numpad) {
-                            NumpadSheet(mode: .integer(label: "FiO₂", unit: "%"),
-                                        initial: befund.fio2) { val in befund.fio2 = val }
-                        }
-                        HStack {
-                            Text("AF Gerät (/min)")
-                            Spacer()
-                            Text(befund.beatmungsfrequenzMasch.isEmpty ? "—" : befund.beatmungsfrequenzMasch)
-                                .foregroundColor(befund.beatmungsfrequenzMasch.isEmpty ? .secondary : .primary)
-                        }
-                        .contentShape(Rectangle())
-                        .onTapGesture { zeigeBfMaschNumpad = true }
-                        .sheet(isPresented: $zeigeBfMaschNumpad) {
-                            NumpadSheet(mode: .integer(label: "AF Gerät", unit: "/min"),
-                                        initial: befund.beatmungsfrequenzMasch) { val in befund.beatmungsfrequenzMasch = val }
-                        }
+                CheckboxRow("Maschinelle Beatmung", isOn: $befund.maschinelleBeatmung)
+                if befund.maschinelleBeatmung {
+                    HStack {
+                        Text("Tidalvolumen (ml)")
+                        Spacer()
+                        Text(befund.tidalvolumen.isEmpty ? "—" : befund.tidalvolumen)
+                            .foregroundColor(befund.tidalvolumen.isEmpty ? .secondary : .primary)
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture { zeigeTvNumpad = true }
+                    .sheet(isPresented: $zeigeTvNumpad) {
+                        NumpadSheet(mode: .integer(label: "Tidalvolumen", unit: "ml"),
+                                    initial: befund.tidalvolumen) { val in befund.tidalvolumen = val }
+                    }
+                    HStack {
+                        Text("PEEP (cmH₂O)")
+                        Spacer()
+                        Text(befund.peep.isEmpty ? "—" : befund.peep)
+                            .foregroundColor(befund.peep.isEmpty ? .secondary : .primary)
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture { zeigePeepNumpad = true }
+                    .sheet(isPresented: $zeigePeepNumpad) {
+                        NumpadSheet(mode: .integer(label: "PEEP", unit: "cmH₂O"),
+                                    initial: befund.peep) { val in befund.peep = val }
+                    }
+                    HStack {
+                        Text("FiO₂ (%)")
+                        Spacer()
+                        Text(befund.fio2.isEmpty ? "—" : befund.fio2)
+                            .foregroundColor(befund.fio2.isEmpty ? .secondary : .primary)
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture { zeigeFio2Numpad = true }
+                    .sheet(isPresented: $zeigeFio2Numpad) {
+                        NumpadSheet(mode: .integer(label: "FiO₂", unit: "%"),
+                                    initial: befund.fio2) { val in befund.fio2 = val }
+                    }
+                    HStack {
+                        Text("AF Gerät (/min)")
+                        Spacer()
+                        Text(befund.beatmungsfrequenzMasch.isEmpty ? "—" : befund.beatmungsfrequenzMasch)
+                            .foregroundColor(befund.beatmungsfrequenzMasch.isEmpty ? .secondary : .primary)
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture { zeigeBfMaschNumpad = true }
+                    .sheet(isPresented: $zeigeBfMaschNumpad) {
+                        NumpadSheet(mode: .integer(label: "AF Gerät", unit: "/min"),
+                                    initial: befund.beatmungsfrequenzMasch) { val in befund.beatmungsfrequenzMasch = val }
                     }
                 }
                 CheckboxRow("Maskenbeatmung unmöglich", isOn: $befund.maskenbeatmungUnmoeglich)

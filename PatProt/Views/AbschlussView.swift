@@ -8,6 +8,8 @@ struct AbschlussView: View {
     @State private var zeigeShareSheet = false
     @State private var isGenerating = false
     @AppStorage("recipientEmail") private var recipientEmail: String = ""
+    @AppStorage("defaultVerfasser") private var defaultVerfasserRaw: String = ProtokollVerfasser.notfallsanitaeter.rawValue
+    @State private var verfasserPrefilled = false
     @State private var zeigeEinstellungen = false
     @State private var zeigeMailComposer = false
     @State private var pdfFehler = false
@@ -229,6 +231,11 @@ struct AbschlussView: View {
         }
         .onAppear {
             protokoll.prefillUebergabeMesswerteAusVerlauf()
+            if !verfasserPrefilled,
+               let v = ProtokollVerfasser(rawValue: defaultVerfasserRaw) {
+                protokoll.verfasser = v
+                verfasserPrefilled = true
+            }
         }
         .navigationTitle("Abschluss & Export")
         .navigationBarTitleDisplayMode(.large)

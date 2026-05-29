@@ -142,7 +142,13 @@ struct SAMPLERView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("E — Ereignis").font(.subheadline.bold())
                     Text("Was hat zum Notfall geführt?").font(.caption).foregroundColor(.secondary)
-                    TextEditor(text: $befund.ereignis).frame(minHeight: 70)
+                    Toggle("Unbekannt", isOn: $befund.ereignisUnbekannt)
+                        .onChange(of: befund.ereignisUnbekannt) { _, isUnknown in
+                            if isUnknown { befund.ereignis = "" }
+                        }
+                    if !befund.ereignisUnbekannt {
+                        TextEditor(text: $befund.ereignis).frame(minHeight: 70)
+                    }
                     Text("→ PDF S. 1 · SAMPLER · E").font(.caption2).foregroundColor(.secondary)
                 }
             }
@@ -150,13 +156,24 @@ struct SAMPLERView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("R — Risikofaktoren").font(.subheadline.bold())
                     Text("Bekannte Risikofaktoren").font(.caption).foregroundColor(.secondary)
-                    TextEditor(text: $befund.risikofaktoren).frame(minHeight: 60)
+                    Toggle("Unbekannt", isOn: $befund.risikofaktorenUnbekannt)
+                        .onChange(of: befund.risikofaktorenUnbekannt) { _, isUnknown in
+                            if isUnknown { befund.risikofaktoren = "" }
+                        }
+                    if !befund.risikofaktorenUnbekannt {
+                        TextEditor(text: $befund.risikofaktoren).frame(minHeight: 60)
+                    }
                     Text("→ PDF S. 1 · SAMPLER · R").font(.caption2).foregroundColor(.secondary)
                 }
             }
             Section {
-                Toggle("Schwangerschaft bekannt", isOn: $befund.schwangerschaft)
-                if befund.schwangerschaft {
+                Picker("Status", selection: $befund.schwangerschaftStatus) {
+                    Text("Unbekannt").tag("Unbekannt")
+                    Text("Nein").tag("Nein")
+                    Text("Ja").tag("Ja")
+                }
+                .pickerStyle(.segmented)
+                if befund.schwangerschaftStatus == "Ja" {
                     Stepper(befund.schwangerschaftSSW == 0 ? "SSW unbekannt"
                                                            : "SSW \(befund.schwangerschaftSSW)",
                             value: $befund.schwangerschaftSSW, in: 0...42)

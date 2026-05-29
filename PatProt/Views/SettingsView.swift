@@ -4,6 +4,7 @@ struct SettingsView: View {
     var onBack: () -> Void
 
     @AppStorage("recipientEmail") private var recipientEmail: String = ""
+    @AppStorage("defaultVerfasser") private var defaultVerfasserRaw: String = ProtokollVerfasser.notfallsanitaeter.rawValue
     @AppStorage("gespeichertesPersonal") private var personalJSON: String = "[]"
     @AppStorage("customFahrzeuge") private var customFahrzeugeJSON: String = "[]"
     @AppStorage("einheitenname") private var einheitenname: String = "First Responder Geesthacht"
@@ -56,6 +57,23 @@ struct SettingsView: View {
                 Label("Startseite", systemImage: "house.fill")
             } footer: {
                 Text("Name und Untertitel werden auf der Startseite angezeigt.")
+                    .font(.footnote).foregroundStyle(.secondary)
+            }
+
+            // Qualifikation
+            Section {
+                Picker("Meine Qualifikation", selection: Binding(
+                    get: { ProtokollVerfasser(rawValue: defaultVerfasserRaw) ?? .notfallsanitaeter },
+                    set: { defaultVerfasserRaw = $0.rawValue }
+                )) {
+                    ForEach(ProtokollVerfasser.allCases, id: \.self) { v in
+                        Text(v.rawValue).tag(v)
+                    }
+                }
+            } header: {
+                Label("Meine Qualifikation", systemImage: "person.badge.key")
+            } footer: {
+                Text("Wird als Standard-Verfasser im Protokollabschluss vorausgewählt.")
                     .font(.footnote).foregroundStyle(.secondary)
             }
 

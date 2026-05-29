@@ -347,18 +347,18 @@ struct DINPDFGenerator {
                   x:x+w/2, y:y, w:w/2, h:11, lw:w*0.22)
             y += 11
 
-            // Times block (alarm / ankunft / abfahrt)
+            // Times block — logical order: Alarm → Ankunft → Übergabe → Ende
             let tW = w / 3
             labeledVal("Alarm", t(p.einsatzOrt.alarmzeit),
                        x:x, y:y, w:tW, labelH:7, valH:11)
             labeledVal("Ankunft Einsatzort", t(p.einsatzOrt.ankunftzeit),
                        x:x+tW, y:y, w:tW, labelH:7, valH:11)
-            labeledVal("Einsatz Ende", t(p.einsatzOrt.abfahrtzeit),
+            labeledVal("Übergabe an RD", t(p.einsatzOrt.krankenHausAnkunft),
                        x:x+tW*2, y:y, w:tW, labelH:7, valH:11)
             y += 18
 
             let tW2 = w / 2
-            labeledVal("Übergabe an RD", t(p.einsatzOrt.krankenHausAnkunft),
+            labeledVal("Einsatz Ende", t(p.einsatzOrt.abfahrtzeit),
                        x:x, y:y, w:tW2, labelH:7, valH:11)
             labeledVal("Einsatz-Nr.", p.einsatzOrt.einsatzNummer,
                        x:x+tW2, y:y, w:tW2, labelH:7, valH:11)
@@ -548,9 +548,17 @@ struct DINPDFGenerator {
             return was
         }()
         let schwangerschaftText: String = {
-            guard p.sampler.schwangerschaft else { return "Nein" }
-            return p.sampler.schwangerschaftSSW == 0 ? "Ja – SSW unbekannt"
-                                                     : "Ja – SSW \(p.sampler.schwangerschaftSSW)"
+            switch p.sampler.schwangerschaftStatus {
+            case "Ja":
+                return p.sampler.schwangerschaftSSW == 0 ? "Ja – SSW unbekannt"
+                                                         : "Ja – SSW \(p.sampler.schwangerschaftSSW)"
+            case "Nein": return "Nein"
+            default:
+                // "Unbekannt" or legacy data: fall back to old Bool
+                guard p.sampler.schwangerschaft else { return "Unbekannt" }
+                return p.sampler.schwangerschaftSSW == 0 ? "Ja – SSW unbekannt"
+                                                         : "Ja – SSW \(p.sampler.schwangerschaftSSW)"
+            }
         }()
         let samplerAllRows: [(String, String)] = [
             ("S – Symptome",       p.sampler.symptome),
@@ -563,8 +571,8 @@ struct DINPDFGenerator {
             ("L – Letztes Essen",  letztesMahlText),
             ("L – Letzter Stuhlgang",   letzterStuhlgangText),
             ("L – Letzte Regelblutung", letzteRegelblutungText),
-            ("E – Ereignis",       p.sampler.ereignis),
-            ("R – Risikofaktoren", p.sampler.risikofaktoren),
+            ("E – Ereignis",       p.sampler.ereignisUnbekannt ? "Unbekannt" : p.sampler.ereignis),
+            ("R – Risikofaktoren", p.sampler.risikofaktorenUnbekannt ? "Unbekannt" : p.sampler.risikofaktoren),
             ("Schwangerschaft",    schwangerschaftText),
         ]
         for (label, value) in samplerAllRows {
@@ -853,14 +861,21 @@ struct DINPDFGenerator {
             ("Gallen-/Nierenstein", p.diagnose.abdoGalleNiere),
         ]
 
-        // Section 4 compact diagnosis groups
+        // Section 4 compact diagnosis groups — skip any group that would overflow the footer
+        let diagSafe = pageSize.height - 16
         var dy: CGFloat = 0
-        dy += diagGruppe("ZNS / Neurologie",        items: col1Items + col1b, x: lx, y: y + dy, w: rx-lx)
-        dy += diagGruppe("Herz-Kreislauf",          items: col2Items,          x: lx, y: y + dy, w: rx-lx)
-        dy += diagGruppe("Infektionen / Sonstiges", items: col3Items,          x: lx, y: y + dy, w: rx-lx)
-        dy += diagGruppe("Psychiatrie",             items: psyItems,           x: lx, y: y + dy, w: rx-lx)
-        dy += diagGruppe("Gyn / Geburtshilfe",      items: gynItems,           x: lx, y: y + dy, w: rx-lx)
-        dy += diagGruppe("Stoffwechsel / Abdomen",  items: stoffItems,         x: lx, y: y + dy, w: rx-lx)
+        let allDiagGruppen: [(String, [(String,Bool)])] = [
+            ("ZNS / Neurologie",        col1Items + col1b),
+            ("Herz-Kreislauf",          col2Items),
+            ("Infektionen / Sonstiges", col3Items),
+            ("Psychiatrie",             psyItems),
+            ("Gyn / Geburtshilfe",      gynItems),
+            ("Stoffwechsel / Abdomen",  stoffItems),
+        ]
+        for (title, items) in allDiagGruppen {
+            guard y + dy + 20.5 < diagSafe else { break }
+            dy += diagGruppe(title, items: items, x: lx, y: y + dy, w: rx-lx)
+        }
         y += dy + 2
 
         // Footer
@@ -1150,7 +1165,7 @@ struct DINPDFGenerator {
             ("Cervikalstütze/HWS",  p.massnahmen.cervikalStuetze),
             ("Absaugung",           p.massnahmen.absaugung),
             ("Guedel-Tubus (OPA)", p.massnahmen.guedelTubus),
-            ("Wendl-Tubus (NPA)",  p.massnahmen.wendlTubus),
+            ("Wendel-Tubus (NPA)", p.massnahmen.wendlTubus),
             ("Sauerstoffgabe",      p.massnahmen.sauerstoffgabe),
             ("Maskenbeatmung",      p.massnahmen.maskenbeatmung),
             ("Masch. Beatmung",     p.massnahmen.maschinelleBeatmung),
@@ -1404,10 +1419,11 @@ struct DINPDFGenerator {
             y += 11
         }
 
+        let p2safe = pageSize.height - 16
         let besatzungNames = [p.besatzung.sanitaeter1, p.besatzung.sanitaeter2,
                               p.besatzung.sanitaeter3, p.besatzung.sanitaeter4]
             .filter { !$0.isEmpty }.joined(separator: " · ")
-        if !besatzungNames.isEmpty {
+        if !besatzungNames.isEmpty && y + 11 < p2safe {
             field("Besatzung", besatzungNames, x:lx, y:y, w:rx-lx, h:11, lw:42)
             y += 11
         }
@@ -1432,21 +1448,23 @@ struct DINPDFGenerator {
         let besH: CGFloat = 9.5
         let besPerCol = (besItems.count + 2) / 3
         let besColW = (rx-lx) / 3
-        for (i,(label,checked)) in besItems.enumerated() {
-            let col = i / besPerCol
-            let row = i % besPerCol
-            let bx = lx + CGFloat(col)*besColW
-            let by = y + CGFloat(row)*besH
-            let bg: UIColor = row%2==0 ? .white : UIColor(white:0.97,alpha:1)
-            fillRect(CGRect(x:bx,y:by,width:besColW,height:besH), bg)
-            strokeRect(CGRect(x:bx,y:by,width:besColW,height:besH))
-            cb(label, checked, x:bx+2, y:by+1, bs:7, lw:besColW-12)
+        let besBlockH = CGFloat(besPerCol) * besH
+        if y + besBlockH < p2safe {
+            for (i,(label,checked)) in besItems.enumerated() {
+                let col = i / besPerCol
+                let row = i % besPerCol
+                let bx = lx + CGFloat(col)*besColW
+                let by = y + CGFloat(row)*besH
+                let bg: UIColor = row%2==0 ? .white : UIColor(white:0.97,alpha:1)
+                fillRect(CGRect(x:bx,y:by,width:besColW,height:besH), bg)
+                strokeRect(CGRect(x:bx,y:by,width:besColW,height:besH))
+                cb(label, checked, x:bx+2, y:by+1, bs:7, lw:besColW-12)
+            }
+            y += besBlockH + 2
         }
-        y += CGFloat(besPerCol)*besH + 2
-
 
         // ── Unterschrift ──────────────────────────────────
-        let sigH: CGFloat = min(40, pageSize.height - y - 10)
+        let sigH: CGFloat = min(40, pageSize.height - y - 16)
         if sigH > 15 {
             fillRect(CGRect(x:lx,y:y,width:rx-lx,height:sigH), .white)
             strokeRect(CGRect(x:lx,y:y,width:rx-lx,height:sigH))

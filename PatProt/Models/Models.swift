@@ -170,6 +170,30 @@ class EinsatzProtokoll: ObservableObject, Identifiable {
 
     var erstelltAm: Date = Date()
 
+    private var cancellables = Set<AnyCancellable>()
+
+    init() {
+        einsatzOrt.alarmzeit = Date()
+        objectWillChange
+            .debounce(for: .seconds(5), scheduler: DispatchQueue.main)
+            .sink { [weak self] _ in
+                guard let self = self, self.hasAutoSaveContent else { return }
+                try? ProtokollArchiv.shared.speichern(self)
+            }
+            .store(in: &cancellables)
+    }
+
+    private var hasAutoSaveContent: Bool {
+        !einsatzOrt.einsatzNummer.isEmpty ||
+        !einsatzOrt.adresse.isEmpty ||
+        !patientDaten.vorname.isEmpty ||
+        !patientDaten.nachname.isEmpty ||
+        airway.status != .unbewertet ||
+        breathing.status != .unbewertet ||
+        circulation.status != .unbewertet ||
+        disability.status != .unbewertet
+    }
+
     func prefillUebergabeMesswerteAusVerlauf() {
         guard let letzte = verlaufMessungen
             .sorted(by: { $0.zeitpunkt < $1.zeitpunkt }).last else { return }
@@ -541,9 +565,12 @@ struct SAMPLERBefund: Codable {
     var medikamenteUnbekannt: Bool = false
     var patientenVorgeschichteUnbekannt: Bool = false
     var ereignis = ""
+    var ereignisUnbekannt: Bool = false
     var risikofaktoren = ""
+    var risikofaktorenUnbekannt: Bool = false
     var schwangerschaft: Bool = false
     var schwangerschaftSSW: Int = 0
+    var schwangerschaftStatus: String = "Unbekannt"
 }
 
 // MARK: - Diagnose (Sektion 4 des Formulars)
@@ -1091,7 +1118,6 @@ extension SINNHAFTBefund {
 
         // Atemweg
         if m.atemwegFreimachen  { massnahmenList.append("Atemweg freimachen") }
-        if m.atemwegFreimachen  { massnahmenList.append("Atemweg freimachen") }
         if m.absaugung          { massnahmenList.append("Absaugung") }
         if m.cervikalStuetze    { massnahmenList.append("Cervikalstütze") }
         if m.sauerstoffgabe     { massnahmenList.append("O₂-Gabe\(m.sauerstoffLitMin.isEmpty ? "" : " \(m.sauerstoffLitMin) l/min")") }
@@ -1099,7 +1125,12 @@ extension SINNHAFTBefund {
         if m.supraglottisch     { massnahmenList.append("Supraglottischer Atemweg\(m.supraglottischTyp.isEmpty ? "" : " (\(m.supraglottischTyp))")") }
         if protokoll.airway.konikotomie { massnahmenList.append("Konikotomie") }
         if m.atemwegErschwert   { massnahmenList.append("Erschwerter Atemweg") }
-        if m.peripherVenoes     { massnahmenList.append("Peripher-venöser Zugang\(m.peripherVenoesOrt.isEmpty ? "" : " (\(m.peripherVenoesOrt))")") }
+        if m.peripherVenoes {
+            var zugangParts = ["Peripher-venöser Zugang"]
+            if !m.peripherVenoesOrt.isEmpty { zugangParts.append("(\(m.peripherVenoesOrt))") }
+            if !m.peripherVenoesGroesse.isEmpty { zugangParts.append("\(m.peripherVenoesGroesse) G") }
+            massnahmenList.append(zugangParts.joined(separator: " "))
+        }
         if m.tourniquet         { massnahmenList.append("Tourniquet") }
         if m.krisenintervention { massnahmenList.append("Krisenintervention") }
         if m.vakuummatratze     { massnahmenList.append("Vakuummatratze") }
@@ -1110,7 +1141,9 @@ extension SINNHAFTBefund {
         for med in protokoll.medikamente where !med.name.isEmpty {
             var parts: [String] = [med.name]
             if !med.dosis.isEmpty {
-                parts.append("\(med.dosis)\(med.einheit.isEmpty ? "" : " \(med.einheit)")")
+                var dosisStr = "\(med.dosis)\(med.einheit.isEmpty ? "" : " \(med.einheit)")"
+                if !med.maximaldosis.isEmpty { dosisStr += " (Max. \(med.maximaldosis) \(med.einheit))" }
+                parts.append(dosisStr)
             }
             if !med.route.isEmpty { parts.append(med.route) }
             massnahmenList.append("\(parts.joined(separator: " ")) · \(medFmt.string(from: med.zeit))")
@@ -1126,7 +1159,9 @@ extension SINNHAFTBefund {
         befund.hintergrund = hintParts.joined(separator: "\n")
 
         var zustandParts: [String] = []
-        // ABCDE-Statusübersicht für strukturierte Übergabe
+        let f = DateFormatter(); f.dateFormat = "HH:mm"
+
+        // ABCDE-Statusübersicht
         let abcdeStatus: [(String, ABCDEStatus)] = [
             ("A", protokoll.airway.status), ("B", protokoll.breathing.status),
             ("C", protokoll.circulation.status), ("D", protokoll.disability.status),
@@ -1137,21 +1172,28 @@ extension SINNHAFTBefund {
             .map { "\($0.0) \($0.1 == .nicht_kritisch ? "o.B." : "kritisch")" }
             .joined(separator: " · ")
         if !abcdeText.isEmpty { zustandParts.append("ABCDE: \(abcdeText)") }
-        if let af = protokoll.breathing.atemFrequenz { zustandParts.append("AF: \(af)/min") }
-        if let spo2 = protokoll.breathing.spo2 { zustandParts.append("SpO₂: \(spo2)%") }
-        if let puls = protokoll.circulation.puls { zustandParts.append("Puls: \(puls)/min") }
+
+        // Anfangswerte (initial ABCDE vitals)
+        var anfangParts: [String] = []
+        if let af = protokoll.breathing.atemFrequenz { anfangParts.append("AF \(af)/min") }
+        if let spo2 = protokoll.breathing.spo2 { anfangParts.append("SpO₂ \(spo2)%") }
+        if let puls = protokoll.circulation.puls { anfangParts.append("Puls \(puls)/min") }
         if let sys = protokoll.circulation.blutdruckSystolisch,
-           let dia = protokoll.circulation.blutdruckDiastolisch { zustandParts.append("RR: \(sys)/\(dia) mmHg") }
-        if protokoll.disability.status != .unbewertet { zustandParts.append("GCS: \(protokoll.disability.gcsGesamt)") }
-        if let bz = protokoll.disability.blutzucker { zustandParts.append("BZ: \(String(format: "%.0f", bz)) mg/dL") }
-        if let temp = protokoll.exposure.temperatur { zustandParts.append("Temp: \(String(format: "%.1f", temp))°C") }
+           let dia = protokoll.circulation.blutdruckDiastolisch { anfangParts.append("RR \(sys)/\(dia) mmHg") }
+        if protokoll.disability.status != .unbewertet { anfangParts.append("GCS \(protokoll.disability.gcsGesamt)") }
+        if let bz = protokoll.disability.blutzucker { anfangParts.append("BZ \(String(format: "%.0f", bz)) mg/dL") }
+        if let temp = protokoll.exposure.temperatur { anfangParts.append("Temp \(String(format: "%.1f", temp))°C") }
+        if !anfangParts.isEmpty { zustandParts.append("Anfangswerte: \(anfangParts.joined(separator: ", "))") }
+
+        // Letzter Verlauf (most recent measurement)
         if let letzte = protokoll.verlaufMessungen.sorted(by: { $0.zeitpunkt < $1.zeitpunkt }).last {
-            let f = DateFormatter(); f.dateFormat = "HH:mm"
             var verlaufTeile: [String] = []
-            if let af = letzte.atemFrequenz { verlaufTeile.append("AF \(af)") }
+            if let af = letzte.atemFrequenz { verlaufTeile.append("AF \(af)/min") }
             if let spo2 = letzte.spo2 { verlaufTeile.append("SpO₂ \(spo2)%") }
-            if let p = letzte.puls { verlaufTeile.append("Puls \(p)") }
-            if !verlaufTeile.isEmpty { zustandParts.append("Verlauf \(f.string(from: letzte.zeitpunkt)): \(verlaufTeile.joined(separator: ", "))") }
+            if let p = letzte.puls { verlaufTeile.append("Puls \(p)/min") }
+            if let sys = letzte.blutdruckSys, let dia = letzte.blutdruckDia { verlaufTeile.append("RR \(sys)/\(dia) mmHg") }
+            if let gcs = letzte.gcsGesamt { verlaufTeile.append("GCS \(gcs)") }
+            if !verlaufTeile.isEmpty { zustandParts.append("Aktuell (\(f.string(from: letzte.zeitpunkt))): \(verlaufTeile.joined(separator: ", "))") }
         }
         befund.aktuellerZustand = zustandParts.joined(separator: "\n")
 
