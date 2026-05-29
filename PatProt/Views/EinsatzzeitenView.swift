@@ -4,10 +4,10 @@ struct EinsatzzeitenView: View {
     @ObservedObject var protokoll: EinsatzProtokoll
 
     private var zeitFehler: [String] {
-        let alarm    = protokoll.einsatzOrt.alarmzeit
-        let ankunft  = protokoll.einsatzOrt.ankunftzeit
+        let alarm     = protokoll.einsatzOrt.alarmzeit
+        let ankunft   = protokoll.einsatzOrt.ankunftzeit
         let uebergabe = protokoll.einsatzOrt.krankenHausAnkunft
-        let ende     = protokoll.einsatzOrt.abfahrtzeit
+        let ende      = protokoll.einsatzOrt.abfahrtzeit
         var fehler: [String] = []
         if let a = alarm,     let b = ankunft,   b < a { fehler.append("Ankunft liegt vor der Alarmzeit") }
         if let a = ankunft, let b = ende,      b < a { fehler.append("Einsatz Ende liegt vor der Ankunft") }
