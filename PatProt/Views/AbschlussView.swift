@@ -1,5 +1,6 @@
 import SwiftUI
 import MessageUI
+import PencilKit
 
 struct AbschlussView: View {
     @Environment(\.dismiss) private var dismiss
@@ -16,6 +17,7 @@ struct AbschlussView: View {
     @State private var gespeichert = false
     @State private var speicherFehler = false
     @State private var mailNichtVerfügbar = false
+    @State private var zeigeUnterschrift = false
     @State private var zeigeUebRrSys  = false
     @State private var zeigeUebRrDia  = false
     @State private var zeigeUebHf     = false
@@ -157,6 +159,42 @@ struct AbschlussView: View {
                 Label("Archiv", systemImage: "archivebox")
             } footer: {
                 Text("Daten werden lokal auf dem Gerät gespeichert (DSGVO-konform).").font(.footnote).foregroundStyle(.secondary)
+            }
+
+            // Unterschrift
+            Section {
+                if let data = protokoll.unterschriftData, let img = UIImage(data: data) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Image(uiImage: img)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(maxWidth: .infinity, maxHeight: 80)
+                            .background(Color(.systemBackground))
+                            .cornerRadius(8)
+                        Button(role: .destructive) {
+                            protokoll.unterschriftData = nil
+                        } label: {
+                            Label("Unterschrift löschen", systemImage: "trash")
+                                .font(.subheadline)
+                        }
+                    }
+                } else {
+                    Button {
+                        zeigeUnterschrift = true
+                    } label: {
+                        Label("Unterschrift erfassen", systemImage: "signature")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(Color("RDOrange"))
+                }
+            } header: {
+                Label("Unterschrift", systemImage: "signature")
+            }
+            .sheet(isPresented: $zeigeUnterschrift) {
+                UnterschriftSheet { data in
+                    protokoll.unterschriftData = data
+                }
             }
 
             // PDF EXPORT
@@ -342,6 +380,76 @@ struct AbschlussView: View {
             }
         }
     }
+}
+
+// MARK: - Unterschrift Sheet
+
+struct UnterschriftSheet: View {
+    var onSave: (Data) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var canvasView = PKCanvasView()
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                Text("Hier unterschreiben")
+                    .font(.caption).foregroundColor(.secondary)
+                    .padding(.top, 12)
+
+                ZStack(alignment: .center) {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color(.separator), lineWidth: 1)
+                        .background(Color(.systemBackground).cornerRadius(12))
+                        .padding()
+
+                    UnterschriftCanvas(canvasView: $canvasView)
+                        .padding(20)
+
+                    if canvasView.drawing.strokes.isEmpty {
+                        Text("Unterschrift")
+                            .font(.title3).foregroundColor(Color(.tertiaryLabel))
+                            .allowsHitTesting(false)
+                    }
+                }
+                .frame(height: 200)
+            }
+            .navigationTitle("Unterschrift")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Abbrechen") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Speichern") {
+                        let image = canvasView.drawing.image(from: canvasView.drawing.bounds, scale: UIScreen.main.scale)
+                        if let data = image.pngData() {
+                            onSave(data)
+                        }
+                        dismiss()
+                    }
+                    .disabled(canvasView.drawing.strokes.isEmpty)
+                }
+                ToolbarItem(placement: .bottomBar) {
+                    Button { canvasView.drawing = PKDrawing() } label: {
+                        Label("Löschen", systemImage: "arrow.counterclockwise")
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct UnterschriftCanvas: UIViewRepresentable {
+    @Binding var canvasView: PKCanvasView
+
+    func makeUIView(context: Context) -> PKCanvasView {
+        canvasView.tool = PKInkingTool(.pen, color: .black, width: 2)
+        canvasView.drawingPolicy = .anyInput
+        canvasView.backgroundColor = .clear
+        return canvasView
+    }
+
+    func updateUIView(_ uiView: PKCanvasView, context: Context) {}
 }
 
 // MARK: - Share Sheet

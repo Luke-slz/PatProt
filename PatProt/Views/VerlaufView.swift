@@ -12,6 +12,7 @@ struct VerlaufView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 14) {
+                dysrhythmieHinweis
                 if !messungen.isEmpty {
                     trendUebersicht
                 }
@@ -57,6 +58,36 @@ struct VerlaufView: View {
                 },
                 onAbbrechen: { zeigeNeueMessung = false }
             )
+        }
+    }
+
+    // MARK: - Dysrhythmie-Hinweis
+
+    private var dysrhythmieHinweis: some View {
+        let sorted = messungen.sorted { $0.zeitpunkt < $1.zeitpunkt }
+        let letzte3 = sorted.suffix(3).compactMap { $0.blutdruckSys }
+        let pathologisch = letzte3.count >= 3 && letzte3.allSatisfy { $0 < 90 || $0 > 180 }
+        let arrhythmieNochNicht = protokoll.circulation.pulsRhythmus != "arrhythmisch"
+
+        return Group {
+            if pathologisch && arrhythmieNochNicht {
+                HStack(spacing: 10) {
+                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Persistentes Blutdruckproblem").font(.subheadline).fontWeight(.semibold)
+                        Text("3 konsekutive pathologische Werte – Dysrhythmie prüfen.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Button("→ Arrhythmisch") {
+                        protokoll.circulation.pulsRhythmus = "arrhythmisch"
+                    }
+                    .font(.caption).buttonStyle(.bordered).tint(.orange)
+                }
+                .padding(12)
+                .background(Color.orange.opacity(0.12))
+                .cornerRadius(12)
+            }
         }
     }
 

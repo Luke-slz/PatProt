@@ -11,8 +11,69 @@ struct MedikamenteView: View {
     private let einheiten = ["mg", "ml", "IE", "µg", "g", "mmol"]
     private let routen = ["i.v.", "i.o.", "i.m.", "s.c.", "p.o.", "inhalativ", "nasal", "rektal"]
 
+    private struct KumulationsZeile: Identifiable {
+        let id = UUID()
+        let name: String
+        let einheit: String
+        let gesamt: Double
+        let max: Double?
+        var ueberschritten: Bool { max.map { gesamt > $0 } ?? false }
+    }
+
+    private var kumulationen: [KumulationsZeile] {
+        var dict: [String: (sum: Double, max: Double?, einheit: String)] = [:]
+        for med in medikamente where !med.name.isEmpty {
+            let key = med.name.lowercased()
+            let dosis = Double(med.dosis.replacingOccurrences(of: ",", with: ".")) ?? 0
+            let maxVal = Double(med.maximaldosis.replacingOccurrences(of: ",", with: "."))
+            let existing = dict[key]
+            dict[key] = (
+                sum: (existing?.sum ?? 0) + dosis,
+                max: maxVal ?? existing?.max,
+                einheit: med.einheit
+            )
+        }
+        return dict.compactMap { name, v in
+            guard v.sum > 0 else { return nil }
+            return KumulationsZeile(name: name.capitalized, einheit: v.einheit, gesamt: v.sum, max: v.max)
+        }.filter { _ in true }
+    }
+
     var body: some View {
         Form {
+            let warnungen = kumulationen.filter { $0.ueberschritten }
+            if !warnungen.isEmpty {
+                Section {
+                    ForEach(warnungen) { z in
+                        Label {
+                            Text("\(z.name): \(String(format: "%.1f", z.gesamt)) \(z.einheit) gegeben (Max. \(String(format: "%.1f", z.max!)) \(z.einheit))")
+                                .font(.subheadline)
+                        } icon: {
+                            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.red)
+                        }
+                    }
+                } header: { Label("Maximaldosis überschritten", systemImage: "exclamationmark.triangle.fill").foregroundStyle(.red) }
+            }
+
+            let mehrfach = kumulationen.filter { k in medikamente.filter { $0.name.lowercased() == k.name.lowercased() }.count > 1 }
+            if !mehrfach.isEmpty {
+                Section {
+                    ForEach(mehrfach) { z in
+                        HStack {
+                            Text(z.name).font(.subheadline)
+                            Spacer()
+                            Text("\(String(format: "%.1f", z.gesamt)) \(z.einheit) gesamt")
+                                .font(.subheadline.monospacedDigit())
+                                .foregroundStyle(z.ueberschritten ? .red : .primary)
+                            if let max = z.max {
+                                Text("/ Max \(String(format: "%.1f", max))")
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                } header: { Text("Kumulationsdosen") }
+            }
+
             if medikamente.isEmpty {
                 Section {
                     HStack {

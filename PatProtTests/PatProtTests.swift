@@ -287,11 +287,10 @@ struct PatProtTests {
         #expect(s.patientenVorgeschichteUnbekannt == false)
     }
 
-    @Test func notfallgeschehenHatAuffindewerte() {
+    @Test func notfallgeschehenHatKeinenAuffindeSeparatEintrag() {
+        // Auffindewerte are now derived automatically from ABCDE initial values
         let n = NotfallgeschehenBefund()
-        #expect(n.auffindePuls == "")
-        #expect(n.auffindeSpO2 == "")
-        #expect(n.auffindeRRSys == "")
+        #expect(n.erstbefundVorOrt == "")
     }
 
     @Test func medikamentEintragHatMaximaldosis() {

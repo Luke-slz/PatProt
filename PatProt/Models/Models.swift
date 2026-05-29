@@ -167,6 +167,7 @@ class EinsatzProtokoll: ObservableObject, Identifiable {
     @Published var uebergabeAn = ""
     @Published var zustandBeiUebergabe = ""
     @Published var verfasser: ProtokollVerfasser = .notfallsanitaeter
+    @Published var unterschriftData: Data? = nil
 
     var erstelltAm: Date = Date()
 
@@ -250,6 +251,7 @@ class EinsatzProtokoll: ObservableObject, Identifiable {
         uebergabeAn = ""
         zustandBeiUebergabe = ""
         verfasser = .notfallsanitaeter
+        unterschriftData = nil
         erstelltAm = Date()
     }
 }
@@ -849,15 +851,14 @@ struct NotfallgeschehenBefund: Codable {
     var verlaufsbemerkungen: String = ""
     var dynamischeErweiterung: String = ""
     var notfallFreitext: String = ""
-    var auffindePuls: String = ""
-    var auffindeSpO2: String = ""
-    var auffindeRRSys: String = ""
-    var auffindeRRDia: String = ""
-    var auffindeAF: String = ""
-    var auffindeBewusstsein: String = ""
-    var auffindeFreitext: String = ""
-
     var manvGesamtSK: Int { manvSK1 + manvSK2 + manvSK3 + manvSK4 + manvVerstorben }
+
+    // PRIOR-Triage (nur bei MANV/Ersteintreffen)
+    var priorPuls: String = ""           // Pulsfrequenz oder "nicht tastbar"
+    var priorRespiration: String = ""    // AF/min oder "keine"
+    var priorIntoxikation: String = "Unbekannt"  // Ja / Nein / Unbekannt
+    var priorOrientierung: String = ""   // orientiert / desorientiert / bewusstlos
+    var priorReizaufnahme: String = ""   // verbal / Schmerz / keine
 }
 
 // MARK: - Verdachtsdiagnose (Trichter)
@@ -1183,7 +1184,7 @@ extension SINNHAFTBefund {
         if protokoll.disability.status != .unbewertet { anfangParts.append("GCS \(protokoll.disability.gcsGesamt)") }
         if let bz = protokoll.disability.blutzucker { anfangParts.append("BZ \(String(format: "%.0f", bz)) mg/dL") }
         if let temp = protokoll.exposure.temperatur { anfangParts.append("Temp \(String(format: "%.1f", temp))°C") }
-        if !anfangParts.isEmpty { zustandParts.append("Anfangswerte: \(anfangParts.joined(separator: ", "))") }
+        if !anfangParts.isEmpty { zustandParts.append("Auffindewerte: \(anfangParts.joined(separator: ", "))") }
 
         // Letzter Verlauf (most recent measurement)
         if let letzte = protokoll.verlaufMessungen.sorted(by: { $0.zeitpunkt < $1.zeitpunkt }).last {

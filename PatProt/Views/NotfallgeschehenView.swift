@@ -75,23 +75,6 @@ struct NotfallgeschehenView: View {
             }
 
             Section {
-                NavigationLink {
-                    AuffindewerteView(befund: $befund)
-                } label: {
-                    NfgZeile(
-                        titel: "Auffindewerte",
-                        wert: (befund.auffindePuls.isEmpty && befund.auffindeSpO2.isEmpty
-                               && befund.auffindeRRSys.isEmpty && befund.auffindeBewusstsein.isEmpty)
-                            ? nil
-                            : [befund.auffindePuls.isEmpty ? nil : "Puls \(befund.auffindePuls)",
-                               befund.auffindeSpO2.isEmpty ? nil : "SpO₂ \(befund.auffindeSpO2)%",
-                               befund.auffindeRRSys.isEmpty ? nil : "RR \(befund.auffindeRRSys)/\(befund.auffindeRRDia)"]
-                               .compactMap { $0 }.joined(separator: " · ")
-                    )
-                }
-            }
-
-            Section {
                 Picker("NACA-Score", selection: Binding(
                     get: { befund.nacaScoreWert ?? NacaScore.naca3 },
                     set: { befund.nacaScoreWert = $0 }
@@ -401,6 +384,47 @@ struct DynamischeErweiterungView: View {
                     Label("MANV-Meldung", systemImage: "megaphone.fill")
                 }
             }
+
+            if befund.manv {
+                Section {
+                    HStack {
+                        Text("P – Puls")
+                        Spacer()
+                        TextField("z.B. 90/min oder nicht tastbar", text: $befund.priorPuls)
+                            .multilineTextAlignment(.trailing)
+                            .foregroundStyle(.secondary)
+                    }
+                    HStack {
+                        Text("R – Respiration")
+                        Spacer()
+                        TextField("z.B. 18/min oder keine", text: $befund.priorRespiration)
+                            .multilineTextAlignment(.trailing)
+                            .foregroundStyle(.secondary)
+                    }
+                    Picker("I – Intoxikation", selection: $befund.priorIntoxikation) {
+                        Text("Unbekannt").tag("Unbekannt")
+                        Text("Nein").tag("Nein")
+                        Text("Ja").tag("Ja")
+                    }
+                    Picker("O – Orientierung", selection: $befund.priorOrientierung) {
+                        Text("–").tag("")
+                        Text("Orientiert").tag("Orientiert")
+                        Text("Desorientiert").tag("Desorientiert")
+                        Text("Bewusstlos").tag("Bewusstlos")
+                    }
+                    Picker("R – Reizaufnahme", selection: $befund.priorReizaufnahme) {
+                        Text("–").tag("")
+                        Text("Verbal").tag("Verbal")
+                        Text("Schmerz").tag("Schmerz")
+                        Text("Keine").tag("Keine")
+                    }
+                } header: {
+                    Label("PRIOR-Triage", systemImage: "figure.stand.line.dotted.figure.stand")
+                } footer: {
+                    Text("Puls · Respiration · Intoxikation · Orientierung · Reizaufnahme")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
         }
         .navigationTitle("Dyn. Erweiterung / MANV")
         .navigationBarTitleDisplayMode(.inline)
@@ -478,87 +502,3 @@ private struct AuswahlSection: View {
     }
 }
 
-// MARK: - Auffindewerte
-
-struct AuffindewerteView: View {
-    @Binding var befund: NotfallgeschehenBefund
-
-    @State private var zeigePulsNumpad  = false
-    @State private var zeigeSpO2Numpad  = false
-    @State private var zeigeAFNumpad    = false
-    @State private var zeigeRRNumpad    = false
-
-    var body: some View {
-        Form {
-            Section {
-                HStack {
-                    Text("Puls (/min)").foregroundStyle(.secondary)
-                    Spacer()
-                    Text(befund.auffindePuls.isEmpty ? "–" : "\(befund.auffindePuls) /min")
-                        .foregroundStyle(befund.auffindePuls.isEmpty ? Color(.tertiaryLabel) : .primary)
-                }
-                .contentShape(Rectangle())
-                .onTapGesture { zeigePulsNumpad = true }
-                .sheet(isPresented: $zeigePulsNumpad) {
-                    NumpadSheet(mode: .integer(label: "Puls", unit: "/min", maxDigits: 3),
-                                initial: befund.auffindePuls) { val in befund.auffindePuls = val }
-                }
-
-                HStack {
-                    Text("SpO₂ (%)").foregroundStyle(.secondary)
-                    Spacer()
-                    Text(befund.auffindeSpO2.isEmpty ? "–" : "\(befund.auffindeSpO2) %")
-                        .foregroundStyle(befund.auffindeSpO2.isEmpty ? Color(.tertiaryLabel) : .primary)
-                }
-                .contentShape(Rectangle())
-                .onTapGesture { zeigeSpO2Numpad = true }
-                .sheet(isPresented: $zeigeSpO2Numpad) {
-                    NumpadSheet(mode: .integer(label: "SpO₂", unit: "%", maxDigits: 3),
-                                initial: befund.auffindeSpO2) { val in befund.auffindeSpO2 = val }
-                }
-
-                HStack {
-                    Text("RR (mmHg)").foregroundStyle(.secondary)
-                    Spacer()
-                    Text(befund.auffindeRRSys.isEmpty ? "–" : "\(befund.auffindeRRSys)/\(befund.auffindeRRDia) mmHg")
-                        .foregroundStyle(befund.auffindeRRSys.isEmpty ? Color(.tertiaryLabel) : .primary)
-                }
-                .contentShape(Rectangle())
-                .onTapGesture { zeigeRRNumpad = true }
-                .sheet(isPresented: $zeigeRRNumpad) {
-                    NumpadSheet(
-                        initialSys: befund.auffindeRRSys,
-                        initialDia: befund.auffindeRRDia
-                    ) { sys, dia in
-                        befund.auffindeRRSys = sys
-                        befund.auffindeRRDia = dia
-                    }
-                }
-
-                HStack {
-                    Text("AF (/min)").foregroundStyle(.secondary)
-                    Spacer()
-                    Text(befund.auffindeAF.isEmpty ? "–" : "\(befund.auffindeAF) /min")
-                        .foregroundStyle(befund.auffindeAF.isEmpty ? Color(.tertiaryLabel) : .primary)
-                }
-                .contentShape(Rectangle())
-                .onTapGesture { zeigeAFNumpad = true }
-                .sheet(isPresented: $zeigeAFNumpad) {
-                    NumpadSheet(mode: .integer(label: "AF", unit: "/min", maxDigits: 2),
-                                initial: befund.auffindeAF) { val in befund.auffindeAF = val }
-                }
-            } header: { Text("Messwerte bei Erstkontakt") }
-
-            Section {
-                TextField("AVPU / Freitext (z.B. A, V, P, U)", text: $befund.auffindeBewusstsein)
-            } header: { Text("Bewusstsein") }
-
-            Section {
-                TextField("Ergänzungen", text: $befund.auffindeFreitext, axis: .vertical)
-                    .lineLimit(3...6)
-            } header: { Text("Freitext") }
-        }
-        .navigationTitle("Auffindewerte")
-        .navigationBarTitleDisplayMode(.inline)
-    }
-}

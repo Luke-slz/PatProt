@@ -247,10 +247,26 @@ struct DINPDFGenerator {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(fname).pdf")
         do {
             try renderer.writePDF(to: url) { ctx in
+                // Add 10pt safety margin so nothing is clipped when printing
+                let m: CGFloat = 10
+                let sx = (pageSize.width - 2*m) / pageSize.width
+                let sy = (pageSize.height - 2*m) / pageSize.height
+                func applyMarginTransform() {
+                    ctx.cgContext.translateBy(x: m, y: m)
+                    ctx.cgContext.scaleBy(x: sx, y: sy)
+                }
                 ctx.beginPage()
+                applyMarginTransform()
                 drawPage1(p: protokoll)
                 ctx.beginPage()
+                applyMarginTransform()
                 drawPage2(p: protokoll)
+                let messungen = protokoll.verlaufMessungen.sorted(by: { $0.zeitpunkt < $1.zeitpunkt })
+                if messungen.count >= 2 {
+                    ctx.beginPage()
+                    applyMarginTransform()
+                    drawVerlaufsChart(p: protokoll, messungen: messungen)
+                }
                 drawFotoPages(ctx: ctx,
                               mediFotos: protokoll.medikamentFotos,
                               patFotos: protokoll.fotos,
@@ -580,14 +596,15 @@ struct DINPDFGenerator {
             y += 11
         }
 
-        // Auffindewerte — nur wenn mindestens ein Wert gesetzt
-        let auffindeNG = p.notfallGeschehen
+        // Auffindewerte = initiale ABCDE-Werte
         var auffindeTeile: [String] = []
-        if !auffindeNG.auffindePuls.isEmpty    { auffindeTeile.append("Puls \(auffindeNG.auffindePuls)/min") }
-        if !auffindeNG.auffindeSpO2.isEmpty    { auffindeTeile.append("SpO₂ \(auffindeNG.auffindeSpO2)%") }
-        if !auffindeNG.auffindeRRSys.isEmpty   { auffindeTeile.append("RR \(auffindeNG.auffindeRRSys)/\(auffindeNG.auffindeRRDia)") }
-        if !auffindeNG.auffindeAF.isEmpty      { auffindeTeile.append("AF \(auffindeNG.auffindeAF)/min") }
-        if !auffindeNG.auffindeBewusstsein.isEmpty { auffindeTeile.append("Bew. \(auffindeNG.auffindeBewusstsein)") }
+        if let puls = p.circulation.puls { auffindeTeile.append("Puls \(puls)/min") }
+        if let spo2 = p.breathing.spo2   { auffindeTeile.append("SpO₂ \(spo2)%") }
+        if let sys = p.circulation.blutdruckSystolisch, let dia = p.circulation.blutdruckDiastolisch {
+            auffindeTeile.append("RR \(sys)/\(dia)")
+        }
+        if let af = p.breathing.atemFrequenz { auffindeTeile.append("AF \(af)/min") }
+        if let bz = p.disability.blutzucker  { auffindeTeile.append("BZ \(Int(bz)) mg/dL") }
         if !auffindeTeile.isEmpty {
             field("Auffindewerte", auffindeTeile.joined(separator: " · "),
                   x:lx, y:y, w:rx-lx, h:11, lw:70)
@@ -1470,8 +1487,131 @@ struct DINPDFGenerator {
             strokeRect(CGRect(x:lx,y:y,width:rx-lx,height:sigH))
             let sigDate = DateFormatter()
             sigDate.dateFormat = "dd.MM.yyyy HH:mm"
-            txt("Datum / Uhrzeit: \(sigDate.string(from: Date()))          Unterschrift: ________________________________________",
-                CGRect(x:lx+4,y:y+sigH-12,width:rx-lx-8,height:10), font:f7)
+            let datumBreite: CGFloat = 160
+            txt("Datum / Uhrzeit: \(sigDate.string(from: Date()))",
+                CGRect(x:lx+4, y:y+sigH-12, width:datumBreite, height:10), font:f7)
+            txt("Unterschrift:", CGRect(x:lx+datumBreite+10, y:y+sigH-12, width:60, height:10), font:f7)
+            if let data = p.unterschriftData, let img = UIImage(data: data) {
+                let sigW: CGFloat = rx - lx - datumBreite - 80
+                let sigRect = CGRect(x: lx + datumBreite + 74, y: y + 2, width: sigW, height: sigH - 14)
+                img.draw(in: sigRect)
+            }
+        }
+
+        drawFooter(erstelltAm: p.erstelltAm)
+    }
+
+    // ─────────────────────────────────────────────────────
+    // MARK: - Verlaufs-Chart Seite
+    // ─────────────────────────────────────────────────────
+
+    private static func drawVerlaufsChart(p: EinsatzProtokoll, messungen: [VerlaufsMessung]) {
+        let ctx = UIGraphicsGetCurrentContext()!
+        let lx: CGFloat = 20; let rx: CGFloat = pageSize.width - 20
+        var y: CGFloat = 30
+
+        // Header
+        let hFont = UIFont.boldSystemFont(ofSize: 11)
+        txt("Vitalwerte-Verlauf", CGRect(x: lx, y: y, width: rx - lx, height: 14), font: hFont)
+        y += 18
+
+        let timeFmt = DateFormatter(); timeFmt.dateFormat = "HH:mm"
+
+        // Series to draw: label, color, normalRange, values extractor
+        struct Series {
+            let label: String; let color: UIColor
+            let normalMin: Double?; let normalMax: Double?
+            let values: [Double?]
+        }
+
+        let n = messungen.count
+        let series: [Series] = [
+            Series(label: "Puls /min",  color: .systemRed,
+                   normalMin: 60, normalMax: 100,
+                   values: messungen.map { $0.puls.map(Double.init) }),
+            Series(label: "SpO₂ %",    color: .systemBlue,
+                   normalMin: 95, normalMax: nil,
+                   values: messungen.map { $0.spo2.map(Double.init) }),
+            Series(label: "RR syst.",  color: .systemOrange,
+                   normalMin: 100, normalMax: 140,
+                   values: messungen.map { $0.blutdruckSys.map(Double.init) }),
+        ]
+
+        let chartW: CGFloat = rx - lx - 60
+        let chartH: CGFloat = 70
+        let axisX: CGFloat = lx + 44
+
+        for ser in series {
+            let vals = ser.values.compactMap { $0 }
+            guard !vals.isEmpty else { continue }
+
+            // Label
+            txt(ser.label, CGRect(x: lx, y: y + chartH * 0.5 - 6, width: 42, height: 12),
+                font: UIFont.systemFont(ofSize: 7), color: .black, align: .right)
+
+            // Background
+            fillRect(CGRect(x: axisX, y: y, width: chartW, height: chartH), UIColor.systemGray6)
+            strokeRect(CGRect(x: axisX, y: y, width: chartW, height: chartH), UIColor.separator, lw: 0.5)
+
+            // Normal range band
+            let allVals = vals
+            let dataMin = (allVals.min() ?? 0) - 10
+            let dataMax = (allVals.max() ?? 100) + 10
+            let valRange = max(dataMax - dataMin, 1)
+
+            if let nMin = ser.normalMin, let nMax = ser.normalMax {
+                let bandY1 = y + chartH * CGFloat(1 - (nMax - dataMin) / valRange)
+                let bandY2 = y + chartH * CGFloat(1 - (nMin - dataMin) / valRange)
+                fillRect(CGRect(x: axisX, y: max(y, bandY1), width: chartW,
+                                height: min(chartH, bandY2 - max(0, bandY1 - y))), UIColor.systemGreen.withAlphaComponent(0.08))
+            } else if let nMin = ser.normalMin {
+                let bandY = y + chartH * CGFloat(1 - (nMin - dataMin) / valRange)
+                fillRect(CGRect(x: axisX, y: y, width: chartW, height: max(0, bandY - y)), UIColor.systemGreen.withAlphaComponent(0.08))
+            }
+
+            // Draw lines + points
+            ctx.saveGState()
+            ctx.clip(to: CGRect(x: axisX, y: y, width: chartW, height: chartH))
+            ctx.setStrokeColor(ser.color.cgColor)
+            ctx.setLineWidth(1.2)
+            var prevPt: CGPoint? = nil
+
+            for (i, rawVal) in ser.values.enumerated() {
+                guard let v = rawVal else { prevPt = nil; continue }
+                let xPos = axisX + chartW * CGFloat(i) / CGFloat(max(n - 1, 1))
+                let yPos = y + chartH * CGFloat(1 - (v - dataMin) / valRange)
+                let pt = CGPoint(x: xPos, y: yPos)
+                if let prev = prevPt {
+                    ctx.move(to: prev); ctx.addLine(to: pt); ctx.strokePath()
+                }
+                fillRect(CGRect(x: pt.x - 2, y: pt.y - 2, width: 4, height: 4), ser.color)
+                // Value label
+                txt(String(Int(v)), CGRect(x: pt.x - 8, y: pt.y - 10, width: 16, height: 8),
+                    font: UIFont.systemFont(ofSize: 6), color: ser.color, align: .center)
+                prevPt = pt
+            }
+            ctx.restoreGState()
+
+            // Time axis labels (max 6)
+            let step = max(1, n / 6)
+            for (i, m) in messungen.enumerated() where i % step == 0 || i == n - 1 {
+                let xPos = axisX + chartW * CGFloat(i) / CGFloat(max(n - 1, 1))
+                txt(timeFmt.string(from: m.zeitpunkt),
+                    CGRect(x: xPos - 12, y: y + chartH + 2, width: 24, height: 8),
+                    font: UIFont.systemFont(ofSize: 5.5), color: .black, align: .center)
+            }
+
+            y += chartH + 14
+        }
+
+        // Legend
+        let legY = y + 4
+        var legX = axisX
+        for ser in series where !ser.values.compactMap({$0}).isEmpty {
+            fillRect(CGRect(x: legX, y: legY + 3, width: 14, height: 4), ser.color)
+            txt(ser.label, CGRect(x: legX + 16, y: legY, width: 55, height: 10),
+                font: UIFont.systemFont(ofSize: 7), color: ser.color)
+            legX += 75
         }
 
         drawFooter(erstelltAm: p.erstelltAm)

@@ -105,22 +105,22 @@ struct iPhoneContentView: View {
                         WeiterButton { path = [.menu, .sampler] }
                     }
                 case .airway:
-                    AirwayView(befund: $protokoll.airway, massnahmen: protokoll.massnahmen) {
+                    AirwayView(befund: $protokoll.airway, massnahmen: $protokoll.massnahmen) {
                         path.removeAll { [.airway,.breathing,.circulation,.disability,.exposure].contains($0) }
                         path.append(.breathing)
                     }
                 case .breathing:
-                    BreathingView(befund: $protokoll.breathing, massnahmen: protokoll.massnahmen) {
+                    BreathingView(befund: $protokoll.breathing, massnahmen: $protokoll.massnahmen) {
                         path.removeAll { [.airway,.breathing,.circulation,.disability,.exposure].contains($0) }
                         path.append(.circulation)
                     }
                 case .circulation:
-                    CirculationView(befund: $protokoll.circulation, massnahmen: protokoll.massnahmen) {
+                    CirculationView(befund: $protokoll.circulation, massnahmen: $protokoll.massnahmen) {
                         path.removeAll { [.airway,.breathing,.circulation,.disability,.exposure].contains($0) }
                         path.append(.disability)
                     }
                 case .disability:
-                    DisabilityView(befund: $protokoll.disability, massnahmen: protokoll.massnahmen) {
+                    DisabilityView(befund: $protokoll.disability, massnahmen: $protokoll.massnahmen) {
                         path.removeAll { [.airway,.breathing,.circulation,.disability,.exposure].contains($0) }
                         path.append(.exposure)
                     }

@@ -234,6 +234,8 @@ struct iPadMainView: View {
                 iPadNavRow(icon: "list.clipboard.fill",              farbe: .indigo, titel: "SAMPLER-Schema",      section: .sampler)
                 iPadNavRow(icon: "eye.fill",                         farbe: .purple, titel: "Diagnosen",           section: .diagnose,         badge: diagnoseBadge)
             }
+            .disabled(!patientErfasst)
+            .opacity(patientErfasst ? 1 : 0.45)
 
             Section {
                 iPadNavRow(icon: "waveform.path.ecg",                farbe: Color(.systemGreen), titel: "Verlauf und Therapie",   section: .verlauf,    badge: verlaufBadge)
@@ -243,6 +245,8 @@ struct iPadMainView: View {
                 iPadNavRow(icon: "photo.stack.fill",                 farbe: .brown,              titel: "Bilder & Dateien",         section: .bilder,           badge: bilderBadge)
                 iPadNavRow(icon: "cross.case.fill",                  farbe: Color("RDOrange"),   titel: "Übergabe-Befunde",          section: .uebergabeBefunde)
             }
+            .disabled(!patientErfasst)
+            .opacity(patientErfasst ? 1 : 0.45)
 
             Section {
                 HStack(spacing: 14) {
@@ -330,19 +334,19 @@ struct iPadMainView: View {
             }
         case .airway:
             NavigationStack {
-                AirwayView(befund: $protokoll.airway, massnahmen: protokoll.massnahmen) { selectedSection = .breathing }
+                AirwayView(befund: $protokoll.airway, massnahmen: $protokoll.massnahmen) { selectedSection = .breathing }
             }
         case .breathing:
             NavigationStack {
-                BreathingView(befund: $protokoll.breathing, massnahmen: protokoll.massnahmen) { selectedSection = .circulation }
+                BreathingView(befund: $protokoll.breathing, massnahmen: $protokoll.massnahmen) { selectedSection = .circulation }
             }
         case .circulation:
             NavigationStack {
-                CirculationView(befund: $protokoll.circulation, massnahmen: protokoll.massnahmen) { selectedSection = .disability }
+                CirculationView(befund: $protokoll.circulation, massnahmen: $protokoll.massnahmen) { selectedSection = .disability }
             }
         case .disability:
             NavigationStack {
-                DisabilityView(befund: $protokoll.disability, massnahmen: protokoll.massnahmen) { selectedSection = .exposure }
+                DisabilityView(befund: $protokoll.disability, massnahmen: $protokoll.massnahmen) { selectedSection = .exposure }
             }
         case .exposure:
             NavigationStack {
@@ -441,6 +445,13 @@ struct iPadMainView: View {
                 selectedSection = .notfallGeschehen
             }
         }
+    }
+
+    // MARK: - Gate
+
+    private var patientErfasst: Bool {
+        let p = protokoll.patientDaten
+        return !p.vorname.isEmpty || !p.nachname.isEmpty || p.geburtsDatum != nil
     }
 
     // MARK: - Badge Berechnungen

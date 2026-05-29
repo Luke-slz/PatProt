@@ -84,7 +84,7 @@ struct StatusPickerView: View {
 
 struct AirwayView: View {
     @Binding var befund: AirwayBefund
-    var massnahmen: MassnahmenBefund
+    @Binding var massnahmen: MassnahmenBefund
     var onZurueck: () -> Void
 
     let massnahmenOptionen = ["Kopf überstrecken", "Mundinspektion", "Absaugen", "Stabile Seitenlage", "Esmarch-Handgriff"]
@@ -112,36 +112,19 @@ struct AirwayView: View {
             } header: { Text("Freitext / Notizen") }
 
             Section {
-                Label("Atemwegssicherung & Maßnahmen werden unter \"Maßnahmen\" dokumentiert.", systemImage: "info.circle")
-                    .font(.caption).foregroundColor(.secondary)
-            }
-
-            let airwayMassnahmen: [String] = {
-                var items: [String] = []
-                if massnahmen.atemwegFreimachen { items.append("Atemweg freimachen") }
-                if massnahmen.cervikalStuetze   { items.append("Cervikalstütze") }
-                if massnahmen.absaugung         { items.append("Absaugung") }
-                if massnahmen.guedelTubus       { items.append("Guedel-Tubus (OPA)") }
-                if massnahmen.wendlTubus        { items.append("Wendel-Tubus (NPA)") }
-                if massnahmen.supraglottisch    {
-                    let t = massnahmen.supraglottischTyp
-                    items.append("Supraglottischer AW\(t.isEmpty ? "" : " (\(t))")")
+                CheckboxRow("Atemweg freimachen", isOn: $massnahmen.atemwegFreimachen)
+                CheckboxRow("Absaugung", isOn: $massnahmen.absaugung)
+                CheckboxRow("Cervikalstütze", isOn: $massnahmen.cervikalStuetze)
+                CheckboxRow("Guedel-Tubus (OPA)", isOn: $massnahmen.guedelTubus)
+                CheckboxRow("Wendel-Tubus (NPA)", isOn: $massnahmen.wendlTubus)
+                CheckboxRow("Heimlich-Manöver", isOn: $massnahmen.heimlich)
+                CheckboxRow("Erschwerter Atemweg", isOn: $massnahmen.atemwegErschwert)
+                Toggle("Supraglottischer AW", isOn: $massnahmen.supraglottisch)
+                if massnahmen.supraglottisch {
+                    TextField("Typ (z.B. LMA, i-gel)", text: $massnahmen.supraglottischTyp)
                 }
-                if massnahmen.atemwegErschwert  { items.append("Erschwerter Atemweg") }
-                if massnahmen.heimlich          { items.append("Heimlich-Manöver") }
-                return items
-            }()
-            if !airwayMassnahmen.isEmpty {
-                Section {
-                    ForEach(airwayMassnahmen, id: \.self) { item in
-                        Label(item, systemImage: "checkmark.circle.fill")
-                            .foregroundColor(.green)
-                            .font(.subheadline)
-                    }
-                } header: {
-                    Label("Dokumentierte Maßnahmen", systemImage: "cross.fill")
-                }
-            }
+                CheckboxRow("Konikotomie", isOn: $befund.konikotomie)
+            } header: { Label("Maßnahmen Atemweg", systemImage: "cross.fill") }
 
         }
         .safeAreaInset(edge: .bottom) {
@@ -165,7 +148,7 @@ struct AirwayView: View {
 
 struct BreathingView: View {
     @Binding var befund: BreathingBefund
-    var massnahmen: MassnahmenBefund
+    @Binding var massnahmen: MassnahmenBefund
     var onZurueck: () -> Void
 
     @State private var andereAtemgeraeusche: String = ""
@@ -276,42 +259,32 @@ struct BreathingView: View {
             } header: { Label("Klinische Zeichen", systemImage: "eye") }
 
             Section {
-                Label("Maßnahmen (O₂, Beatmung etc.) werden unter \"Maßnahmen\" dokumentiert.", systemImage: "info.circle")
-                    .font(.caption).foregroundColor(.secondary)
-            }
-
-            Section {
                 TextEditor(text: $befund.freitext).frame(minHeight: 80)
                 Text("→ PDF S. 1 · ABCDE · B")
                     .font(.caption2)
                     .foregroundColor(.secondary)
             } header: { Text("Freitext / Notizen") }
 
-            let breathingMassnahmen: [String] = {
-                var items: [String] = []
+            Section {
+                Toggle("Sauerstoffgabe", isOn: $massnahmen.sauerstoffgabe)
                 if massnahmen.sauerstoffgabe {
-                    let l = massnahmen.sauerstoffLitMin
-                    items.append("O₂\(l.isEmpty ? "" : " \(l) l/min")")
-                }
-                if massnahmen.maskenbeatmung      { items.append("Maskenbeatmung") }
-                if massnahmen.maschinelleBeatmung { items.append("Maschinelle Beatmung") }
-                if massnahmen.cpap {
-                    let p = massnahmen.cpapMbar
-                    items.append("CPAP\(p.isEmpty ? "" : " \(p) mbar")")
-                }
-                return items
-            }()
-            if !breathingMassnahmen.isEmpty {
-                Section {
-                    ForEach(breathingMassnahmen, id: \.self) { item in
-                        Label(item, systemImage: "checkmark.circle.fill")
-                            .foregroundColor(.green)
-                            .font(.subheadline)
+                    HStack {
+                        TextField("Liter/min", text: $massnahmen.sauerstoffLitMin)
+                            .keyboardType(.decimalPad)
+                        Text("l/min").foregroundColor(.secondary)
                     }
-                } header: {
-                    Label("Dokumentierte Maßnahmen", systemImage: "cross.fill")
                 }
-            }
+                CheckboxRow("Maskenbeatmung", isOn: $massnahmen.maskenbeatmung)
+                CheckboxRow("Maschinelle Beatmung", isOn: $massnahmen.maschinelleBeatmung)
+                Toggle("CPAP", isOn: $massnahmen.cpap)
+                if massnahmen.cpap {
+                    HStack {
+                        TextField("Druck", text: $massnahmen.cpapMbar)
+                            .keyboardType(.decimalPad)
+                        Text("mbar").foregroundColor(.secondary)
+                    }
+                }
+            } header: { Label("Maßnahmen Beatmung / O₂", systemImage: "cross.fill") }
 
         }
         .safeAreaInset(edge: .bottom) {
@@ -335,7 +308,7 @@ struct BreathingView: View {
 
 struct CirculationView: View {
     @Binding var befund: CirculationBefund
-    var massnahmen: MassnahmenBefund
+    @Binding var massnahmen: MassnahmenBefund
     var onZurueck: () -> Void
 
     @State private var zeigePulsNumpad = false
@@ -453,9 +426,6 @@ struct CirculationView: View {
 
             Section {
                 Toggle("EKG abgeleitet", isOn: $befund.ekg)
-                if befund.ekg {
-                    TextField("EKG-Befund", text: $befund.ekgBefund)
-                }
             } header: { Label("EKG", systemImage: "waveform.path.ecg") }
 
             if befund.ekg {
@@ -486,8 +456,6 @@ struct CirculationView: View {
                 if befund.blutung {
                     TextField("Lokalisation der Blutung", text: $befund.blutungLokalisation)
                 }
-                Label("Zugänge & weitere Maßnahmen werden unter \"Maßnahmen\" dokumentiert.", systemImage: "info.circle")
-                    .font(.caption).foregroundColor(.secondary)
             } header: { Label("Befunde", systemImage: "cross.case") }
 
             Section {
@@ -497,32 +465,24 @@ struct CirculationView: View {
                     .foregroundColor(.secondary)
             } header: { Text("Freitext / Notizen") }
 
-            let circMassnahmen: [String] = {
-                var items: [String] = []
+            Section {
+                Toggle("Peripher-venöser Zugang", isOn: $massnahmen.peripherVenoes)
                 if massnahmen.peripherVenoes {
-                    let o = massnahmen.peripherVenoesOrt
-                    items.append("Peripher-venöser Zugang\(o.isEmpty ? "" : " (\(o))")")
-                }
-                if massnahmen.intraossaer {
-                    let o = massnahmen.intraossaerOrt
-                    items.append("Intraossärer Zugang\(o.isEmpty ? "" : " (\(o))")")
-                }
-                if massnahmen.defibrillation  { items.append("Defibrillation") }
-                if massnahmen.kardioversion   { items.append("Kardioversion") }
-                if massnahmen.tourniquet      { items.append("Tourniquet") }
-                return items
-            }()
-            if !circMassnahmen.isEmpty {
-                Section {
-                    ForEach(circMassnahmen, id: \.self) { item in
-                        Label(item, systemImage: "checkmark.circle.fill")
-                            .foregroundColor(.green)
-                            .font(.subheadline)
+                    TextField("Ort (z.B. RE Kubital)", text: $massnahmen.peripherVenoesOrt)
+                    HStack {
+                        TextField("Größe", text: $massnahmen.peripherVenoesGroesse)
+                            .keyboardType(.numberPad)
+                        Text("G").foregroundColor(.secondary)
                     }
-                } header: {
-                    Label("Dokumentierte Maßnahmen", systemImage: "cross.fill")
                 }
-            }
+                Toggle("Intraossärer Zugang", isOn: $massnahmen.intraossaer)
+                if massnahmen.intraossaer {
+                    TextField("Ort (z.B. Tibia)", text: $massnahmen.intraossaerOrt)
+                }
+                CheckboxRow("Tourniquet", isOn: $massnahmen.tourniquet)
+                CheckboxRow("Defibrillation", isOn: $massnahmen.defibrillation)
+                CheckboxRow("Kardioversion", isOn: $massnahmen.kardioversion)
+            } header: { Label("Maßnahmen Kreislauf", systemImage: "cross.fill") }
 
         }
         .safeAreaInset(edge: .bottom) {
@@ -546,7 +506,7 @@ struct CirculationView: View {
 
 struct DisabilityView: View {
     @Binding var befund: DisabilityBefund
-    var massnahmen: MassnahmenBefund
+    @Binding var massnahmen: MassnahmenBefund
     var onZurueck: () -> Void
     @State private var zeigeBzNumpad = false
 
@@ -684,24 +644,11 @@ struct DisabilityView: View {
                     .foregroundColor(.secondary)
             } header: { Text("Freitext / Notizen") }
 
-            let disabilityMassnahmen: [String] = {
-                var items: [String] = []
-                if massnahmen.monBz              { items.append("BZ-Monitoring") }
-                if massnahmen.monEkg             { items.append("EKG-Monitoring") }
-                if massnahmen.krisenintervention { items.append("Krisenintervention") }
-                return items
-            }()
-            if !disabilityMassnahmen.isEmpty {
-                Section {
-                    ForEach(disabilityMassnahmen, id: \.self) { item in
-                        Label(item, systemImage: "checkmark.circle.fill")
-                            .foregroundColor(.green)
-                            .font(.subheadline)
-                    }
-                } header: {
-                    Label("Dokumentierte Maßnahmen", systemImage: "cross.fill")
-                }
-            }
+            Section {
+                CheckboxRow("BZ-Monitoring", isOn: $massnahmen.monBz)
+                CheckboxRow("EKG-Monitoring", isOn: $massnahmen.monEkg)
+                CheckboxRow("Krisenintervention", isOn: $massnahmen.krisenintervention)
+            } header: { Label("Maßnahmen Neurologie", systemImage: "cross.fill") }
 
         }
         .safeAreaInset(edge: .bottom) {
@@ -878,28 +825,14 @@ struct ExposureView: View {
                     .foregroundColor(.secondary)
             } header: { Text("Freitext / Notizen") }
 
-            let exposureMassnahmen: [String] = {
-                let m = protokoll.massnahmen
-                var items: [String] = []
-                if m.kuehlung               { items.append("Kühlung") }
-                if m.waermeerhalt           { items.append("Wärmeerhalt") }
-                if m.verband                { items.append("Verband") }
-                if m.beckenschlinge         { items.append("Beckenschlinge") }
-                if m.extremitaetenschienung { items.append("Extremitätenschienung") }
-                if m.vakuummatratze         { items.append("Vakuummatratze") }
-                return items
-            }()
-            if !exposureMassnahmen.isEmpty {
-                Section {
-                    ForEach(exposureMassnahmen, id: \.self) { item in
-                        Label(item, systemImage: "checkmark.circle.fill")
-                            .foregroundColor(.green)
-                            .font(.subheadline)
-                    }
-                } header: {
-                    Label("Dokumentierte Maßnahmen", systemImage: "cross.fill")
-                }
-            }
+            Section {
+                CheckboxRow("Wärmeerhalt", isOn: $protokoll.massnahmen.waermeerhalt)
+                CheckboxRow("Kühlung", isOn: $protokoll.massnahmen.kuehlung)
+                CheckboxRow("Verband", isOn: $protokoll.massnahmen.verband)
+                CheckboxRow("Beckenschlinge", isOn: $protokoll.massnahmen.beckenschlinge)
+                CheckboxRow("Extremitätenschienung", isOn: $protokoll.massnahmen.extremitaetenschienung)
+                CheckboxRow("Vakuummatratze", isOn: $protokoll.massnahmen.vakuummatratze)
+            } header: { Label("Maßnahmen Exposure", systemImage: "cross.fill") }
 
         }
         .navigationTitle("E — Exposure")

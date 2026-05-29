@@ -48,6 +48,28 @@ struct ABCDEUebersichtView: View {
                 .buttonStyle(.plain)
                 .padding(.horizontal)
 
+                // Auffindewerte (erste Messung aus ABCDE)
+                if !erstMessungTeile.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Auffindewerte")
+                            .font(.caption).fontWeight(.semibold)
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 14)
+                        HStack(spacing: 8) {
+                            ForEach(erstMessungTeile, id: \.self) { teil in
+                                Text(teil)
+                                    .font(.caption.monospacedDigit())
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 5)
+                                    .background(Color(.secondarySystemGroupedBackground))
+                                    .cornerRadius(8)
+                            }
+                            Spacer()
+                        }
+                        .padding(.horizontal, 14)
+                    }
+                }
+
                 // ABCDE Karten
                 VStack(spacing: 1) {
                     ABCDEZeile(
@@ -134,6 +156,19 @@ struct ABCDEUebersichtView: View {
         .background(Color(.systemGroupedBackground))
         .navigationTitle("Befunde")
         .navigationBarTitleDisplayMode(.large)
+    }
+
+    // MARK: Auffindewerte
+
+    private var erstMessungTeile: [String] {
+        var teile: [String] = []
+        if let puls = protokoll.circulation.puls { teile.append("Puls \(puls)/min") }
+        if let spo2 = protokoll.breathing.spo2   { teile.append("SpO₂ \(spo2)%") }
+        if let sys = protokoll.circulation.blutdruckSystolisch,
+           let dia = protokoll.circulation.blutdruckDiastolisch { teile.append("RR \(sys)/\(dia)") }
+        if let af = protokoll.breathing.atemFrequenz { teile.append("AF \(af)/min") }
+        if let bz = protokoll.disability.blutzucker  { teile.append("BZ \(Int(bz)) mg/dL") }
+        return teile
     }
 
     // MARK: Subtitel-Hilfsfunktionen

@@ -21,7 +21,14 @@ struct iPhoneMenuView: View {
                 menuRow("ABCDE",            icon: "staroflife.fill",         color: .red,    step: .abcde,            badge: befundeBadge)
                 menuRow("SAMPLER-Schema",   icon: "list.clipboard.fill",     color: .indigo, step: .sampler,          badge: nil)
                 menuRow("Diagnosen",        icon: "eye.fill",                color: .purple, step: .diagnose,         badge: diagnoseBadge)
+            } footer: {
+                if !patientErfasst {
+                    Label("Patient erfassen um klinische Abschnitte freizuschalten", systemImage: "lock.fill")
+                        .font(.caption).foregroundStyle(.orange)
+                }
             }
+            .disabled(!patientErfasst)
+            .opacity(patientErfasst ? 1 : 0.45)
 
             // Verlauf & Therapie
             Section {
@@ -32,6 +39,8 @@ struct iPhoneMenuView: View {
                 menuRow("Bilder & Dateien",      icon: "photo.stack.fill",               color: .brown,               step: .bilder,          badge: bilderBadge)
                 menuRow("Übergabe-Befunde",      icon: "cross.case.fill",                color: Color("RDOrange"),    step: .uebergabeBefunde, badge: nil)
             }
+            .disabled(!patientErfasst)
+            .opacity(patientErfasst ? 1 : 0.45)
 
             // Abschluss
             Section {
@@ -97,6 +106,13 @@ struct iPhoneMenuView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Gate
+
+    private var patientErfasst: Bool {
+        let p = protokoll.patientDaten
+        return !p.vorname.isEmpty || !p.nachname.isEmpty || p.geburtsDatum != nil
     }
 
     // MARK: - Badge Berechnungen
