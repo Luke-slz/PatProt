@@ -202,7 +202,7 @@ struct NumpadSheet: View {
                 Button("Abbrechen") { dismiss() }
             }
         }
-        .presentationDetents(UIDevice.current.userInterfaceIdiom == .pad ? [.height(650)] : [.medium])
+        .presentationDetents(UIDevice.current.userInterfaceIdiom == .pad ? [.large] : [.medium])
         .onAppear {
             switch mode {
             case .bloodPressure:
@@ -225,7 +225,7 @@ private struct NumpadKey: View {
     let action: () -> Void
 
     private var keyHeight: CGFloat {
-        UIDevice.current.userInterfaceIdiom == .pad ? 88 : 72
+        UIDevice.current.userInterfaceIdiom == .pad ? 110 : 72
     }
 
     var body: some View {
