@@ -515,8 +515,8 @@ struct DisabilityView: View {
                       lowWarn: "Hypoglykämie (< 70 mg/dL)", highWarn: "Hyperglykämie (> 140 mg/dL)")
     }
     private var gcsBg: Color {
-        // Only color once at least one subscore has been changed from minimum
-        guard befund.gcsAugen > 1 || befund.gcsVerbal > 1 || befund.gcsMotor > 1 else { return .clear }
+        // Only color once at least one subscore has been changed from default (E4V5M6)
+        guard befund.gcsAugen != 4 || befund.gcsVerbal != 5 || befund.gcsMotor != 6 else { return .clear }
         let gcs = befund.gcsGesamt
         if gcs >= 13 { return Color.green.opacity(0.12) }
         if gcs >= 9  { return Color.yellow.opacity(0.18) }
@@ -582,14 +582,20 @@ struct DisabilityView: View {
                 CheckboxRow("Mittel",              isOn: $befund.pupilleReMittel)
                 CheckboxRow("Weit",                isOn: $befund.pupilleReWeit)
                 CheckboxRow("Entrundet",           isOn: $befund.pupilleReEntrundet)
-                CheckboxRow("Keine Lichtreaktion", isOn: $befund.pupilleReKeineLichtreaktion)
+                CheckboxRow("Lichtreaktion", isOn: Binding(
+                    get: { !befund.pupilleReKeineLichtreaktion },
+                    set: { befund.pupilleReKeineLichtreaktion = !$0 }
+                ))
                 CheckboxRow("Nicht beurteilbar",   isOn: $befund.pupilleReNichtBeurteilbar)
                 Text("Links").font(.caption).foregroundColor(.secondary)
                 CheckboxRow("Eng",                 isOn: $befund.pupilleLiEng)
                 CheckboxRow("Mittel",              isOn: $befund.pupilleLiMittel)
                 CheckboxRow("Weit",                isOn: $befund.pupilleLiWeit)
                 CheckboxRow("Entrundet",           isOn: $befund.pupilleLiEntrundet)
-                CheckboxRow("Keine Lichtreaktion", isOn: $befund.pupilleLiKeineLichtreaktion)
+                CheckboxRow("Lichtreaktion", isOn: Binding(
+                    get: { !befund.pupilleLiKeineLichtreaktion },
+                    set: { befund.pupilleLiKeineLichtreaktion = !$0 }
+                ))
                 CheckboxRow("Nicht beurteilbar",   isOn: $befund.pupilleLiNichtBeurteilbar)
             } header: { Label("Pupillen", systemImage: "eye.circle") }
 
@@ -646,7 +652,6 @@ struct DisabilityView: View {
 
             Section {
                 CheckboxRow("BZ-Monitoring", isOn: $massnahmen.monBz)
-                CheckboxRow("EKG-Monitoring", isOn: $massnahmen.monEkg)
                 CheckboxRow("Krisenintervention", isOn: $massnahmen.krisenintervention)
             } header: { Label("Maßnahmen Neurologie", systemImage: "cross.fill") }
 
@@ -691,11 +696,11 @@ func labelForGCSVerbal(_ score: Int) -> String {
 
 func labelForGCSMotor(_ score: Int) -> String {
     switch score {
-    case 6: return "Folgt Aufforderungen (6)"
+    case 6: return "Befolgt Aufforderungen (6)"
     case 5: return "Gezielte Schmerzabwehr (5)"
-    case 4: return "Beugesynergismen (4)"
-    case 3: return "Strecksynergismen (3)"
-    case 2: return "Auf Schmerz verzieht (2)"
+    case 4: return "Auf Schmerzreiz zurückziehen (4)"
+    case 3: return "Beugesynergismus (pathologisch) (3)"
+    case 2: return "Strecksynergismus (2)"
     case 1: return "Keine Reaktion (1)"
     default: return "—"
     }
