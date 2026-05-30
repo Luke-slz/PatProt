@@ -77,11 +77,9 @@ enum NacaScore: Int, CaseIterable, Codable {
 }
 
 enum Qualifikation: String, CaseIterable, Codable {
-    case ersthelfer         = "EH"
-    case ersthelferE        = "EH-E"
+    case sanitaeterB        = "SanB"
     case rettungssanitaeter = "RS"
-    case rettungsassistent  = "RA"
-    case notfallsanitaeter  = "NotSan"
+    case notfallsanitaeter  = "NFS"
     case arzt               = "Arzt"
 }
 
@@ -91,11 +89,9 @@ struct PersonalEintrag: Codable, Hashable {
 }
 
 enum ProtokollVerfasser: String, CaseIterable, Codable {
-    case ersthelfer         = "Ersthelfer"
-    case ersthelferE        = "Ersthelfer (E)"
-    case rettungssanitaeter = "Rettungssanitäter"
-    case rettungsassistent  = "Rettungsassistent"
-    case notfallsanitaeter  = "Notfallsanitäter"
+    case sanitaeterB        = "SanB"
+    case rettungssanitaeter = "RS"
+    case notfallsanitaeter  = "NFS"
     case arzt               = "Arzt"
 }
 
@@ -162,6 +158,9 @@ class EinsatzProtokoll: ObservableObject, Identifiable {
     @Published var uebergabeMesswerte = UebergabeMesswerte()
     @Published var psyche = PsycheBefund()
     @Published var uebergabeBefunde = UebergabeBefunde()
+
+    // Freischalt-Flag
+    @Published var massnahmenDurchgefuehrt: Bool = true
 
     // Abschluss
     @Published var uebergabeAn = ""
@@ -252,6 +251,7 @@ class EinsatzProtokoll: ObservableObject, Identifiable {
         zustandBeiUebergabe = ""
         verfasser = .notfallsanitaeter
         unterschriftData = nil
+        massnahmenDurchgefuehrt = true
         erstelltAm = Date()
     }
 }
@@ -973,6 +973,7 @@ struct ProtokollDaten: Codable, Identifiable {
     var uebergabeAn: String
     var zustandBeiUebergabe: String
     var verfasser: ProtokollVerfasser?
+    var massnahmenDurchgefuehrt: Bool?
     var pdfExportiertAm: Date? = nil
 
     init(
@@ -1003,6 +1004,7 @@ struct ProtokollDaten: Codable, Identifiable {
         uebergabeAn: String = "",
         zustandBeiUebergabe: String = "",
         verfasser: ProtokollVerfasser? = nil,
+        massnahmenDurchgefuehrt: Bool? = nil,
         pdfExportiertAm: Date? = nil
     ) {
         self.id = id
@@ -1032,6 +1034,7 @@ struct ProtokollDaten: Codable, Identifiable {
         self.uebergabeAn = uebergabeAn
         self.zustandBeiUebergabe = zustandBeiUebergabe
         self.verfasser = verfasser
+        self.massnahmenDurchgefuehrt = massnahmenDurchgefuehrt
         self.pdfExportiertAm = pdfExportiertAm
     }
 }
@@ -1052,7 +1055,8 @@ extension EinsatzProtokoll {
             psyche: psyche, uebergabeBefunde: uebergabeBefunde,
             uebergabeAn: uebergabeAn,
             zustandBeiUebergabe: zustandBeiUebergabe,
-            verfasser: verfasser
+            verfasser: verfasser,
+            massnahmenDurchgefuehrt: massnahmenDurchgefuehrt
         )
     }
 
@@ -1072,6 +1076,7 @@ extension EinsatzProtokoll {
         uebergabeAn = d.uebergabeAn
         zustandBeiUebergabe = d.zustandBeiUebergabe
         verfasser = d.verfasser ?? .notfallsanitaeter
+        massnahmenDurchgefuehrt = d.massnahmenDurchgefuehrt ?? true
         erstelltAm = d.erstelltAm
     }
 }
@@ -1138,6 +1143,33 @@ extension SINNHAFTBefund {
         if m.beckenschlinge     { massnahmenList.append("Beckenschlinge") }
         if m.extremitaetenschienung { massnahmenList.append("Extremitätenschienung") }
         if m.verband            { massnahmenList.append("Verband") }
+
+        // Beatmung
+        if m.maschinelleBeatmung {
+            var beatmParts = ["Maschinelle Beatmung"]
+            if !m.tidalvolumen.isEmpty  { beatmParts.append("TV \(m.tidalvolumen) ml") }
+            if !m.peep.isEmpty          { beatmParts.append("PEEP \(m.peep) cmH₂O") }
+            if !m.fio2.isEmpty          { beatmParts.append("FiO₂ \(m.fio2)%") }
+            massnahmenList.append(beatmParts.joined(separator: ", "))
+        }
+        if m.cpap { massnahmenList.append("CPAP\(m.cpapMbar.isEmpty ? "" : " \(m.cpapMbar) mbar")") }
+        if m.guedelTubus  { massnahmenList.append("Guedel-Tubus") }
+        if m.wendlTubus   { massnahmenList.append("Wendel-Tubus") }
+        if m.heimlich     { massnahmenList.append("Heimlich-Manöver") }
+        if m.intraossaer  { massnahmenList.append("Intraossärer Zugang\(m.intraossaerOrt.isEmpty ? "" : " (\(m.intraossaerOrt))")") }
+        if m.defibrillation { massnahmenList.append("Defibrillation \(m.defiAnzahl)× \(m.defiJoule) J") }
+        if m.kardioversion  { massnahmenList.append("Kardioversion \(m.kardioversionJoule) J") }
+        if m.waermeerhalt   { massnahmenList.append("Wärmeerhalt") }
+        if m.kuehlung       { massnahmenList.append("Kühlung") }
+        if m.entbindung     { massnahmenList.append("Entbindung") }
+        if m.schocklagerung { massnahmenList.append("Schocklagerung") }
+        if m.linksseitenlage { massnahmenList.append("Stabile Seitenlage") }
+        if m.okHochlagerung { massnahmenList.append("OK-Hochlagerung") }
+        if !m.airwaySonstige.isEmpty   { massnahmenList.append(m.airwaySonstige) }
+        if !m.circSonstige.isEmpty     { massnahmenList.append(m.circSonstige) }
+        if !m.weitereSonstige.isEmpty  { massnahmenList.append(m.weitereSonstige) }
+        if !m.lagerungSonstige.isEmpty { massnahmenList.append(m.lagerungSonstige) }
+
         let medFmt = DateFormatter(); medFmt.dateFormat = "HH:mm"
         for med in protokoll.medikamente where !med.name.isEmpty {
             var parts: [String] = [med.name]
@@ -1160,9 +1192,8 @@ extension SINNHAFTBefund {
         befund.hintergrund = hintParts.joined(separator: "\n")
 
         var zustandParts: [String] = []
-        let f = DateFormatter(); f.dateFormat = "HH:mm"
 
-        // ABCDE-Statusübersicht
+        // ABCDE-Statusübersicht (nur Status, Vitalwerte stehen in der Tabelle im View)
         let abcdeStatus: [(String, ABCDEStatus)] = [
             ("A", protokoll.airway.status), ("B", protokoll.breathing.status),
             ("C", protokoll.circulation.status), ("D", protokoll.disability.status),
@@ -1174,28 +1205,6 @@ extension SINNHAFTBefund {
             .joined(separator: " · ")
         if !abcdeText.isEmpty { zustandParts.append("ABCDE: \(abcdeText)") }
 
-        // Anfangswerte (initial ABCDE vitals)
-        var anfangParts: [String] = []
-        if let af = protokoll.breathing.atemFrequenz { anfangParts.append("AF \(af)/min") }
-        if let spo2 = protokoll.breathing.spo2 { anfangParts.append("SpO₂ \(spo2)%") }
-        if let puls = protokoll.circulation.puls { anfangParts.append("Puls \(puls)/min") }
-        if let sys = protokoll.circulation.blutdruckSystolisch,
-           let dia = protokoll.circulation.blutdruckDiastolisch { anfangParts.append("RR \(sys)/\(dia) mmHg") }
-        if protokoll.disability.status != .unbewertet { anfangParts.append("GCS \(protokoll.disability.gcsGesamt)") }
-        if let bz = protokoll.disability.blutzucker { anfangParts.append("BZ \(String(format: "%.0f", bz)) mg/dL") }
-        if let temp = protokoll.exposure.temperatur { anfangParts.append("Temp \(String(format: "%.1f", temp))°C") }
-        if !anfangParts.isEmpty { zustandParts.append("Auffindewerte: \(anfangParts.joined(separator: ", "))") }
-
-        // Letzter Verlauf (most recent measurement)
-        if let letzte = protokoll.verlaufMessungen.sorted(by: { $0.zeitpunkt < $1.zeitpunkt }).last {
-            var verlaufTeile: [String] = []
-            if let af = letzte.atemFrequenz { verlaufTeile.append("AF \(af)/min") }
-            if let spo2 = letzte.spo2 { verlaufTeile.append("SpO₂ \(spo2)%") }
-            if let p = letzte.puls { verlaufTeile.append("Puls \(p)/min") }
-            if let sys = letzte.blutdruckSys, let dia = letzte.blutdruckDia { verlaufTeile.append("RR \(sys)/\(dia) mmHg") }
-            if let gcs = letzte.gcsGesamt { verlaufTeile.append("GCS \(gcs)") }
-            if !verlaufTeile.isEmpty { zustandParts.append("Aktuell (\(f.string(from: letzte.zeitpunkt))): \(verlaufTeile.joined(separator: ", "))") }
-        }
         befund.aktuellerZustand = zustandParts.joined(separator: "\n")
 
         var forderungParts: [String] = []
