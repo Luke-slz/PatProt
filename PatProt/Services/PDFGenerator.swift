@@ -766,9 +766,14 @@ struct DINPDFGenerator {
         }
 
         // ── C Kreislauf + EKG (dual cb) ──
+        let rekapLabel: String = {
+            var lbl = "Rekap.>2Sek."
+            if let t = p.circulation.rekapillierungZeit { lbl += " \(String(format: "%.1f", t))s" }
+            return lbl
+        }()
         let cItems: [(String, Bool, Bool)] = [
             ("unauffällig",   p.circulation.status == .nicht_kritisch, ub.cUnauffaellig),
-            ("Rekap.>2Sek.",  p.circulation.rekapillierung,            ub.rekapillierung),
+            (rekapLabel,      p.circulation.rekapillierung,            ub.rekapillierung),
             ("Sinusrhythmus", p.circulation.sinusrhythmus,             ub.sinusrhythmus),
             ("Abs.Arrhythm.", p.circulation.absoluteArrhythmie,        ub.absoluteArrhythmie),
             ("AV-Block",      p.circulation.avBlock,                   ub.avBlock),
@@ -1497,11 +1502,23 @@ struct DINPDFGenerator {
             field("Anmerkungen", p.ergebnis.anmerkungen, x:lx, y:y, w:rx-lx, h:h, lw:80, multiline: true)
             y += h
         }
+        if !p.ergebnis.firstResponderBesonderheiten.isEmpty && y + 11 < pageSize.height - 15 {
+            let h = fieldH(p.ergebnis.firstResponderBesonderheiten, width: p2ValW)
+            field("FR-Besonderheiten", p.ergebnis.firstResponderBesonderheiten, x:lx, y:y, w:rx-lx, h:h, lw:90, multiline: true)
+            y += h
+        }
 
         let p2safe = pageSize.height - 16
-        let besatzungNames = [p.besatzung.sanitaeter1, p.besatzung.sanitaeter2,
-                              p.besatzung.sanitaeter3, p.besatzung.sanitaeter4]
-            .filter { !$0.isEmpty }.joined(separator: " · ")
+        let besatzungEntries: [(String, Qualifikation)] = [
+            (p.besatzung.sanitaeter1, p.besatzung.qualifikation1),
+            (p.besatzung.sanitaeter2, p.besatzung.qualifikation2),
+            (p.besatzung.sanitaeter3, p.besatzung.qualifikation3),
+            (p.besatzung.sanitaeter4, p.besatzung.qualifikation4),
+        ]
+        let besatzungNames = besatzungEntries
+            .filter { !$0.0.isEmpty }
+            .map { "\($0.0) (\($0.1.rawValue))" }
+            .joined(separator: " · ")
         if !besatzungNames.isEmpty && y + 11 < p2safe {
             field("Besatzung", besatzungNames, x:lx, y:y, w:rx-lx, h:11, lw:42)
             y += 11

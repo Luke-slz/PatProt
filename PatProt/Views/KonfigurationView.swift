@@ -95,10 +95,10 @@ struct KonfigurationView: View {
             }
 
             Section {
-                BesatzungsFeld(label: "Sanitäter 1", text: $protokoll.besatzung.sanitaeter1)
-                BesatzungsFeld(label: "Sanitäter 2", text: $protokoll.besatzung.sanitaeter2)
-                BesatzungsFeld(label: "Sanitäter 3", text: $protokoll.besatzung.sanitaeter3)
-                BesatzungsFeld(label: "Sanitäter 4", text: $protokoll.besatzung.sanitaeter4)
+                BesatzungZeile(label: "Sanitäter 1", text: $protokoll.besatzung.sanitaeter1, qualifikation: $protokoll.besatzung.qualifikation1)
+                BesatzungZeile(label: "Sanitäter 2", text: $protokoll.besatzung.sanitaeter2, qualifikation: $protokoll.besatzung.qualifikation2)
+                BesatzungZeile(label: "Sanitäter 3", text: $protokoll.besatzung.sanitaeter3, qualifikation: $protokoll.besatzung.qualifikation3)
+                BesatzungZeile(label: "Sanitäter 4", text: $protokoll.besatzung.sanitaeter4, qualifikation: $protokoll.besatzung.qualifikation4)
             } header: {
                 Label("Besatzung", systemImage: "person.2")
             }
@@ -126,6 +126,51 @@ struct KonfigurationView: View {
                     protokoll.einsatzOrt.weitereEinsatzmittel.append(name)
                 }
             }
+        }
+    }
+}
+
+// MARK: - Besatzungszeile mit Qualifikations-Picker
+
+private struct BesatzungZeile: View {
+    let label: String
+    @Binding var text: String
+    @Binding var qualifikation: Qualifikation
+    @AppStorage("gespeichertesPersonal") private var personalJSON: String = "[]"
+    @State private var zeigePickerSheet = false
+
+    private var personal: [PersonalEintrag] {
+        let data = Data(personalJSON.utf8)
+        if let liste = try? JSONDecoder().decode([PersonalEintrag].self, from: data) { return liste }
+        if let namen = try? JSONDecoder().decode([String].self, from: data) {
+            return namen.map { PersonalEintrag(name: $0, qualifikation: .rettungssanitaeter) }
+        }
+        return []
+    }
+
+    var body: some View {
+        HStack(spacing: 6) {
+            TextField(label, text: $text)
+            if !personal.isEmpty {
+                Button {
+                    zeigePickerSheet = true
+                } label: {
+                    Image(systemName: "person.badge.plus")
+                        .foregroundStyle(Color("RDOrange"))
+                }
+                .buttonStyle(.plain)
+            }
+            Picker("", selection: $qualifikation) {
+                ForEach(Qualifikation.allCases, id: \.self) { q in
+                    Text(q.rawValue).tag(q)
+                }
+            }
+            .pickerStyle(.menu)
+            .labelsHidden()
+            .frame(width: 64)
+        }
+        .sheet(isPresented: $zeigePickerSheet) {
+            PersonalPickerSheet(ausgewählt: $text, personal: personal)
         }
     }
 }

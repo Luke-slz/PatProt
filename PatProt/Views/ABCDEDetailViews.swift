@@ -447,6 +447,17 @@ struct CirculationView: View {
                     }
                 }
                 CheckboxRow("Rekap. > 2 Sek.", isOn: $befund.rekapillierung)
+                if befund.rekapillierung {
+                    HStack {
+                        Text("Rekapillarisierungszeit:")
+                        Spacer()
+                        TextField("sek", value: $befund.rekapillierungZeit, format: .number)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 60)
+                        Text("sek").foregroundStyle(.secondary)
+                    }
+                }
             } header: { Label("Kreislauf", systemImage: "heart.fill") }
 
             Section {

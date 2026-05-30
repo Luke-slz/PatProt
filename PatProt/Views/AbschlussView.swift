@@ -121,6 +121,14 @@ struct AbschlussView: View {
                 Label("Einsatzbesonderheiten", systemImage: "exclamationmark.triangle")
             }
 
+            // FR-Einsatzbesonderheiten
+            Section {
+                TextField("Besonderheiten (Lage, Zugang, Gegebenheiten)", text: $protokoll.ergebnis.firstResponderBesonderheiten, axis: .vertical)
+                    .lineLimit(3...)
+            } header: {
+                Label("FR-Einsatzbesonderheiten", systemImage: "exclamationmark.triangle")
+            }
+
             // Archiv
             Section {
                 Button {

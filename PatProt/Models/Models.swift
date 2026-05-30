@@ -297,6 +297,10 @@ struct Besatzung: Codable {
     var sanitaeter2 = ""
     var sanitaeter3 = ""
     var sanitaeter4 = ""
+    var qualifikation1: Qualifikation = .rettungssanitaeter
+    var qualifikation2: Qualifikation = .rettungssanitaeter
+    var qualifikation3: Qualifikation = .rettungssanitaeter
+    var qualifikation4: Qualifikation = .rettungssanitaeter
 }
 
 // MARK: - ABCDE Befunde
@@ -352,6 +356,7 @@ struct CirculationBefund: Codable {
     var ivLokalisation = ""
     // RKN-Ergänzungen EKG
     var rekapillierung:          Bool = false
+    var rekapillierungZeit:      Double? = nil
     var sinusrhythmus:           Bool = false
     var absoluteArrhythmie:      Bool = false
     var avBlock:                 Bool = false
@@ -814,6 +819,7 @@ struct ErgebnisData: Codable {
     var rotAlarm: Bool = false
 
     var anmerkungen: String = ""
+    var firstResponderBesonderheiten: String = ""
 
     // Transportziel Klinik
     var transportzielZna: Bool = false
