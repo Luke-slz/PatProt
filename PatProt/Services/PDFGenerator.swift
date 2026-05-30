@@ -87,6 +87,18 @@ struct DINPDFGenerator {
         return min(ceil(br.height)+4, r.height)
     }
 
+    /// Height needed to render s within width, clamped to [minH, maxH]
+    private static func fieldH(_ s: String, width: CGFloat, font: UIFont = f7,
+                                minH: CGFloat = 11, maxH: CGFloat = 33) -> CGFloat {
+        guard !s.isEmpty else { return minH }
+        let ps = NSMutableParagraphStyle()
+        let attrs: [NSAttributedString.Key: Any] = [.font: font, .paragraphStyle: ps]
+        let br = (s as NSString).boundingRect(
+            with: CGSize(width: width, height: maxH),
+            options: .usesLineFragmentOrigin, attributes: attrs, context: nil)
+        return max(minH, min(ceil(br.height) + 5, maxH))
+    }
+
     // ─────────────────────────────────────────────────────
     // MARK: Form element helpers
     // ─────────────────────────────────────────────────────
@@ -107,7 +119,8 @@ struct DINPDFGenerator {
     private static func field(_ label: String, _ value: String,
                                x: CGFloat, y: CGFloat, w: CGFloat, h: CGFloat,
                                lw: CGFloat = 55, hl: Bool = false,
-                               lFont: UIFont? = nil, vFont: UIFont? = nil) {
+                               lFont: UIFont? = nil, vFont: UIFont? = nil,
+                               multiline: Bool = false) {
         let bg = hl ? hlYellow : .white
         fillRect(CGRect(x:x,y:y,width:w,height:h), bg)
         strokeRect(CGRect(x:x,y:y,width:w,height:h))
@@ -116,8 +129,12 @@ struct DINPDFGenerator {
             txt(label, CGRect(x:x+1.5,y:y+1.5,width:lw-3,height:h-3),
                 font:lFont ?? f6, color:.darkGray)
         }
-        txt(value, CGRect(x:x+lw+1.5,y:y+1.5,width:w-lw-3,height:h-3),
-            font:vFont ?? f7, color:.black)
+        let vr = CGRect(x:x+lw+1.5, y:y+1.5, width:w-lw-3, height:h-3)
+        if multiline {
+            mtxt(value, vr, font: vFont ?? f7)
+        } else {
+            txt(value, vr, font:vFont ?? f7, color:.black)
+        }
     }
 
     /// Just a bordered value box (no label divider)
@@ -398,12 +415,10 @@ struct DINPDFGenerator {
             strokeRect(CGRect(x:x,y:titleY,width:w,height:bh))
             txt("EINSATZPROTOKOLL",
                 CGRect(x:x+3,y:titleY+3,width:w-6,height:14), font:f13b, color:colBlue)
-            cb("EH",     p.verfasser == .ersthelfer,          x:x+3,   y:titleY+19, bs:7, lw:28)
-            cb("EH-E",   p.verfasser == .ersthelferE,         x:x+45,  y:titleY+19, bs:7, lw:33)
-            cb("RS",     p.verfasser == .rettungssanitaeter,  x:x+95,  y:titleY+19, bs:7, lw:22)
-            cb("RA",     p.verfasser == .rettungsassistent,   x:x+3,   y:titleY+28, bs:7, lw:22)
-            cb("NotSan", p.verfasser == .notfallsanitaeter,   x:x+45,  y:titleY+28, bs:7, lw:40)
-            cb("Arzt",   p.verfasser == .arzt,                x:x+95,  y:titleY+28, bs:7, lw:25)
+            cb("SanB",  p.verfasser == .sanitaeterB,        x:x+3,  y:titleY+19, bs:7, lw:30)
+            cb("RS",    p.verfasser == .rettungssanitaeter, x:x+55, y:titleY+19, bs:7, lw:22)
+            cb("NFS",   p.verfasser == .notfallsanitaeter,  x:x+3,  y:titleY+28, bs:7, lw:25)
+            cb("Arzt",  p.verfasser == .arzt,               x:x+55, y:titleY+28, bs:7, lw:25)
         }
 
         y = max(rightY, titleY + 36)
@@ -415,8 +430,9 @@ struct DINPDFGenerator {
         // Notfallgeschehen Felder
         let ng = p.notfallGeschehen
         if !ng.erstbefundVorOrt.isEmpty {
-            field("Erstbefund", ng.erstbefundVorOrt, x:lx, y:y, w:rx-lx, h:11, lw:50)
-            y += 11
+            let h = fieldH(ng.erstbefundVorOrt, width: rx-lx-53)
+            field("Erstbefund", ng.erstbefundVorOrt, x:lx, y:y, w:rx-lx, h:h, lw:50, multiline: true)
+            y += h
         }
         if !ng.patientGefunden.isEmpty || ng.manv {
             let beteiligteLabel = ng.manv
@@ -445,37 +461,44 @@ struct DINPDFGenerator {
             y += 11
         }
         if !ng.ersthelferMassnahmen.isEmpty {
-            field("Ersthelfer", ng.ersthelferMassnahmen, x:lx, y:y, w:rx-lx, h:11, lw:50)
-            y += 11
+            let h = fieldH(ng.ersthelferMassnahmen, width: rx-lx-53)
+            field("Ersthelfer", ng.ersthelferMassnahmen, x:lx, y:y, w:rx-lx, h:h, lw:50, multiline: true)
+            y += h
         }
 
         // Neue Notfallgeschehen-Felder
         let unfallHergangText = (ng.unfallhergangAuswahl + (ng.unfallhergangFreitext.isEmpty ? [] : [ng.unfallhergangFreitext])).joined(separator: ", ")
         if !unfallHergangText.isEmpty {
-            field("Unfallhergang", unfallHergangText, x:lx, y:y, w:rx-lx, h:11, lw:65)
-            y += 11
+            let h = fieldH(unfallHergangText, width: rx-lx-68)
+            field("Unfallhergang", unfallHergangText, x:lx, y:y, w:rx-lx, h:h, lw:65, multiline: true)
+            y += h
         }
         let unfallMechText = [ng.unfallmechanismus, ng.unfallmechanismusFreitext].filter{!$0.isEmpty}.joined(separator: " – ")
         if !unfallMechText.isEmpty {
-            field("Unfallmechanismus", unfallMechText, x:lx, y:y, w:rx-lx, h:11, lw:72)
-            y += 11
+            let h = fieldH(unfallMechText, width: rx-lx-75)
+            field("Unfallmechanismus", unfallMechText, x:lx, y:y, w:rx-lx, h:h, lw:72, multiline: true)
+            y += h
         }
         if !ng.preEmergencyStatus.isEmpty {
-            field("Pre-Emergency Status", ng.preEmergencyStatus, x:lx, y:y, w:rx-lx, h:11, lw:85)
-            y += 11
+            let h = fieldH(ng.preEmergencyStatus, width: rx-lx-88)
+            field("Pre-Emergency Status", ng.preEmergencyStatus, x:lx, y:y, w:rx-lx, h:h, lw:85, multiline: true)
+            y += h
         }
         let erstbefundAuswahlText = ng.erstbefundAuswahl.joined(separator: ", ")
         if !erstbefundAuswahlText.isEmpty {
-            field("Erstbefund (Auswahl)", erstbefundAuswahlText, x:lx, y:y, w:rx-lx, h:11, lw:85)
-            y += 11
+            let h = fieldH(erstbefundAuswahlText, width: rx-lx-88)
+            field("Erstbefund (Auswahl)", erstbefundAuswahlText, x:lx, y:y, w:rx-lx, h:h, lw:85, multiline: true)
+            y += h
         }
         if !ng.verlaufsbemerkungen.isEmpty {
-            field("Verlaufsbemerkungen", ng.verlaufsbemerkungen, x:lx, y:y, w:rx-lx, h:11, lw:85)
-            y += 11
+            let h = fieldH(ng.verlaufsbemerkungen, width: rx-lx-88)
+            field("Verlaufsbemerkungen", ng.verlaufsbemerkungen, x:lx, y:y, w:rx-lx, h:h, lw:85, multiline: true)
+            y += h
         }
         if !ng.notfallFreitext.isEmpty {
-            field("Ergänzungen", ng.notfallFreitext, x:lx, y:y, w:rx-lx, h:11, lw:55)
-            y += 11
+            let h = fieldH(ng.notfallFreitext, width: rx-lx-58)
+            field("Ergänzungen", ng.notfallFreitext, x:lx, y:y, w:rx-lx, h:h, lw:55, multiline: true)
+            y += h
         }
 
         // ABCDE grid
@@ -494,7 +517,29 @@ struct DINPDFGenerator {
         }
         func buildCirculationDetail() -> String {
             var parts = [p.circulation.freitext]
-            if !p.circulation.ekgBefund.isEmpty { parts.append("EKG: \(p.circulation.ekgBefund)") }
+            if p.circulation.ekg {
+                let c = p.circulation
+                let ekgFlags: [(Bool, String)] = [
+                    (c.sinusrhythmus,          "Sinusrhythmus"),
+                    (c.absoluteArrhythmie,     "Abs. Arrhythmie"),
+                    (c.avBlock,                "AV-Block II°/III°"),
+                    (c.qrsTachykardieBreit,    "QRS-Tachy breit"),
+                    (c.qrsTachykardieSchmal,   "QRS-Tachy schmal"),
+                    (c.kammerflattern,         "Kammerflimmern"),
+                    (c.pea,                    "PEA"),
+                    (c.asystolie,              "Asystolie"),
+                    (c.schrittmacher,          "Schrittmacher"),
+                    (c.infarktEkg,             "Infarkt-EKG"),
+                    (c.sves,                   "SVES"),
+                    (c.ves,                    "VES"),
+                    (c.extrasystolenMonomorph, "Extrasyst. mono"),
+                    (c.extrasystolenPolymorph, "Extrasyst. poly"),
+                    (c.cNichtBeurteilbar,      "Nicht beurteilbar"),
+                ]
+                let active = ekgFlags.filter(\.0).map(\.1)
+                let ekgSummary = active.isEmpty ? "EKG abgeleitet" : "EKG: \(active.joined(separator: ", "))"
+                parts.append(ekgSummary)
+            }
             if p.circulation.blutung && !p.circulation.blutungLokalisation.isEmpty { parts.append("Blutung: \(p.circulation.blutungLokalisation)") }
             if p.circulation.ivZugang && !p.circulation.ivLokalisation.isEmpty { parts.append("IV: \(p.circulation.ivLokalisation)") }
             return parts.filter { !$0.isEmpty }.joined(separator: " · ")
@@ -517,24 +562,29 @@ struct DINPDFGenerator {
         let abcdeRaw = [buildAirwayDetail(), buildBreathingDetail(), buildCirculationDetail(), p.disability.freitext, buildExposureDetail()]
         let abcdeVals   = abcdeRaw.map { $0.isEmpty ? "o.B." : $0 }
         let abcdeColors = abcdeRaw.map { $0.isEmpty ? UIColor.lightGray : UIColor.black }
-        let rowH: CGFloat = 11
+        let cw = rx - lx - 12
+        var abcdeY = y
         for i in 0..<5 {
-            let ry = y + CGFloat(i)*rowH
-            // Letter box A-E (12pt)
-            fillRect(CGRect(x:lx, y:ry, width:12, height:rowH), subBlue)
-            txt(abcdeLetters[i], CGRect(x:lx+1, y:ry+3, width:10, height:rowH-6),
-                font:f7b, color:.white, align:.center)
-            // Content (volle Breite bis rx)
-            let cw = rx - lx - 12
-            fillRect(CGRect(x:lx+12, y:ry, width:cw, height:rowH),
-                     i%2==0 ? .white : UIColor(white:0.97,alpha:1))
-            strokeRect(CGRect(x:lx+12, y:ry, width:cw, height:rowH))
             let isOB = abcdeRaw[i].isEmpty
-            txt(abcdeVals[i], CGRect(x:lx+14, y:ry+3, width:cw-4, height:rowH-6),
-                font: isOB ? UIFont.italicSystemFont(ofSize: 7) : f7,
-                color: abcdeColors[i])
+            let rowFont: UIFont = isOB ? UIFont.italicSystemFont(ofSize: 7) : f7
+            let rowH: CGFloat = isOB ? 11 : fieldH(abcdeVals[i], width: cw - 4)
+            // Letter box A-E
+            fillRect(CGRect(x:lx, y:abcdeY, width:12, height:rowH), subBlue)
+            txt(abcdeLetters[i], CGRect(x:lx+1, y:abcdeY+2, width:10, height:rowH-4),
+                font:f7b, color:.white, align:.center)
+            // Content box
+            fillRect(CGRect(x:lx+12, y:abcdeY, width:cw, height:rowH),
+                     i%2==0 ? .white : UIColor(white:0.97,alpha:1))
+            strokeRect(CGRect(x:lx+12, y:abcdeY, width:cw, height:rowH))
+            if isOB {
+                txt(abcdeVals[i], CGRect(x:lx+14, y:abcdeY+2, width:cw-4, height:rowH-4),
+                    font: rowFont, color: abcdeColors[i])
+            } else {
+                mtxt(abcdeVals[i], CGRect(x:lx+14, y:abcdeY+2, width:cw-4, height:rowH-4), font: rowFont)
+            }
+            abcdeY += rowH
         }
-        y += CGFloat(5)*rowH
+        y = abcdeY
 
         // SAMPLER — immer alle 8 Zeilen anzeigen
         let letztesMahlText: String = {
@@ -591,9 +641,11 @@ struct DINPDFGenerator {
             ("R – Risikofaktoren", p.sampler.risikofaktorenUnbekannt ? "Unbekannt" : p.sampler.risikofaktoren),
             ("Schwangerschaft",    schwangerschaftText),
         ]
+        let sValW: CGFloat = rx - lx - 88  // value area width for lw:85
         for (label, value) in samplerAllRows {
-            field(label, value, x:lx, y:y, w:rx-lx, h:11, lw:85)
-            y += 11
+            let rowH = fieldH(value, width: sValW)
+            field(label, value, x:lx, y:y, w:rx-lx, h:rowH, lw:85, multiline: true)
+            y += rowH
         }
 
         // Auffindewerte = initiale ABCDE-Werte
@@ -632,22 +684,26 @@ struct DINPDFGenerator {
         let mvLbl: CGFloat = 42
         let mvAnk: CGFloat = (bW_mv - mvLbl) / 2
         let mvUeb: CGFloat = bW_mv - mvLbl - mvAnk
-        txt("Ankunft",  CGRect(x:xMv+mvLbl,       y:y+2.5, width:mvAnk-2, height:4.5), font:f5, color:.white, align:.center)
-        txt("Übergabe", CGRect(x:xMv+mvLbl+mvAnk, y:y+2.5, width:mvUeb-2, height:4.5), font:f5, color:.white, align:.center)
-        subHeader("A+B Atmung", x:xAb, y:y, w:bW_ab)
-        txt("Ank.", CGRect(x:xAb+2,         y:y+2.5, width:14, height:4.5), font:f5, color:.white)
-        txt("Üb.",  CGRect(x:xAb+bW_ab-16,  y:y+2.5, width:14, height:4.5), font:f5, color:.white, align:.right)
+        txt("Ankunft",  CGRect(x:xMv+mvLbl,       y:y+2, width:mvAnk-2, height:5.5), font:f5, color:.white, align:.center)
+        txt("Übergabe", CGRect(x:xMv+mvLbl+mvAnk, y:y+2, width:mvUeb-2, height:5.5), font:f5, color:.white, align:.center)
+        // A+B, C, D: draw manually so "Ank."/"Üb." edge markers don't overlap the title text
+        fillRect(CGRect(x:xAb, y:y, width:bW_ab, height:9.5), subBlue)
+        txt("Ank.",       CGRect(x:xAb+1.5,        y:y+2,   width:13,         height:5.5), font:f5,  color:.white)
+        txt("A+B Atmung", CGRect(x:xAb+15,         y:y+1.5, width:bW_ab-30,   height:6.5), font:f6b, color:.white, align:.center)
+        txt("Üb.",        CGRect(x:xAb+bW_ab-14.5, y:y+2,   width:13,         height:5.5), font:f5,  color:.white, align:.right)
         subHeader("Schmerz", x:xSch, y:y, w:bW_sch)
-        subHeader("C Kreislauf+EKG", x:xC, y:y, w:bW_c)
-        txt("Ank.", CGRect(x:xC+2,        y:y+2.5, width:14, height:4.5), font:f5, color:.white)
-        txt("Üb.",  CGRect(x:xC+bW_c-16,  y:y+2.5, width:14, height:4.5), font:f5, color:.white, align:.right)
-        subHeader("D Neurologie", x:xD, y:y, w:bW_d)
-        txt("Ank.", CGRect(x:xD+2,        y:y+2.5, width:14, height:4.5), font:f5, color:.white)
-        txt("Üb.",  CGRect(x:xD+bW_d-16,  y:y+2.5, width:14, height:4.5), font:f5, color:.white, align:.right)
+        fillRect(CGRect(x:xC, y:y, width:bW_c, height:9.5), subBlue)
+        txt("Ank.",           CGRect(x:xC+1.5,       y:y+2,   width:13,        height:5.5), font:f5,  color:.white)
+        txt("C Kreislauf+EKG",CGRect(x:xC+15,        y:y+1.5, width:bW_c-30,  height:6.5), font:f6b, color:.white, align:.center)
+        txt("Üb.",            CGRect(x:xC+bW_c-14.5, y:y+2,   width:13,        height:5.5), font:f5,  color:.white, align:.right)
+        fillRect(CGRect(x:xD, y:y, width:bW_d, height:9.5), subBlue)
+        txt("Ank.",        CGRect(x:xD+1.5,       y:y+2,   width:13,        height:5.5), font:f5,  color:.white)
+        txt("D Neurologie",CGRect(x:xD+15,        y:y+1.5, width:bW_d-30,  height:6.5), font:f6b, color:.white, align:.center)
+        txt("Üb.",         CGRect(x:xD+bW_d-14.5, y:y+2,   width:13,        height:5.5), font:f5,  color:.white, align:.right)
         y += 9.5
 
         let mvColY = y
-        let dCbH: CGFloat = 8.5
+        let dCbH: CGFloat = 10
 
         // ── Messwerte (dual Ankunft/Übergabe) ──
         let mvH: CGFloat = 11
@@ -800,8 +856,9 @@ struct DINPDFGenerator {
             let diagText = DiagnoseWahrscheinlichkeit.allCases
                 .flatMap { stufe in p.diagnose.verdachtsdiagnosen.filter { $0.wahrscheinlichkeit == stufe }.map { "\($0.name) (\(stufe.rawValue))" } }
                 .joined(separator: " · ")
-            field("Verdachtsdiagnosen", diagText, x:lx, y:y, w:rx-lx, h:11, lw:85)
-            y += 11
+            let h = fieldH(diagText, width: rx-lx-88)
+            field("Verdachtsdiagnosen", diagText, x:lx, y:y, w:rx-lx, h:h, lw:85, multiline: true)
+            y += h
         }
 
         let col1Items: [(String,Bool)] = [
@@ -1389,8 +1446,9 @@ struct DINPDFGenerator {
             y = r7y0 + CGFloat(r7RowsCount) * r7H + 2
 
             if !rea.freitext.isEmpty && y + 11 < pageSize.height - 15 {
-                field("Reanimation – Notizen", rea.freitext, x:lx, y:y, w:rx-lx, h:11, lw:90)
-                y += 11
+                let h = fieldH(rea.freitext, width: rx-lx-93)
+                field("Reanimation – Notizen", rea.freitext, x:lx, y:y, w:rx-lx, h:h, lw:90, multiline: true)
+                y += h
             }
         } else if let naca = p.notfallGeschehen.nacaScoreWert {
             // Section 7 skipped — show NACA standalone at full width
@@ -1425,15 +1483,19 @@ struct DINPDFGenerator {
         field("Übergabe an Rettungsmittel", p.uebergabeAn, x:lx, y:y, w:rx-lx, h:12, lw:100, hl:true)
         y += 12
 
-        field("Zustand bei Übergabe", p.zustandBeiUebergabe, x:lx, y:y, w:rx-lx, h:11, lw:80)
-        y += 11
+        let p2ValW: CGFloat = rx - lx - 83
+        let zustandH = fieldH(p.zustandBeiUebergabe, width: p2ValW)
+        field("Zustand bei Übergabe", p.zustandBeiUebergabe, x:lx, y:y, w:rx-lx, h:zustandH, lw:80, multiline: true)
+        y += zustandH
         if !p.diagnose.diagnoseFreitext.isEmpty && y + 11 < pageSize.height - 15 {
-            field("Diagnose-Freitext", p.diagnose.diagnoseFreitext, x:lx, y:y, w:rx-lx, h:11, lw:80)
-            y += 11
+            let h = fieldH(p.diagnose.diagnoseFreitext, width: p2ValW)
+            field("Diagnose-Freitext", p.diagnose.diagnoseFreitext, x:lx, y:y, w:rx-lx, h:h, lw:80, multiline: true)
+            y += h
         }
         if !p.ergebnis.anmerkungen.isEmpty && y + 11 < pageSize.height - 15 {
-            field("Anmerkungen", p.ergebnis.anmerkungen, x:lx, y:y, w:rx-lx, h:11, lw:80)
-            y += 11
+            let h = fieldH(p.ergebnis.anmerkungen, width: p2ValW)
+            field("Anmerkungen", p.ergebnis.anmerkungen, x:lx, y:y, w:rx-lx, h:h, lw:80, multiline: true)
+            y += h
         }
 
         let p2safe = pageSize.height - 16
