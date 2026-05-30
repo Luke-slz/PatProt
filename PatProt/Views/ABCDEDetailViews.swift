@@ -124,6 +124,19 @@ struct AirwayView: View {
                     TextField("Typ (z.B. LMA, i-gel)", text: $massnahmen.supraglottischTyp)
                 }
                 CheckboxRow("Konikotomie", isOn: $befund.konikotomie)
+
+                let aktMassnahmen: [String] = [
+                    massnahmen.guedelTubus  ? "Guedel" : nil,
+                    massnahmen.wendlTubus   ? "Wendel" : nil,
+                    massnahmen.sauerstoffgabe ? "O₂\(massnahmen.sauerstoffLitMin.isEmpty ? "" : " \(massnahmen.sauerstoffLitMin) l/min")" : nil,
+                    massnahmen.maskenbeatmung       ? "Maskenbeatmung" : nil,
+                    massnahmen.maschinelleBeatmung  ? "Masch. Beatmung" : nil
+                ].compactMap { $0 }
+                if !aktMassnahmen.isEmpty {
+                    Label(aktMassnahmen.joined(separator: " · "), systemImage: "checkmark.circle.fill")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             } header: { Label("Maßnahmen Atemweg", systemImage: "cross.fill") }
 
         }
@@ -283,6 +296,18 @@ struct BreathingView: View {
                             .keyboardType(.decimalPad)
                         Text("mbar").foregroundColor(.secondary)
                     }
+                }
+
+                let aktMassnahmen: [String] = [
+                    massnahmen.sauerstoffgabe ? "O₂\(massnahmen.sauerstoffLitMin.isEmpty ? "" : " \(massnahmen.sauerstoffLitMin) l/min")" : nil,
+                    massnahmen.maskenbeatmung      ? "Maskenbeatmung" : nil,
+                    massnahmen.maschinelleBeatmung ? "Masch. Beatmung" : nil,
+                    massnahmen.cpap ? "CPAP\(massnahmen.cpapMbar.isEmpty ? "" : " \(massnahmen.cpapMbar) mbar")" : nil
+                ].compactMap { $0 }
+                if !aktMassnahmen.isEmpty {
+                    Label(aktMassnahmen.joined(separator: " · "), systemImage: "checkmark.circle.fill")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             } header: { Label("Maßnahmen Beatmung / O₂", systemImage: "cross.fill") }
 
@@ -482,6 +507,22 @@ struct CirculationView: View {
                 CheckboxRow("Tourniquet", isOn: $massnahmen.tourniquet)
                 CheckboxRow("Defibrillation", isOn: $massnahmen.defibrillation)
                 CheckboxRow("Kardioversion", isOn: $massnahmen.kardioversion)
+
+                let aktMassnahmen: [String] = [
+                    massnahmen.peripherVenoes ? {
+                        var parts = ["PVK"]
+                        if !massnahmen.peripherVenoesGroesse.isEmpty { parts.append("\(massnahmen.peripherVenoesGroesse) G") }
+                        if !massnahmen.peripherVenoesOrt.isEmpty     { parts.append("(\(massnahmen.peripherVenoesOrt))") }
+                        return parts.joined(separator: " ")
+                    }() : nil,
+                    massnahmen.intraossaer ? "Intraossär\(massnahmen.intraossaerOrt.isEmpty ? "" : " (\(massnahmen.intraossaerOrt))")" : nil,
+                    massnahmen.defibrillation ? "Defi" : nil
+                ].compactMap { $0 }
+                if !aktMassnahmen.isEmpty {
+                    Label(aktMassnahmen.joined(separator: " · "), systemImage: "checkmark.circle.fill")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             } header: { Label("Maßnahmen Kreislauf", systemImage: "cross.fill") }
 
         }

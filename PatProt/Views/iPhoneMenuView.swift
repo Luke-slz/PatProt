@@ -5,6 +5,7 @@ import SwiftUI
 struct iPhoneMenuView: View {
     @EnvironmentObject private var protokoll: EinsatzProtokoll
     @Binding var path: [iPhoneAppStep]
+    @State private var zeigeVerlassenWarnung = false
 
     var body: some View {
         List {
@@ -12,23 +13,26 @@ struct iPhoneMenuView: View {
             Section {
                 menuRow("Konfiguration",    icon: "gearshape.fill",         color: .gray,   step: .konfiguration,    badge: konfigurationBadge)
                 menuRow("Einsatzzeiten",    icon: "clock.fill",              color: .blue,   step: .einsatzzeiten,    badge: nil)
-                menuRow("Patient",          icon: "person.fill",             color: .teal,   step: .patient,          badge: patientBadge)
+                menuRow("Patient",          icon: "person.fill",             color: .teal,   step: .patient,          badge: patientBadge, warnBadge: patientWarnBadge)
             }
 
             // Klinische Erfassung
             Section {
                 menuRow("Notfallgeschehen", icon: "bell.fill",               color: .orange, step: .notfallGeschehen, badge: notfallBadge)
-                menuRow("ABCDE",            icon: "staroflife.fill",         color: .red,    step: .abcde,            badge: befundeBadge)
+                menuRow("ABCDE",            icon: "staroflife.fill",         color: .red,    step: .abcde,            badge: befundeBadge, warnBadge: abcdeWarnBadge)
                 menuRow("SAMPLER-Schema",   icon: "list.clipboard.fill",     color: .indigo, step: .sampler,          badge: nil)
                 menuRow("Diagnosen",        icon: "eye.fill",                color: .purple, step: .diagnose,         badge: diagnoseBadge)
             } footer: {
                 if !patientErfasst {
-                    Label("Patient erfassen um klinische Abschnitte freizuschalten", systemImage: "lock.fill")
+                    Label("Kein Patient erfasst – Abschnitte gesperrt", systemImage: "lock.fill")
+                        .font(.caption).foregroundStyle(.orange)
+                } else if !protokoll.massnahmenDurchgefuehrt {
+                    Label("Keine Maßnahmen – klinische Abschnitte gesperrt", systemImage: "lock.fill")
                         .font(.caption).foregroundStyle(.orange)
                 }
             }
-            .disabled(!patientErfasst)
-            .opacity(patientErfasst ? 1 : 0.45)
+            .disabled(!patientErfasst || !protokoll.massnahmenDurchgefuehrt)
+            .opacity(patientErfasst && protokoll.massnahmenDurchgefuehrt ? 1 : 0.4)
 
             // Verlauf & Therapie
             Section {
@@ -39,8 +43,8 @@ struct iPhoneMenuView: View {
                 menuRow("Bilder & Dateien",      icon: "photo.stack.fill",               color: .brown,               step: .bilder,          badge: bilderBadge)
                 menuRow("Übergabe-Befunde",      icon: "cross.case.fill",                color: Color("RDOrange"),    step: .uebergabeBefunde, badge: nil)
             }
-            .disabled(!patientErfasst)
-            .opacity(patientErfasst ? 1 : 0.45)
+            .disabled(!patientErfasst || !protokoll.massnahmenDurchgefuehrt)
+            .opacity(patientErfasst && protokoll.massnahmenDurchgefuehrt ? 1 : 0.4)
 
             // Abschluss
             Section {
@@ -70,11 +74,50 @@ struct iPhoneMenuView: View {
         .listStyle(.insetGrouped)
         .navigationTitle("Menü")
         .navigationBarTitleDisplayMode(.large)
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button {
+                    if hatDaten {
+                        zeigeVerlassenWarnung = true
+                    } else {
+                        path = []
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                            .fontWeight(.semibold)
+                        Text("Start")
+                    }
+                }
+            }
+        }
+        .confirmationDialog("Einsatz abbrechen?",
+                            isPresented: $zeigeVerlassenWarnung,
+                            titleVisibility: .visible) {
+            Button("Zurück ohne Speichern", role: .destructive) { path = [] }
+            Button("Abbrechen", role: .cancel) {}
+        } message: {
+            Text("Es wurden bereits Daten erfasst. Wenn du zurückgehst, gehen alle Eingaben verloren.")
+        }
+    }
+
+    private var hatDaten: Bool {
+        let p = protokoll.patientDaten
+        let eo = protokoll.einsatzOrt
+        return !p.vorname.isEmpty
+            || !p.nachname.isEmpty
+            || p.geburtsDatum != nil
+            || !eo.stichwort.isEmpty
+            || !eo.einsatzNummer.isEmpty
+            || !protokoll.verlaufMessungen.isEmpty
+            || protokoll.massnahmen.sauerstoffgabe
+            || !protokoll.medikamente.isEmpty
     }
 
     // MARK: - Menu Row
 
-    private func menuRow(_ title: String, icon: String, color: Color, step: iPhoneAppStep, badge: Int?) -> some View {
+    private func menuRow(_ title: String, icon: String, color: Color, step: iPhoneAppStep, badge: Int?, warnBadge: Int? = nil) -> some View {
         Button {
             path.append(step)
         } label: {
@@ -91,7 +134,15 @@ struct iPhoneMenuView: View {
                     .foregroundColor(.primary)
                     .fontWeight(.medium)
                 Spacer()
-                if let count = badge, count > 0 {
+                if let count = warnBadge, count > 0 {
+                    Text("\(min(count, 99))")
+                        .font(.caption.weight(.bold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(Color.red)
+                        .clipShape(Capsule())
+                } else if let count = badge, count > 0 {
                     Text("\(min(count, 99))")
                         .font(.caption.weight(.bold))
                         .foregroundColor(.white)
@@ -108,11 +159,11 @@ struct iPhoneMenuView: View {
         }
     }
 
-    // MARK: - Gate
+    // MARK: - Patient Gate
 
     private var patientErfasst: Bool {
         let p = protokoll.patientDaten
-        return !p.vorname.isEmpty || !p.nachname.isEmpty || p.geburtsDatum != nil
+        return !p.vorname.isEmpty || !p.nachname.isEmpty
     }
 
     // MARK: - Badge Berechnungen
@@ -135,6 +186,25 @@ struct iPhoneMenuView: View {
         if p.geburtsDatum != nil      { count += 1 }
         if p.geschlecht != .unbekannt { count += 1 }
         return count > 0 ? count : nil
+    }
+
+    private var patientWarnBadge: Int? {
+        let p = protokoll.patientDaten
+        var missing = 0
+        if p.vorname.isEmpty      { missing += 1 }
+        if p.nachname.isEmpty     { missing += 1 }
+        if p.geburtsDatum == nil  { missing += 1 }
+        return missing > 0 ? missing : nil
+    }
+
+    private var abcdeWarnBadge: Int? {
+        let unbewertet = [protokoll.airway.status,
+                          protokoll.breathing.status,
+                          protokoll.circulation.status,
+                          protokoll.disability.status,
+                          protokoll.exposure.status]
+            .filter { $0 == .unbewertet }.count
+        return unbewertet > 0 ? unbewertet : nil
     }
 
     private var notfallBadge: Int? {
