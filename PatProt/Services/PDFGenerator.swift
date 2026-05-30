@@ -264,8 +264,8 @@ struct DINPDFGenerator {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(fname).pdf")
         do {
             try renderer.writePDF(to: url) { ctx in
-                // Add 10pt safety margin so nothing is clipped when printing
-                let m: CGFloat = 10
+                // 36pt (~half-inch) safety margin so nothing is clipped on a standard printer
+                let m: CGFloat = 36
                 let sx = (pageSize.width - 2*m) / pageSize.width
                 let sy = (pageSize.height - 2*m) / pageSize.height
                 func applyMarginTransform() {
@@ -280,6 +280,9 @@ struct DINPDFGenerator {
                 drawPage2(p: protokoll)
                 let messungen = protokoll.verlaufMessungen.sorted(by: { $0.zeitpunkt < $1.zeitpunkt })
                 if messungen.count >= 2 {
+                    ctx.beginPage()
+                    applyMarginTransform()
+                    drawVerlaufsTabellenSeite(p: protokoll, messungen: messungen)
                     ctx.beginPage()
                     applyMarginTransform()
                     drawVerlaufsChart(p: protokoll, messungen: messungen)
@@ -843,6 +846,28 @@ struct DINPDFGenerator {
         field("Hautfarbe", p.exposure.hautfarbe, x:lx, y:y, w:(rx-lx)/2, h:11, lw:42)
         field("Verletzungen", p.exposure.verletzungen, x:lx+(rx-lx)/2, y:y, w:(rx-lx)/2, h:11, lw:45)
         y += 11
+
+        // Psyche (E-Befund)
+        let psycheFlags: [String] = [
+            p.psyche.unauffaellig     ? "Unauffällig"       : nil,
+            p.psyche.aengstlich       ? "Ängstlich"         : nil,
+            p.psyche.wahnhaft         ? "Wahnhaft"          : nil,
+            p.psyche.suizidal         ? "Suizidal"          : nil,
+            p.psyche.erregt           ? "Erregt"            : nil,
+            p.psyche.verlangsamt      ? "Verlangsamt"       : nil,
+            p.psyche.depressiv        ? "Depressiv"         : nil,
+            p.psyche.euphorisch       ? "Euphorisch"        : nil,
+            p.psyche.verwirrt         ? "Verwirrt"          : nil,
+            p.psyche.motorischUnruhig ? "Motorisch unruhig" : nil,
+            p.psyche.aggressiv        ? "Aggressiv"         : nil,
+            p.psyche.nichtBeurteilbar ? "Nicht beurteilbar" : nil,
+        ].compactMap { $0 }
+        if !psycheFlags.isEmpty {
+            let psycheText = psycheFlags.joined(separator: " · ")
+            let h = fieldH(psycheText, width: rx-lx-55)
+            field("Psyche", psycheText, x:lx, y:y, w:rx-lx, h:h, lw:52, multiline: true)
+            y += h
+        }
 
         // ── SECTION 4 ──────────────────────────────────────
         secHeader("4. Diagnose", x:lx, y:y, w:rx-lx)
@@ -1575,6 +1600,117 @@ struct DINPDFGenerator {
                 let sigRect = CGRect(x: lx + datumBreite + 74, y: y + 2, width: sigW, height: sigH - 14)
                 img.draw(in: sigRect)
             }
+        }
+
+        drawFooter(erstelltAm: p.erstelltAm)
+    }
+
+    // ─────────────────────────────────────────────────────
+    // MARK: - Verlaufs-Tabellen Seite
+    // ─────────────────────────────────────────────────────
+
+    /// Trend arrow comparing two optional numeric values (b vs a)
+    private static func trendPfeil(_ a: Double?, _ b: Double?) -> String {
+        guard let a, let b else { return " " }
+        if b > a { return "↑" } else if b < a { return "↓" } else { return "→" }
+    }
+
+    private static func drawVerlaufsTabellenSeite(p: EinsatzProtokoll, messungen: [VerlaufsMessung]) {
+        let tLx: CGFloat = 7; let tRx: CGFloat = pageSize.width - 7
+        var y: CGFloat = 28
+
+        // Page header
+        fillRect(CGRect(x:0, y:0, width:pageSize.width, height:22), colBlue)
+        txt("Verlaufsmessungen – tabellarische Übersicht",
+            CGRect(x:tLx, y:3, width:tRx-tLx, height:16), font:f10b, color:.white)
+        txt("\(p.patientDaten.nachname), \(p.patientDaten.vorname)   |   Einsatz: \(p.einsatzOrt.einsatzNummer)",
+            CGRect(x:tRx-230, y:13, width:225, height:8), font:f6, color:.white, align:.right)
+
+        let timeFmt = DateFormatter(); timeFmt.dateFormat = "HH:mm"
+        let totW = tRx - tLx
+
+        // Column definitions: (header, relative width fraction)
+        let colDefs: [(String, CGFloat)] = [
+            ("Zeit",         0.09),
+            ("AF\n/min",     0.08),
+            ("SpO₂\n%",      0.08),
+            ("Puls\n/min",   0.09),
+            ("RR\nsys/dia",  0.13),
+            ("GCS",          0.07),
+            ("BZ\nmg/dL",    0.09),
+            ("Temp\n°C",     0.10),
+            ("Maßnahmen / Bemerkung", 0.27),
+        ]
+        let colWs = colDefs.map { totW * $0.1 }
+        let hdrH: CGFloat = 16
+        let rowH: CGFloat = 12
+
+        // Draw header row
+        fillRect(CGRect(x:tLx, y:y, width:totW, height:hdrH), vLightB)
+        strokeRect(CGRect(x:tLx, y:y, width:totW, height:hdrH))
+        var cx = tLx
+        for (i, (hdr, _)) in colDefs.enumerated() {
+            if i > 0 { vline(cx, y, hdrH) }
+            let lines = hdr.components(separatedBy: "\n")
+            if lines.count == 2 {
+                txt(lines[0], CGRect(x:cx+1.5, y:y+1, width:colWs[i]-3, height:7), font:f6b, color:colBlue, align:.center)
+                txt(lines[1], CGRect(x:cx+1.5, y:y+8, width:colWs[i]-3, height:7), font:f5,  color:colBlue, align:.center)
+            } else {
+                txt(hdr, CGRect(x:cx+1.5, y:y+4, width:colWs[i]-3, height:8), font:f6b, color:colBlue, align:.center)
+            }
+            cx += colWs[i]
+        }
+        y += hdrH
+
+        // Draw data rows
+        for (idx, m) in messungen.enumerated() {
+            if y + rowH > pageSize.height - 16 { break }
+            let prev: VerlaufsMessung? = idx > 0 ? messungen[idx-1] : nil
+            let bg: UIColor = idx % 2 == 0 ? .white : UIColor(white:0.97, alpha:1)
+            fillRect(CGRect(x:tLx, y:y, width:totW, height:rowH), bg)
+            strokeRect(CGRect(x:tLx, y:y, width:totW, height:rowH))
+
+            let afTrend   = trendPfeil(prev.flatMap { $0.atemFrequenz.map(Double.init) },   m.atemFrequenz.map(Double.init))
+            let spo2Trend = trendPfeil(prev.flatMap { $0.spo2.map(Double.init) },            m.spo2.map(Double.init))
+            let pulsTrend = trendPfeil(prev.flatMap { $0.puls.map(Double.init) },            m.puls.map(Double.init))
+            let sysTrend  = trendPfeil(prev.flatMap { $0.blutdruckSys.map(Double.init) },    m.blutdruckSys.map(Double.init))
+            let gcsTrend  = trendPfeil(prev.flatMap { $0.gcsGesamt.map(Double.init) },       m.gcsGesamt.map(Double.init))
+            let bzTrend   = trendPfeil(prev.flatMap { $0.blutzucker },                        m.blutzucker)
+            let tempTrend = trendPfeil(prev.flatMap { $0.temperatur },                        m.temperatur)
+
+            let rrText: String = {
+                let s = m.blutdruckSys.map { "\($0)" } ?? ""
+                let d = m.blutdruckDia.map { "\($0)" } ?? ""
+                if s.isEmpty && d.isEmpty { return "" }
+                return "\(s)/\(d)\(sysTrend)"
+            }()
+
+            let cellValues: [String] = [
+                timeFmt.string(from: m.zeitpunkt),
+                m.atemFrequenz.map { "\($0)\(afTrend)" } ?? "",
+                m.spo2.map        { "\($0)\(spo2Trend)" } ?? "",
+                m.puls.map        { "\($0)\(pulsTrend)" } ?? "",
+                rrText,
+                m.gcsGesamt.map   { "\($0)\(gcsTrend)" } ?? "",
+                m.blutzucker.map  { "\(String(format:"%.0f",$0))\(bzTrend)" } ?? "",
+                m.temperatur.map  { "\(String(format:"%.1f",$0))\(tempTrend)" } ?? "",
+                [m.massnahmen, m.freitext].filter{!$0.isEmpty}.joined(separator: " · "),
+            ]
+
+            var vx = tLx
+            for (i, val) in cellValues.enumerated() {
+                if i > 0 { vline(vx, y, rowH) }
+                txt(val, CGRect(x:vx+1.5, y:y+2, width:colWs[i]-3, height:rowH-4), font:f7, align:.center)
+                vx += colWs[i]
+            }
+            y += rowH
+        }
+
+        // Maßnahmen legend note
+        y += 4
+        if y + 9 < pageSize.height - 16 {
+            txt("↑ gestiegen  ↓ gefallen  → unverändert  (Trend gegenüber Vormessung)",
+                CGRect(x:tLx, y:y, width:totW, height:8), font:f5, color:.darkGray)
         }
 
         drawFooter(erstelltAm: p.erstelltAm)
