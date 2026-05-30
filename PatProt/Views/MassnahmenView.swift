@@ -4,7 +4,7 @@ struct MassnahmenView: View {
     @Binding var befund: MassnahmenBefund
     var onBack: () -> Void
 
-    @State private var zeigeSauerstoffNumpad = false
+
     @State private var zeigeEgaGrNumpad = false
     @State private var zeigeVenoesGroesseNumpad = false
     @State private var zeigeCpapNumpad = false
@@ -27,17 +27,17 @@ struct MassnahmenView: View {
                 CheckboxRow("Wendel-Tubus (NPA)",  isOn: $befund.wendlTubus)
                 CheckboxRow("Sauerstoffgabe", isOn: $befund.sauerstoffgabe)
                 if befund.sauerstoffgabe {
-                    HStack {
-                        Text("L/min")
-                        Spacer()
-                        Text(befund.sauerstoffLitMin.isEmpty ? "—" : befund.sauerstoffLitMin)
-                            .foregroundColor(befund.sauerstoffLitMin.isEmpty ? .secondary : .primary)
-                    }
-                    .contentShape(Rectangle())
-                    .onTapGesture { zeigeSauerstoffNumpad = true }
-                    .sheet(isPresented: $zeigeSauerstoffNumpad) {
-                        NumpadSheet(mode: .decimal(label: "O₂ Durchfluss", unit: "L/min"),
-                                    initial: befund.sauerstoffLitMin) { val in befund.sauerstoffLitMin = val }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(befund.sauerstoffLitMin.isEmpty ? "L/min: —"
+                             : "L/min: \(befund.sauerstoffLitMin)")
+                            .foregroundStyle(.secondary)
+                        Slider(value: Binding(
+                            get: { Double(befund.sauerstoffLitMin) ?? 0 },
+                            set: { val in
+                                let rounded = (val * 2).rounded() / 2
+                                befund.sauerstoffLitMin = rounded == 0 ? "" : String(format: rounded.truncatingRemainder(dividingBy: 1) == 0 ? "%.0f" : "%.1f", rounded)
+                            }
+                        ), in: 0...15, step: 0.5)
                     }
                 }
                 CheckboxRow("Maskenbeatmung (BVM)", isOn: $befund.maskenbeatmung)

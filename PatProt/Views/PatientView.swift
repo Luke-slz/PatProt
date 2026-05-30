@@ -41,6 +41,7 @@ struct PatientView: View {
                 .contentShape(Rectangle())
                 .onTapGesture { zeigeGewichtNumpad = true }
                 Toggle("Ansprechbar", isOn: $protokoll.patientDaten.ansprechbar)
+                Toggle("Maßnahmen / Behandlung durchgeführt", isOn: $protokoll.massnahmenDurchgefuehrt)
             } header: {
                 Label("Klinische Angaben", systemImage: "stethoscope")
             }

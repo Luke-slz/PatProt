@@ -272,13 +272,9 @@ struct EinsatzOrtView: View {
         }
         .onChange(of: locationManager.address) { _, newAddress in
             if !newAddress.isEmpty {
-                if !locationManager.street.isEmpty {
-                    protokoll.einsatzOrt.adresse = locationManager.street
-                    protokoll.einsatzOrt.plz = locationManager.postalCode
-                    protokoll.einsatzOrt.ort = locationManager.city
-                } else {
-                    protokoll.einsatzOrt.adresse = newAddress
-                }
+                protokoll.einsatzOrt.adresse = locationManager.street.isEmpty ? newAddress : locationManager.street
+                if !locationManager.postalCode.isEmpty { protokoll.einsatzOrt.plz = locationManager.postalCode }
+                if !locationManager.city.isEmpty       { protokoll.einsatzOrt.ort = locationManager.city }
             }
         }
         .navigationTitle("Rettungstechnische Daten")

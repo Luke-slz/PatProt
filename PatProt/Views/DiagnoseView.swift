@@ -132,6 +132,13 @@ struct DiagnoseView: View {
                     }
                 }
             }
+
+            Section {
+                TextField("Freitext (z.B. Differentialdiagnosen, Besonderheiten)", text: $befund.diagnoseFreitext, axis: .vertical)
+                    .lineLimit(3...)
+            } header: {
+                Label("Diagnose-Freitext", systemImage: "text.bubble")
+            }
         }
         .searchable(text: $suche, prompt: "Diagnose suchen")
         .navigationTitle("Diagnosen")

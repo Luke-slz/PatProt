@@ -412,7 +412,13 @@ struct UnterschriftSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Speichern") {
-                        let rect = CGRect(origin: .zero, size: canvasView.bounds.size)
+                        // Use actual canvas bounds; fall back to a fixed size if layout
+                        // hasn't completed yet (bounds == .zero).
+                        let canvasBounds = canvasView.bounds
+                        let renderSize = canvasBounds.size == .zero
+                            ? CGSize(width: 300, height: 150)
+                            : canvasBounds.size
+                        let rect = CGRect(origin: .zero, size: renderSize)
                         let image = canvasView.drawing.image(from: rect, scale: UIScreen.main.scale)
                         if let data = image.pngData() {
                             onSave(data)
