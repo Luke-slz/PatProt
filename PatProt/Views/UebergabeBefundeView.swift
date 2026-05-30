@@ -47,6 +47,32 @@ struct UebergabeBefundeView: View {
                 }
             }
 
+            if !protokoll.medikamente.isEmpty || protokoll.massnahmen.peripherVenoes {
+                Section {
+                    ForEach(protokoll.medikamente) { med in
+                        HStack {
+                            Text(med.name).bold()
+                            Spacer()
+                            Text("\(med.dosis) \(med.einheit)")
+                                .foregroundStyle(.secondary)
+                            Text(med.zeit, style: .time)
+                                .foregroundStyle(.secondary)
+                                .font(.caption)
+                        }
+                    }
+                    if protokoll.massnahmen.peripherVenoes {
+                        let pvk = [
+                            "PVK",
+                            protokoll.massnahmen.peripherVenoesGroesse.isEmpty ? nil : "\(protokoll.massnahmen.peripherVenoesGroesse) G",
+                            protokoll.massnahmen.peripherVenoesOrt.isEmpty ? nil : protokoll.massnahmen.peripherVenoesOrt
+                        ].compactMap { $0 }.joined(separator: " ")
+                        Label(pvk, systemImage: "syringe")
+                    }
+                } header: {
+                    Label("Notfallmedikamente & Zugang", systemImage: "pills.fill")
+                }
+            }
+
             // MARK: A+B Atmung
             Section("A+B Atmung") {
                 DualCheckRow(label: "unauffällig",
@@ -279,6 +305,9 @@ struct UebergabeBefundeView: View {
         }
         .navigationTitle("Übergabe-Befunde")
         .onAppear {
+            if protokoll.uebergabeMesswerte.rrSys.isEmpty {
+                protokoll.prefillUebergabeMesswerteAusVerlauf()
+            }
             protokoll.prefillGCSAusDisability()
         }
     }
