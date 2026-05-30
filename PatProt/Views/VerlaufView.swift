@@ -124,11 +124,29 @@ struct VerlaufView: View {
 
     // MARK: - Messungsliste
 
+    private var dreifachRRWarnung: Bool {
+        let sorted = protokoll.verlaufMessungen.sorted { $0.zeitpunkt < $1.zeitpunkt }
+        guard sorted.count >= 3 else { return false }
+        let letzte3 = sorted.suffix(3).compactMap { $0.blutdruckSys }
+        guard letzte3.count == 3 else { return false }
+        return letzte3.allSatisfy { $0 < 90 || $0 > 180 }
+    }
+
     private var messungsListe: some View {
         VStack(spacing: 10) {
-            ForEach(messungen) { messung in
+            if dreifachRRWarnung {
+                Label("Blutdruck seit 3 Messungen pathologisch – Kreislauf neu beurteilen",
+                      systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption).foregroundStyle(.orange)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(10)
+                    .background(Color.orange.opacity(0.10))
+                    .cornerRadius(10)
+            }
+            ForEach(Array(messungen.enumerated()), id: \.element.id) { index, messung in
                 MessungsKarte(
                     messung: messung,
+                    label: index == 0 ? "Auffindewert" : "Verlauf \(index + 1)",
                     onEdit: {
                         bearbeiteMessung = messung
                         zeigeNeueMessung = true
@@ -222,6 +240,7 @@ struct VerlaufView: View {
 
 private struct MessungsKarte: View {
     let messung: VerlaufsMessung
+    var label: String = ""
     let onEdit: () -> Void
     let onDelete: () -> Void
 
@@ -241,6 +260,14 @@ private struct MessungsKarte: View {
                     Text(zeitFormatiert + " Uhr")
                         .font(.subheadline).fontWeight(.bold)
                         .foregroundColor(Color("RDOrange"))
+                    if !label.isEmpty {
+                        Text(label)
+                            .font(.system(size: 9)).fontWeight(.semibold)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 5).padding(.vertical, 2)
+                            .background(label == "Auffindewert" ? Color("RDOrange") : Color.secondary.opacity(0.7))
+                            .cornerRadius(4)
+                    }
                     if messung.autoImportiert {
                         Text("ABCDE")
                             .font(.system(size: 9)).fontWeight(.semibold)

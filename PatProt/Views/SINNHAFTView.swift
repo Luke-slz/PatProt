@@ -155,6 +155,7 @@ struct SINNHAFTView: View {
                     }
                 }
                 vitalVergleichTabelle
+                verlaufVergleichInfo
                 TextField("Zusätzliche Angaben…", text: $befund.aktuellerZustand, axis: .vertical)
                     .lineLimit(2...)
             }
@@ -241,6 +242,26 @@ struct SINNHAFTView: View {
                 }
                 .padding(.vertical, 4)
             }
+        }
+    }
+
+    // MARK: - Verlaufswerte-Vergleich (Ankunft vs. Aktuell)
+
+    @ViewBuilder
+    private var verlaufVergleichInfo: some View {
+        let sorted = protokoll.verlaufMessungen.sorted { $0.zeitpunkt < $1.zeitpunkt }
+        if sorted.count >= 2, let first = sorted.first, let last = sorted.last {
+            let fmt: DateFormatter = {
+                let f = DateFormatter()
+                f.dateFormat = "HH:mm"
+                return f
+            }()
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Ankunft (\(fmt.string(from: first.zeitpunkt))): RR \(first.blutdruckSys.map(String.init) ?? "–")/\(first.blutdruckDia.map(String.init) ?? "–"), HF \(first.puls.map(String.init) ?? "–"), SpO₂ \(first.spo2.map(String.init) ?? "–")%")
+                Text("Aktuell (\(fmt.string(from: last.zeitpunkt))): RR \(last.blutdruckSys.map(String.init) ?? "–")/\(last.blutdruckDia.map(String.init) ?? "–"), HF \(last.puls.map(String.init) ?? "–"), SpO₂ \(last.spo2.map(String.init) ?? "–")%")
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
         }
     }
 

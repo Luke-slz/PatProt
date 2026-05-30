@@ -94,49 +94,28 @@ struct SAMPLERView: View {
                 }
             }
             Section {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("L — Letzte Mahlzeit").font(.subheadline.bold())
-                    Text("Wann und was zuletzt gegessen/getrunken").font(.caption).foregroundColor(.secondary)
-                    Toggle("Unbekannt", isOn: $befund.letztesMahlUnbekannt)
-                        .onChange(of: befund.letztesMahlUnbekannt) { _, isUnknown in
-                            if isUnknown { befund.letztesMahlZeit = nil }
-                        }
-                    if !befund.letztesMahlUnbekannt {
-                        ZeitFeld(label: "Uhrzeit", datum: $befund.letztesMahlZeit)
-                    }
-                    TextField("z.B. Brot und Kaffee", text: $befund.letztesMahl)
-                    Text("→ PDF S. 1 · SAMPLER · L").font(.caption2).foregroundColor(.secondary)
-                }
-            }
-            Section {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("L — Letzter Stuhlgang").font(.subheadline.bold())
-                    Text("Wann zuletzt Stuhlgang").font(.caption).foregroundColor(.secondary)
-                    Toggle("Unbekannt", isOn: $befund.letzterStuhlgangUnbekannt)
-                        .onChange(of: befund.letzterStuhlgangUnbekannt) { _, isUnknown in
-                            if isUnknown { befund.letzterStuhlgangZeit = nil }
-                        }
-                    if !befund.letzterStuhlgangUnbekannt {
-                        ZeitFeld(label: "Uhrzeit", datum: $befund.letzterStuhlgangZeit)
-                    }
-                    TextField("Freitext", text: $befund.letzterStuhlgang)
-                    Text("→ PDF S. 1 · SAMPLER · L").font(.caption2).foregroundColor(.secondary)
-                }
-            }
-            Section {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("L — Letzte Regelblutung").font(.subheadline.bold())
-                    Text("Wann letzte Regelblutung").font(.caption).foregroundColor(.secondary)
-                    Toggle("Unbekannt", isOn: $befund.letzteRegelblutungUnbekannt)
-                        .onChange(of: befund.letzteRegelblutungUnbekannt) { _, isUnknown in
-                            if isUnknown { befund.letzteRegelblutungZeit = nil }
-                        }
-                    if !befund.letzteRegelblutungUnbekannt {
-                        ZeitFeld(label: "Uhrzeit", datum: $befund.letzteRegelblutungZeit)
-                    }
-                    TextField("Freitext", text: $befund.letzteRegelblutung)
-                    Text("→ PDF S. 1 · SAMPLER · L").font(.caption2).foregroundColor(.secondary)
-                }
+                SamplerLRow(
+                    titel: "L — Letzte Mahlzeit",
+                    placeholder: "z.B. Brot und Kaffee",
+                    text: $befund.letztesMahl,
+                    zeit: $befund.letztesMahlZeit,
+                    unbekannt: $befund.letztesMahlUnbekannt
+                )
+                SamplerLRow(
+                    titel: "L — Letzter Stuhlgang",
+                    placeholder: "Freitext",
+                    text: $befund.letzterStuhlgang,
+                    zeit: $befund.letzterStuhlgangZeit,
+                    unbekannt: $befund.letzterStuhlgangUnbekannt
+                )
+                SamplerLRow(
+                    titel: "L — Letzte Regelblutung",
+                    placeholder: "Freitext",
+                    text: $befund.letzteRegelblutung,
+                    zeit: $befund.letzteRegelblutungZeit,
+                    unbekannt: $befund.letzteRegelblutungUnbekannt
+                )
+                Text("→ PDF S. 1 · SAMPLER · L").font(.caption2).foregroundColor(.secondary)
             }
             Section {
                 VStack(alignment: .leading, spacing: 4) {
@@ -174,15 +153,72 @@ struct SAMPLERView: View {
                 }
                 .pickerStyle(.segmented)
                 if befund.schwangerschaftStatus == "Ja" {
-                    Stepper(befund.schwangerschaftSSW == 0 ? "SSW unbekannt"
-                                                           : "SSW \(befund.schwangerschaftSSW)",
-                            value: $befund.schwangerschaftSSW, in: 0...42)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(befund.schwangerschaftSSW == 0 ? "SSW unbekannt" : "SSW \(befund.schwangerschaftSSW)")
+                            .foregroundStyle(.secondary)
+                        Slider(value: Binding(
+                            get: { Double(befund.schwangerschaftSSW) },
+                            set: { befund.schwangerschaftSSW = Int($0.rounded()) }
+                        ), in: 0...42, step: 1)
+                    }
                 }
             } header: { Label("Schwangerschaft", systemImage: "figure.and.child.holdinghands") }
         }
         .keyboardDismissToolbar()
         .navigationTitle("SAMPLER")
         .navigationBarTitleDisplayMode(.large)
+    }
+}
+
+// MARK: - SAMPLER L Row (kompaktes Hilfselement)
+
+private struct SamplerLRow: View {
+    let titel: String
+    let placeholder: String
+    @Binding var text: String
+    @Binding var zeit: Date?
+    @Binding var unbekannt: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(titel).font(.subheadline.bold())
+                Spacer()
+                Toggle("Unbek.", isOn: $unbekannt)
+                    .labelsHidden()
+                    .onChange(of: unbekannt) { _, isUnknown in
+                        if isUnknown { zeit = nil }
+                    }
+                Text("Unbekannt").font(.caption).foregroundColor(.secondary)
+            }
+            if !unbekannt {
+                HStack(spacing: 8) {
+                    TextField(placeholder, text: $text)
+                        .font(.subheadline)
+                    Spacer()
+                    if let _ = zeit {
+                        DatePicker("", selection: Binding(
+                            get: { zeit ?? Date() },
+                            set: { zeit = $0 }
+                        ), displayedComponents: .hourAndMinute)
+                        .labelsHidden()
+                        .frame(width: 80)
+                        Button {
+                            zeit = nil
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                    } else {
+                        Button("Setzen") { zeit = Date() }
+                            .font(.caption)
+                            .buttonStyle(.bordered)
+                    }
+                }
+            }
+        }
+        .padding(.vertical, 2)
     }
 }
 
