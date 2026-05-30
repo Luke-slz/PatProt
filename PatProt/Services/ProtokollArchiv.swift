@@ -32,12 +32,55 @@ class ProtokollArchiv: ObservableObject {
     }
 
     func speichern(_ protokoll: EinsatzProtokoll) throws {
-        let daten = protokoll.toDaten()
-        try speicherDatei(daten)
-        if let idx = protokolle.firstIndex(where: { $0.id == daten.id }) {
-            protokolle[idx] = daten
+        var daten = protokoll.toDaten()
+        let einsatzNr = protokoll.einsatzOrt.einsatzNummer
+        if !einsatzNr.isEmpty,
+           let existingIdx = protokolle.firstIndex(where: {
+               $0.einsatzOrt.einsatzNummer == einsatzNr &&
+               Date().timeIntervalSince($0.erstelltAm) < 86400
+           }) {
+            // Dedup: replace existing entry, preserving its original id
+            let originalId = protokolle[existingIdx].id
+            daten = ProtokollDaten(
+                id: originalId,
+                erstelltAm: protokolle[existingIdx].erstelltAm,
+                einsatzOrt: daten.einsatzOrt,
+                patientDaten: daten.patientDaten,
+                besatzung: daten.besatzung,
+                notfallGeschehen: daten.notfallGeschehen,
+                kritisch: daten.kritisch,
+                airway: daten.airway,
+                breathing: daten.breathing,
+                circulation: daten.circulation,
+                disability: daten.disability,
+                exposure: daten.exposure,
+                sampler: daten.sampler,
+                sinnhaft: daten.sinnhaft,
+                diagnose: daten.diagnose,
+                verlaufMessungen: daten.verlaufMessungen,
+                massnahmen: daten.massnahmen,
+                medikamente: daten.medikamente,
+                reanimationAktiv: daten.reanimationAktiv,
+                reanimation: daten.reanimation,
+                ergebnis: daten.ergebnis,
+                uebergabeMesswerte: daten.uebergabeMesswerte,
+                psyche: daten.psyche,
+                uebergabeBefunde: daten.uebergabeBefunde,
+                uebergabeAn: daten.uebergabeAn,
+                zustandBeiUebergabe: daten.zustandBeiUebergabe,
+                verfasser: daten.verfasser,
+                massnahmenDurchgefuehrt: daten.massnahmenDurchgefuehrt,
+                pdfExportiertAm: daten.pdfExportiertAm
+            )
+            try speicherDatei(daten)
+            protokolle[existingIdx] = daten
         } else {
-            protokolle.insert(daten, at: 0)
+            try speicherDatei(daten)
+            if let idx = protokolle.firstIndex(where: { $0.id == daten.id }) {
+                protokolle[idx] = daten
+            } else {
+                protokolle.insert(daten, at: 0)
+            }
         }
     }
 

@@ -18,13 +18,7 @@ struct AbschlussView: View {
     @State private var speicherFehler = false
     @State private var mailNichtVerfügbar = false
     @State private var zeigeUnterschrift = false
-    @State private var zeigeUebRrSys  = false
-    @State private var zeigeUebRrDia  = false
-    @State private var zeigeUebHf     = false
-    @State private var zeigeUebSpo2   = false
-    @State private var zeigeUebAf     = false
-    @State private var zeigeUebBz     = false
-    @State private var zeigeUebTemp   = false
+
     var onBack: () -> Void
 
     var body: some View {
@@ -59,18 +53,6 @@ struct AbschlussView: View {
                 Label("Protokoll geschrieben von", systemImage: "person.text.rectangle")
             }
 
-            // Übergabe-Messwerte
-            Section {
-                uebRow("RR syst.",   $protokoll.uebergabeMesswerte.rrSys,  "mmHg", $zeigeUebRrSys)
-                uebRow("RR diast.",  $protokoll.uebergabeMesswerte.rrDia,  "mmHg", $zeigeUebRrDia)
-                uebRow("HF /min",    $protokoll.uebergabeMesswerte.hf,     "/min", $zeigeUebHf)
-                uebRow("SpO₂ %",     $protokoll.uebergabeMesswerte.spo2,   "%",    $zeigeUebSpo2)
-                uebRow("AF /min",    $protokoll.uebergabeMesswerte.af,     "/min", $zeigeUebAf)
-                uebRow("BZ",         $protokoll.uebergabeMesswerte.bz,     "mg/dL", $zeigeUebBz, useDecimal: true)
-                uebRow("Temp °C",    $protokoll.uebergabeMesswerte.temp,   "°C",   $zeigeUebTemp, useDecimal: true)
-            } header: {
-                Label("Übergabe-Messwerte", systemImage: "waveform.path.ecg")
-            }
 
             // Verlaufstrend — nur wenn ≥2 Verlaufs-Messungen
             let sortedMessungen = protokoll.verlaufMessungen.sorted(by: { $0.zeitpunkt < $1.zeitpunkt })
@@ -195,6 +177,28 @@ struct AbschlussView: View {
                 UnterschriftSheet { data in
                     protokoll.unterschriftData = data
                 }
+            }
+
+            // Folgeeinheit
+            Section {
+                Button {
+                    let savedNummer = protokoll.einsatzOrt.einsatzNummer
+                    protokoll.reset()
+                    protokoll.einsatzOrt.einsatzNummer = savedNummer
+                    gespeichert = false
+                    pdfURL = nil
+                } label: {
+                    Label("Protokoll für Folgeeinheit erstellen", systemImage: "person.2.badge.key.fill")
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 4)
+                }
+                .buttonStyle(.bordered)
+                .tint(.secondary)
+            } header: {
+                Label("Übergabe an Folgeeinheit", systemImage: "arrow.triangle.2.circlepath")
+            } footer: {
+                Text("Einsatznummer bleibt erhalten. Alle anderen Felder werden zurückgesetzt.")
+                    .font(.footnote).foregroundStyle(.secondary)
             }
 
             // PDF EXPORT
@@ -334,28 +338,6 @@ struct AbschlussView: View {
         }
     }
 
-    @ViewBuilder
-    private func uebRow(_ label: String, _ value: Binding<String>,
-                         _ unit: String, _ zeige: Binding<Bool>,
-                         useDecimal: Bool = false) -> some View {
-        HStack {
-            Text(label)
-            Spacer()
-            Text(value.wrappedValue.isEmpty ? "—" : "\(value.wrappedValue) \(unit)")
-                .foregroundColor(value.wrappedValue.isEmpty ? .secondary : .primary)
-        }
-        .contentShape(Rectangle())
-        .onTapGesture { zeige.wrappedValue = true }
-        .sheet(isPresented: zeige) {
-            if useDecimal {
-                NumpadSheet(mode: .decimal(label: label, unit: unit),
-                            initial: value.wrappedValue) { val in value.wrappedValue = val }
-            } else {
-                NumpadSheet(mode: .integer(label: label, unit: unit, maxDigits: 4),
-                            initial: value.wrappedValue) { val in value.wrappedValue = val }
-            }
-        }
-    }
 
     private func nachExportBereinigen() {
         if let url = pdfURL {
@@ -388,6 +370,7 @@ struct UnterschriftSheet: View {
     var onSave: (Data) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var canvasView = PKCanvasView()
+    @State private var drawingEmpty = true
 
     var body: some View {
         NavigationStack {
@@ -402,10 +385,10 @@ struct UnterschriftSheet: View {
                         .background(Color(.systemBackground).cornerRadius(12))
                         .padding()
 
-                    UnterschriftCanvas(canvasView: $canvasView)
+                    UnterschriftCanvas(canvasView: $canvasView, drawingEmpty: $drawingEmpty)
                         .padding(20)
 
-                    if canvasView.drawing.strokes.isEmpty {
+                    if drawingEmpty {
                         Text("Unterschrift")
                             .font(.title3).foregroundColor(Color(.tertiaryLabel))
                             .allowsHitTesting(false)
@@ -421,16 +404,20 @@ struct UnterschriftSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Speichern") {
-                        let image = canvasView.drawing.image(from: canvasView.drawing.bounds, scale: UIScreen.main.scale)
+                        let rect = CGRect(origin: .zero, size: canvasView.bounds.size)
+                        let image = canvasView.drawing.image(from: rect, scale: UIScreen.main.scale)
                         if let data = image.pngData() {
                             onSave(data)
                         }
                         dismiss()
                     }
-                    .disabled(canvasView.drawing.strokes.isEmpty)
+                    .disabled(drawingEmpty)
                 }
                 ToolbarItem(placement: .bottomBar) {
-                    Button { canvasView.drawing = PKDrawing() } label: {
+                    Button {
+                        canvasView.drawing = PKDrawing()
+                        drawingEmpty = true
+                    } label: {
                         Label("Löschen", systemImage: "arrow.counterclockwise")
                     }
                 }
@@ -441,15 +428,27 @@ struct UnterschriftSheet: View {
 
 struct UnterschriftCanvas: UIViewRepresentable {
     @Binding var canvasView: PKCanvasView
+    @Binding var drawingEmpty: Bool
 
     func makeUIView(context: Context) -> PKCanvasView {
         canvasView.tool = PKInkingTool(.pen, color: .black, width: 2)
         canvasView.drawingPolicy = .anyInput
         canvasView.backgroundColor = .clear
+        canvasView.delegate = context.coordinator
         return canvasView
     }
 
     func updateUIView(_ uiView: PKCanvasView, context: Context) {}
+
+    func makeCoordinator() -> Coordinator { Coordinator(drawingEmpty: $drawingEmpty) }
+
+    class Coordinator: NSObject, PKCanvasViewDelegate {
+        @Binding var drawingEmpty: Bool
+        init(drawingEmpty: Binding<Bool>) { _drawingEmpty = drawingEmpty }
+        func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {
+            drawingEmpty = canvasView.drawing.strokes.isEmpty
+        }
+    }
 }
 
 // MARK: - Share Sheet

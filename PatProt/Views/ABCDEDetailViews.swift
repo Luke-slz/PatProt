@@ -222,7 +222,7 @@ struct BreathingView: View {
                         befund.spo2 = Int(val)
                     }
                 }
-                Picker("Atemgeräusche / Atemstörung", selection: $befund.atemgeraeusche) {
+                Picker("Atemstörung", selection: $befund.atemgeraeusche) {
                     Text("").tag("")
                     Text("Vesikulär (normal)").tag("Vesikulär (normal)")
                     Text("Giemen").tag("Giemen")
