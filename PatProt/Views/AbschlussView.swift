@@ -188,28 +188,6 @@ struct AbschlussView: View {
                 }
             }
 
-            // Folgeeinheit
-            Section {
-                Button {
-                    let savedNummer = protokoll.einsatzOrt.einsatzNummer
-                    protokoll.reset()
-                    protokoll.einsatzOrt.einsatzNummer = savedNummer
-                    gespeichert = false
-                    pdfURL = nil
-                } label: {
-                    Label("Protokoll für Folgeeinheit erstellen", systemImage: "person.2.badge.key.fill")
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 4)
-                }
-                .buttonStyle(.bordered)
-                .tint(.secondary)
-            } header: {
-                Label("Übergabe an Folgeeinheit", systemImage: "arrow.triangle.2.circlepath")
-            } footer: {
-                Text("Einsatznummer bleibt erhalten. Alle anderen Felder werden zurückgesetzt.")
-                    .font(.footnote).foregroundStyle(.secondary)
-            }
-
             // PDF EXPORT
             Section {
                 Button {
