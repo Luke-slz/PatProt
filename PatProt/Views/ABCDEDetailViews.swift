@@ -123,6 +123,7 @@ struct AirwayView: View {
                 if massnahmen.supraglottisch {
                     TextField("Typ (z.B. LMA, i-gel)", text: $massnahmen.supraglottischTyp)
                 }
+                CheckboxRow("Endotracheale Intubation (ETI)", isOn: $befund.intubiert)
                 CheckboxRow("Konikotomie", isOn: $befund.konikotomie)
 
                 let aktMassnahmen: [String] = [
@@ -235,8 +236,8 @@ struct BreathingView: View {
                         befund.spo2 = Int(val)
                     }
                 }
-                Picker("Atemstörung", selection: $befund.atemgeraeusche) {
-                    Text("").tag("")
+                Picker("Atemgeräusch / Befund", selection: $befund.atemgeraeusche) {
+                    Text("— nicht erfasst —").tag("")
                     Text("Vesikulär (normal)").tag("Vesikulär (normal)")
                     Text("Giemen").tag("Giemen")
                     Text("Rasseln").tag("Rasseln")
@@ -352,8 +353,8 @@ struct CirculationView: View {
         let sys = befund.blutdruckSystolisch.map(Double.init)
         let dia = befund.blutdruckDiastolisch.map(Double.init)
         guard sys != nil || dia != nil else { return .clear }
-        if let s = sys, !(80.0...179.0).contains(s) { return Color.red.opacity(0.15) }
-        if let d = dia, !(40.0...109.0).contains(d) { return Color.red.opacity(0.15) }
+        if let s = sys, !(90.0...179.0).contains(s) { return Color.red.opacity(0.15) }
+        if let d = dia, !(50.0...109.0).contains(d) { return Color.red.opacity(0.15) }
         if let s = sys, !(100.0...139.0).contains(s) { return Color.yellow.opacity(0.18) }
         if let d = dia, !(60.0...89.0).contains(d)  { return Color.yellow.opacity(0.18) }
         return Color.green.opacity(0.12)
@@ -364,13 +365,13 @@ struct CirculationView: View {
         var msgs: [String] = []
         var critical = false
         if let s = sys {
-            if s < 80        { msgs.append("sys kritisch niedrig"); critical = true }
+            if s < 90        { msgs.append("sys kritisch niedrig"); critical = true }
             else if s < 100  { msgs.append("Hypotonie (sys)") }
             else if s > 179  { msgs.append("sys kritisch hoch"); critical = true }
             else if s > 139  { msgs.append("Hypertonie (sys)") }
         }
         if let d = dia {
-            if d < 40        { msgs.append("dia kritisch niedrig"); critical = true }
+            if d < 50        { msgs.append("dia kritisch niedrig"); critical = true }
             else if d < 60   { msgs.append("dia erniedrigt") }
             else if d > 109  { msgs.append("dia kritisch hoch"); critical = true }
             else if d > 89   { msgs.append("dia erhöht") }
@@ -414,7 +415,7 @@ struct CirculationView: View {
                         Text("Arrhythmisch").tag("arrhythmisch")
                         Text("Tachykard").tag("tachykard")
                         Text("Bradykard").tag("bradykard")
-                        Text("Undokumentiert").tag("undokumentiert")
+                        Text("Nicht beurteilbar").tag("Nicht beurteilbar")
                         Text("Andere …").tag("Andere")
                     }
 
@@ -462,16 +463,24 @@ struct CirculationView: View {
 
             Section {
                 Toggle("EKG abgeleitet", isOn: $befund.ekg)
+                if befund.ekg {
+                    TextField("EKG-Befund / Freitext", text: $befund.ekgBefund, axis: .vertical)
+                        .lineLimit(2...4)
+                        .font(.subheadline)
+                }
             } header: { Label("EKG", systemImage: "waveform.path.ecg") }
 
             if befund.ekg {
                 Section {
                     CheckboxRow("Sinusrhythmus",            isOn: $befund.sinusrhythmus)
                     CheckboxRow("Absolute Arrhythmie",      isOn: $befund.absoluteArrhythmie)
-                    CheckboxRow("AV-Block II°/III°",        isOn: $befund.avBlock)
+                    CheckboxRow("AV-Block I°",              isOn: $befund.avBlockI)
+                    CheckboxRow("AV-Block II°",             isOn: $befund.avBlockII)
+                    CheckboxRow("AV-Block III°",            isOn: $befund.avBlockIII)
                     CheckboxRow("QRS-Tachykardie breit",    isOn: $befund.qrsTachykardieBreit)
                     CheckboxRow("QRS-Tachykardie schmal",   isOn: $befund.qrsTachykardieSchmal)
-                    CheckboxRow("Kammerflattern/-flimmern", isOn: $befund.kammerflattern)
+                    CheckboxRow("Kammerflimmern (VF)",      isOn: $befund.kammerflimmern)
+                    CheckboxRow("Kammerflattern (VFlutter)",isOn: $befund.kammerflattern)
                     CheckboxRow("Pulslose elektr. Akt.",    isOn: $befund.pea)
                     CheckboxRow("Asystolie",                isOn: $befund.asystolie)
                     CheckboxRow("Schrittmacherrhythmus",    isOn: $befund.schrittmacher)
@@ -480,15 +489,20 @@ struct CirculationView: View {
                 } header: { Label("EKG-Rhythmus", systemImage: "waveform") }
 
                 Section {
-                    CheckboxRow("SVES",      isOn: $befund.sves)
-                    CheckboxRow("VES",       isOn: $befund.ves)
-                    CheckboxRow("Monomorph", isOn: $befund.extrasystolenMonomorph)
-                    CheckboxRow("Polymorph", isOn: $befund.extrasystolenPolymorph)
+                    CheckboxRow("SVES", isOn: $befund.sves)
+                    CheckboxRow("VES",  isOn: $befund.ves)
+                    if befund.ves {
+                        CheckboxRow("VES – Monomorph", isOn: $befund.extrasystolenMonomorph)
+                        CheckboxRow("VES – Polymorph", isOn: $befund.extrasystolenPolymorph)
+                    }
                 } header: { Text("Extrasystolen") }
             }
 
             Section {
                 Toggle("Blutung vorhanden", isOn: $befund.blutung)
+                    .onChange(of: befund.blutung) { _, v in
+                        if !v { befund.blutungLokalisation = "" }
+                    }
                 if befund.blutung {
                     TextField("Lokalisation der Blutung", text: $befund.blutungLokalisation)
                 }
@@ -563,8 +577,8 @@ struct DisabilityView: View {
     @State private var zeigeBzNumpad = false
 
     private var bzWarn: (String, Bool)? {
-        vitalWarnText(befund.blutzucker, normal: 70...140, warning: 54...180,
-                      lowWarn: "Hypoglykämie (< 70 mg/dL)", highWarn: "Hyperglykämie (> 140 mg/dL)")
+        vitalWarnText(befund.blutzucker, normal: 70...200, warning: 54...400,
+                      lowWarn: "Hypoglykämie (< 70 mg/dL)", highWarn: "Hyperglykämie (> 200 mg/dL)")
     }
     private var gcsBg: Color {
         // Only color once at least one subscore has been changed from default (E4V5M6)
@@ -621,12 +635,63 @@ struct DisabilityView: View {
             }
 
             Section {
-                CheckboxRow("Wach",                     isOn: $befund.bewWach)
-                CheckboxRow("Reagiert auf Ansprache",   isOn: $befund.bewAnsprache)
+                CheckboxRow("Wach", isOn: $befund.bewWach)
+                    .onChange(of: befund.bewWach) { _, v in
+                        if v { befund.bewAnsprache = false; befund.bewSchmerzreiz = false; befund.bewusstlos = false; befund.dNichtBeurteilbar = false }
+                    }
+                CheckboxRow("Reagiert auf Ansprache", isOn: $befund.bewAnsprache)
+                    .onChange(of: befund.bewAnsprache) { _, v in
+                        if v { befund.bewWach = false; befund.bewSchmerzreiz = false; befund.bewusstlos = false; befund.dNichtBeurteilbar = false }
+                    }
                 CheckboxRow("Reagiert auf Schmerzreiz", isOn: $befund.bewSchmerzreiz)
-                CheckboxRow("Bewusstlos",               isOn: $befund.bewusstlos)
-                CheckboxRow("Nicht beurteilbar",        isOn: $befund.dNichtBeurteilbar)
-            } header: { Label("Bewusstseinslage", systemImage: "person.fill.questionmark") }
+                    .onChange(of: befund.bewSchmerzreiz) { _, v in
+                        if v { befund.bewWach = false; befund.bewAnsprache = false; befund.bewusstlos = false; befund.dNichtBeurteilbar = false }
+                    }
+                CheckboxRow("Bewusstlos", isOn: $befund.bewusstlos)
+                    .onChange(of: befund.bewusstlos) { _, v in
+                        if v { befund.bewWach = false; befund.bewAnsprache = false; befund.bewSchmerzreiz = false; befund.dNichtBeurteilbar = false }
+                    }
+                CheckboxRow("Nicht beurteilbar", isOn: $befund.dNichtBeurteilbar)
+                    .onChange(of: befund.dNichtBeurteilbar) { _, v in
+                        if v { befund.bewWach = false; befund.bewAnsprache = false; befund.bewSchmerzreiz = false; befund.bewusstlos = false }
+                    }
+            } header: { Label("Bewusstseinslage (AVPU)", systemImage: "person.fill.questionmark") }
+
+            Section {
+                Toggle("ZOP-Test durchgeführt", isOn: $befund.zopAktiv)
+                if befund.zopAktiv {
+                    Picker("Z – Zeit / Datum", selection: $befund.zopZeit) {
+                        Text("–").tag("")
+                        Text("Orientiert").tag("Orientiert")
+                        Text("Desorientiert").tag("Desorientiert")
+                        Text("Nicht testbar").tag("Nicht testbar")
+                    }
+                    Picker("O – Ort", selection: $befund.zopOrt) {
+                        Text("–").tag("")
+                        Text("Orientiert").tag("Orientiert")
+                        Text("Desorientiert").tag("Desorientiert")
+                        Text("Nicht testbar").tag("Nicht testbar")
+                    }
+                    Picker("P – Person (Name)", selection: $befund.zopPerson) {
+                        Text("–").tag("")
+                        Text("Orientiert").tag("Orientiert")
+                        Text("Desorientiert").tag("Desorientiert")
+                        Text("Nicht testbar").tag("Nicht testbar")
+                    }
+                    if !befund.zopText.isEmpty {
+                        HStack {
+                            Text("Ergebnis")
+                                .font(.subheadline).foregroundStyle(.secondary)
+                            Spacer()
+                            Text(befund.zopText)
+                                .font(.subheadline.monospacedDigit())
+                                .foregroundColor(befund.zopPunkte == 3 ? .green
+                                                 : befund.zopPunkte >= 1 ? .orange : .red)
+                        }
+                    }
+                }
+            } header: { Label("ZOP-Orientierungstest (Zeit · Ort · Person)", systemImage: "brain.head.profile") }
+            .tint(Color("RDOrange"))
 
             Section {
                 Text("Rechts").font(.caption).foregroundColor(.secondary)
@@ -751,8 +816,8 @@ func labelForGCSMotor(_ score: Int) -> String {
     case 6: return "Befolgt Aufforderungen (6)"
     case 5: return "Gezielte Schmerzabwehr (5)"
     case 4: return "Auf Schmerzreiz zurückziehen (4)"
-    case 3: return "Beugesynergismus (pathologisch) (3)"
-    case 2: return "Strecksynergismus (2)"
+    case 3: return "Beugesynergismus / Dekortikation (3)"
+    case 2: return "Strecksynergismus / Dezerebration (2)"
     case 1: return "Keine Reaktion (1)"
     default: return "—"
     }
@@ -795,8 +860,8 @@ struct ExposureView: View {
         vitalBg(protokoll.exposure.temperatur, normal: 36.0...37.5, warning: 35.0...38.5)
     }
     private var tempWarn: (String, Bool)? {
-        vitalWarnText(protokoll.exposure.temperatur, normal: 36.0...37.5, warning: 35.0...38.5,
-                      lowWarn: "Hypothermie (< 36.0°C)", highWarn: "Fieber / Hyperthermie (> 37.5°C)")
+        vitalWarnText(protokoll.exposure.temperatur, normal: 36.0...37.9, warning: 35.0...39.5,
+                      lowWarn: "Untertemperatur (< 36,0 °C)", highWarn: "Subfebrile / Fieber (≥ 38,0 °C)")
     }
 
     var body: some View {

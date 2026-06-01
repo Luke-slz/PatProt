@@ -9,7 +9,7 @@ struct MedikamenteView: View {
     @State private var zeigeRechner = false
 
     private let einheiten = ["mg", "ml", "IE", "µg", "g", "mmol"]
-    private let routen = ["i.v.", "i.o.", "i.m.", "s.c.", "p.o.", "inhalativ", "nasal", "rektal"]
+    private let routen = ["i.v.", "i.o.", "i.m.", "s.c.", "s.l.", "p.o.", "inhalativ", "nasal", "rektal"]
 
     private struct KumulationsZeile: Identifiable {
         let id = UUID()
@@ -200,7 +200,7 @@ private let rechnerMedikamente: [RechnerMed] = [
     RechnerMed(name: "Glucose 40%",              dosisProKg: nil,  festDosis: 20.0,  einheit: "g",   route: "i.v.", maxDosis: nil),
     RechnerMed(name: "ASS (ACS)",                dosisProKg: nil,  festDosis: 250.0, einheit: "mg",  route: "p.o.", maxDosis: nil),
     RechnerMed(name: "Nitro (Spray)",            dosisProKg: nil,  festDosis: 0.4,   einheit: "mg",  route: "s.l.", maxDosis: nil),
-    RechnerMed(name: "Midazolam (Krampf)",       dosisProKg: 0.1,  festDosis: nil,   einheit: "mg",  route: "nasal", maxDosis: 10.0),
+    RechnerMed(name: "Midazolam (Krampf)",       dosisProKg: 0.2,  festDosis: nil,   einheit: "mg",  route: "nasal", maxDosis: 10.0),
 ]
 
 private struct MedikamentenRechnerSheet: View {

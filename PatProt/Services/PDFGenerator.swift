@@ -329,7 +329,8 @@ struct DINPDFGenerator {
                   x:x, y:y, w:w, h:14, lw:w*0.38, hl:true)
             field("geb. am", d(p.patientDaten.geburtsDatum),
                   x:x, y:y+14, w:w*0.55, h:12, lw:38)
-            field("Geschlecht", p.patientDaten.geschlecht.rawValue,
+            let geschlechtVal = [p.patientDaten.geschlecht.rawValue, p.patientDaten.ansprechbar ? "Ansprechbar" : ""].filter { !$0.isEmpty }.joined(separator: " · ")
+            field("Geschlecht", geschlechtVal,
                   x:x+w*0.55, y:y+14, w:w*0.45, h:12, lw:42)
             let fw2 = w / 2
             field("Versicherten-Nr.", p.patientDaten.versicherungsNummer,
@@ -455,6 +456,78 @@ struct DINPDFGenerator {
             labeledVal("✝",     "\(ng.manvVerstorben)", x:lx+tW*4, y:y, w:tW, labelH:7, valH:11)
             y += 18
         }
+        if ng.manv && ng.ersteEintreffendeKraft {
+            let pulsWert = [ng.priorPuls, ng.priorPulsFrequenz].filter { !$0.isEmpty }.joined(separator: " ")
+            let respWert = [ng.priorRespiration, ng.priorRespFrequenz].filter { !$0.isEmpty }.joined(separator: " ")
+            let priorRows: [(String, String)] = [
+                ("P – Puls",         pulsWert),
+                ("R – Respiration",  respWert),
+                ("I – Intoxikation", ng.priorIntoxikation),
+                ("O – Orientierung", ng.priorOrientierung),
+                ("R – Reizaufnahme", ng.priorReizaufnahme),
+            ].filter { !$0.1.isEmpty }
+            if !priorRows.isEmpty {
+                subHeader("PRIOR-Triage", x: lx, y: y, w: rx-lx)
+                y += 9.5
+                let priorHalf = (rx - lx) / CGFloat(min(priorRows.count, 3))
+                for (i, (label, val)) in priorRows.enumerated() {
+                    let col = i % 3; let row = i / 3
+                    field(label, val, x: lx + CGFloat(col)*priorHalf, y: y + CGFloat(row)*11,
+                          w: priorHalf, h: 11, lw: 68)
+                }
+                let priorRows2 = (priorRows.count + 2) / 3
+                y += CGFloat(priorRows2) * 11
+            }
+        }
+        // ── PRIOR Personenliste ──
+        if ng.manv && !ng.triagiertePersonen.isEmpty {
+            subHeader("PRIOR-Triage Personenliste", x: lx, y: y, w: rx-lx)
+            y += 9.5
+            let totalW = rx - lx
+            let cNr:  CGFloat = 18
+            let cSK:  CGFloat = 42
+            let cP:   CGFloat = 75
+            let cR:   CGFloat = 75
+            let cI:   CGFloat = 50
+            let cO:   CGFloat = 68
+            let cBem: CGFloat = totalW - cNr - cSK - cP - cR - cI - cO
+            let rowH: CGFloat = 10
+            // Kopfzeile
+            let headers = [
+                (cNr, "Nr."), (cSK, "SK"), (cP, "P – Puls"),
+                (cR, "R – Resp."), (cI, "I – Intox."), (cO, "O – Orient."), (cBem, "Bemerkung")
+            ]
+            var cx = lx
+            for (w, h) in headers {
+                fillRect(CGRect(x: cx, y: y, width: w, height: rowH), subBlue)
+                strokeRect(CGRect(x: cx, y: y, width: w, height: rowH))
+                txt(h, CGRect(x: cx+2, y: y+1.5, width: w-4, height: rowH-3), font: f6b, color: .white)
+                cx += w
+            }
+            y += rowH
+            // Datenzeilen
+            for person in ng.triagiertePersonen {
+                let pulsWert = [person.priorPuls, person.priorPulsFrequenz].filter { !$0.isEmpty }.joined(separator: " ")
+                let respWert = [person.priorRespiration, person.priorRespFrequenz].filter { !$0.isEmpty }.joined(separator: " ")
+                let cols: [(CGFloat, String)] = [
+                    (cNr,  "P\(person.nummer)"),
+                    (cSK,  person.sichtungskategorie.isEmpty ? (person.vorgeschlagenesk.isEmpty ? "–" : "→\(person.vorgeschlagenesk)") : person.sichtungskategorie),
+                    (cP,   pulsWert.isEmpty ? "–" : pulsWert),
+                    (cR,   respWert.isEmpty ? "–" : respWert),
+                    (cI,   person.priorIntoxikation),
+                    (cO,   person.priorOrientierung.isEmpty ? "–" : person.priorOrientierung),
+                    (cBem, person.bemerkung),
+                ]
+                var colX = lx
+                for (w, val) in cols {
+                    valBox(val, x: colX, y: y, w: w, h: rowH, font: f6)
+                    colX += w
+                }
+                y += rowH
+            }
+            y += 2
+        }
+
         if !ng.manvLagemeldung.isEmpty {
             field("Lagemeldung", ng.manvLagemeldung, x:lx, y:y, w:rx-lx, h:11, lw:55)
             y += 11
@@ -503,32 +576,45 @@ struct DINPDFGenerator {
             field("Ergänzungen", ng.notfallFreitext, x:lx, y:y, w:rx-lx, h:h, lw:55, multiline: true)
             y += h
         }
+        if !ng.dynamischeErweiterung.isEmpty {
+            let h = fieldH(ng.dynamischeErweiterung, width: rx-lx-88)
+            field("Dyn. Erweiterung", ng.dynamischeErweiterung, x:lx, y:y, w:rx-lx, h:h, lw:85, multiline: true)
+            y += h
+        }
 
         // ABCDE grid
         let abcdeLetters = ["A","B","C","D","E"]
         func buildAirwayDetail() -> String {
             var parts = [p.airway.freitext]
             if p.airway.verlegung && !p.airway.verlegungsUrsache.isEmpty { parts.append("Ursache: \(p.airway.verlegungsUrsache)") }
+            if p.airway.intubiert  { parts.append("ETI") }
+            if p.airway.konikotomie { parts.append("Konikotomie") }
             return parts.filter { !$0.isEmpty }.joined(separator: " · ")
         }
         func buildBreathingDetail() -> String {
             var parts = [p.breathing.freitext]
             if !p.breathing.atemgeraeusche.isEmpty { parts.append("Atemger.: \(p.breathing.atemgeraeusche)") }
-            if p.breathing.sauerstoffGabe, let lit = p.breathing.sauerstoffLiter { parts.append("O₂: \(String(format: "%.0f", lit))l/min") }
+            if p.massnahmen.sauerstoffgabe && !p.massnahmen.sauerstoffLitMin.isEmpty { parts.append("O₂: \(p.massnahmen.sauerstoffLitMin) l/min") }
             if p.breathing.beatmung && !p.breathing.beatmungsform.isEmpty { parts.append("Beatm.: \(p.breathing.beatmungsform)") }
             return parts.filter { !$0.isEmpty }.joined(separator: " · ")
         }
         func buildCirculationDetail() -> String {
             var parts = [p.circulation.freitext]
+            if p.circulation.pulslosigkeit { parts.append("Pulslos") }
+            else if !p.circulation.pulsRhythmus.isEmpty { parts.append("Rhythmus: \(p.circulation.pulsRhythmus)") }
             if p.circulation.ekg {
                 let c = p.circulation
+                if !c.ekgBefund.isEmpty { parts.append("EKG-Befund: \(c.ekgBefund)") }
                 let ekgFlags: [(Bool, String)] = [
                     (c.sinusrhythmus,          "Sinusrhythmus"),
                     (c.absoluteArrhythmie,     "Abs. Arrhythmie"),
-                    (c.avBlock,                "AV-Block II°/III°"),
+                    (c.avBlockI,               "AV-Block I°"),
+                    (c.avBlockII,              "AV-Block II°"),
+                    (c.avBlockIII,             "AV-Block III°"),
                     (c.qrsTachykardieBreit,    "QRS-Tachy breit"),
                     (c.qrsTachykardieSchmal,   "QRS-Tachy schmal"),
-                    (c.kammerflattern,         "Kammerflimmern"),
+                    (c.kammerflimmern,         "Kammerflimmern (VF)"),
+                    (c.kammerflattern,         "Kammerflattern (VFlutter)"),
                     (c.pea,                    "PEA"),
                     (c.asystolie,              "Asystolie"),
                     (c.schrittmacher,          "Schrittmacher"),
@@ -544,7 +630,15 @@ struct DINPDFGenerator {
                 parts.append(ekgSummary)
             }
             if p.circulation.blutung && !p.circulation.blutungLokalisation.isEmpty { parts.append("Blutung: \(p.circulation.blutungLokalisation)") }
-            if p.circulation.ivZugang && !p.circulation.ivLokalisation.isEmpty { parts.append("IV: \(p.circulation.ivLokalisation)") }
+            if p.massnahmen.peripherVenoes && !p.massnahmen.peripherVenoesOrt.isEmpty {
+                var pvk = "PVK"
+                if !p.massnahmen.peripherVenoesGroesse.isEmpty { pvk += " \(p.massnahmen.peripherVenoesGroesse) G" }
+                pvk += " (\(p.massnahmen.peripherVenoesOrt))"
+                parts.append(pvk)
+            }
+            if p.massnahmen.intraossaer {
+                parts.append("IO\(p.massnahmen.intraossaerOrt.isEmpty ? "" : " (\(p.massnahmen.intraossaerOrt))")")
+            }
             return parts.filter { !$0.isEmpty }.joined(separator: " · ")
         }
         func buildExposureDetail() -> String {
@@ -559,10 +653,41 @@ struct DINPDFGenerator {
             if p.exposure.blutungExtern { flags.append("Blutung extern") }
             if p.exposure.rueckenNackenSchmerz { flags.append("Rücken/Nackenschmerz") }
             if p.exposure.bewegungseinschraenkung { flags.append("Bewegungseinschr.") }
+            if p.exposure.bewusstseinsverlust { flags.append("Bewusstseinsverlust") }
+            if p.exposure.oedeme { flags.append("Ödeme") }
+            if p.exposure.stehendeHautfalten { flags.append("Stehende Hautfalten") }
+            if p.exposure.kaltschweissig { flags.append("Kaltschweißig") }
+            if p.exposure.dekubitus { flags.append("Dekubitus") }
+            if p.exposure.exanthem { flags.append("Exanthem") }
+            if p.exposure.hautNichtUntersucht { flags.append("Haut n. untersucht") }
+            if p.exposure.hautNichtBeurteilbar { flags.append("Haut n. beurteilbar") }
             if !flags.isEmpty { parts.append(flags.joined(separator: ", ")) }
             return parts.filter { !$0.isEmpty }.joined(separator: " · ")
         }
-        let abcdeRaw = [buildAirwayDetail(), buildBreathingDetail(), buildCirculationDetail(), p.disability.freitext, buildExposureDetail()]
+        func buildDisabilityDetail() -> String {
+            var parts = [p.disability.freitext]
+            if p.disability.befastAktiv {
+                var flags: [String] = []
+                if p.disability.befastBalance { flags.append("Balance") }
+                if p.disability.befastEyes    { flags.append("Eyes") }
+                if p.disability.befastFace    { flags.append("Face") }
+                if p.disability.befastArm     { flags.append("Arm") }
+                if p.disability.befastSpeech  { flags.append("Speech") }
+                var befastStr = "BEFAST: \(flags.isEmpty ? "aktiviert" : flags.joined(separator: ", "))"
+                if p.disability.befastZeitUnbekannt {
+                    befastStr += " · T: unbekannt"
+                } else if let ts = p.disability.befastSymptombeginn {
+                    let fmt = DateFormatter(); fmt.dateFormat = "HH:mm"
+                    befastStr += " · T: \(fmt.string(from: ts)) Uhr"
+                }
+                parts.append(befastStr)
+            }
+            if p.disability.zopAktiv && !p.disability.zopText.isEmpty {
+                parts.append("ZOP \(p.disability.zopText)")
+            }
+            return parts.filter { !$0.isEmpty }.joined(separator: " · ")
+        }
+        let abcdeRaw = [buildAirwayDetail(), buildBreathingDetail(), buildCirculationDetail(), buildDisabilityDetail(), buildExposureDetail()]
         let abcdeVals   = abcdeRaw.map { $0.isEmpty ? "o.B." : $0 }
         let abcdeColors = abcdeRaw.map { $0.isEmpty ? UIColor.lightGray : UIColor.black }
         let cw = rx - lx - 12
@@ -779,9 +904,12 @@ struct DINPDFGenerator {
             (rekapLabel,      p.circulation.rekapillierung,            ub.rekapillierung),
             ("Sinusrhythmus", p.circulation.sinusrhythmus,             ub.sinusrhythmus),
             ("Abs.Arrhythm.", p.circulation.absoluteArrhythmie,        ub.absoluteArrhythmie),
-            ("AV-Block",      p.circulation.avBlock,                   ub.avBlock),
+            ("AV-Block I°",   p.circulation.avBlockI,                  ub.avBlockI),
+            ("AV-Block II°",  p.circulation.avBlockII,                 ub.avBlockII),
+            ("AV-Block III°", p.circulation.avBlockIII,                ub.avBlockIII),
             ("QRS-Tachy br.", p.circulation.qrsTachykardieBreit,       ub.qrsTachykardieBreit),
             ("QRS-Tachy sm.", p.circulation.qrsTachykardieSchmal,      ub.qrsTachykardieSchmal),
+            ("Kammerflimmern",p.circulation.kammerflimmern,            ub.kammerflimmern),
             ("Kammerflattern",p.circulation.kammerflattern,            ub.kammerflattern),
             ("PEA",           p.circulation.pea,                       ub.pea),
             ("Asystolie",     p.circulation.asystolie,                 ub.asystolie),
@@ -1422,6 +1550,7 @@ struct DINPDFGenerator {
                 ("AED eingesetzt", rea.aed),
                 ("DNR-Order", rea.dnrOrder),
                 ("KH-Aufnahme v. ROSC", rea.khAufnahmeVorROSC),
+                ("Laufende Rea. b. Übergabe", rea.laufendeReanimation),
             ]
             let r7y0 = y
             for (i,(label,checked)) in r7items.enumerated() {

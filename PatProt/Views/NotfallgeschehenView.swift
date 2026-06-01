@@ -348,7 +348,7 @@ struct DynamischeErweiterungView: View {
                     SKZeile(farbe: .yellow, kuerzel: "SK II",  bezeichnung: "Aufgeschobene Behandlung", count: $befund.manvSK2)
                     SKZeile(farbe: .green,  kuerzel: "SK III", bezeichnung: "Leicht verletzt",           count: $befund.manvSK3)
                     SKZeile(farbe: .blue,   kuerzel: "SK IV",  bezeichnung: "Ohne Überlebenschance",     count: $befund.manvSK4)
-                    SKZeile(farbe: .gray,   kuerzel: "T",      bezeichnung: "Verstorben",                count: $befund.manvVerstorben)
+                    SKZeile(farbe: .black,  kuerzel: "T",      bezeichnung: "Verstorben",                count: $befund.manvVerstorben)
                     HStack {
                         Text("Gesamt").fontWeight(.semibold)
                         Spacer()
@@ -386,42 +386,97 @@ struct DynamischeErweiterungView: View {
             }
 
             if befund.manv {
+                // Triagierte Personen Liste
                 Section {
-                    HStack {
-                        Text("P – Puls")
-                        Spacer()
-                        TextField("z.B. 90/min oder nicht tastbar", text: $befund.priorPuls)
-                            .multilineTextAlignment(.trailing)
-                            .foregroundStyle(.secondary)
+                    ForEach($befund.triagiertePersonen) { $person in
+                        NavigationLink {
+                            PRIORDetailView(person: $person)
+                        } label: {
+                            PRIORPersonZeile(person: person)
+                        }
                     }
-                    HStack {
-                        Text("R – Respiration")
-                        Spacer()
-                        TextField("z.B. 18/min oder keine", text: $befund.priorRespiration)
-                            .multilineTextAlignment(.trailing)
-                            .foregroundStyle(.secondary)
+                    .onDelete { idx in
+                        befund.triagiertePersonen.remove(atOffsets: idx)
                     }
+                    Button {
+                        let nr = (befund.triagiertePersonen.map(\.nummer).max() ?? 0) + 1
+                        var p = PRIORPatient()
+                        p.nummer = nr
+                        befund.triagiertePersonen.append(p)
+                    } label: {
+                        Label("Person hinzufügen", systemImage: "person.badge.plus")
+                            .foregroundColor(Color("RDOrange"))
+                    }
+                } header: {
+                    Label("PRIOR-Triage – alle Personen", systemImage: "person.3.fill")
+                } footer: {
+                    Text("Jede Person einzeln triagieren. Wischen zum Löschen.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+
+            if befund.manv {
+                Section {
+                    // P – Puls: binäre Entscheidung + optionale Frequenz
+                    Picker("P – Puls", selection: $befund.priorPuls) {
+                        Text("–").tag("")
+                        Text("Tastbar").tag("Tastbar")
+                        Text("Nicht tastbar").tag("Nicht tastbar")
+                    }
+                    if befund.priorPuls == "Tastbar" {
+                        HStack {
+                            Text("Herzfrequenz")
+                                .font(.subheadline).foregroundStyle(.secondary)
+                            Spacer()
+                            TextField("z.B. 100/min", text: $befund.priorPulsFrequenz)
+                                .multilineTextAlignment(.trailing)
+                                .foregroundStyle(.secondary)
+                                .frame(width: 100)
+                        }
+                    }
+                    // R – Respiration: binäre Entscheidung + optionale Frequenz
+                    Picker("R – Respiration", selection: $befund.priorRespiration) {
+                        Text("–").tag("")
+                        Text("Vorhanden").tag("Vorhanden")
+                        Text("Keine").tag("Keine")
+                    }
+                    if befund.priorRespiration == "Vorhanden" {
+                        HStack {
+                            Text("Atemfrequenz")
+                                .font(.subheadline).foregroundStyle(.secondary)
+                            Spacer()
+                            TextField("z.B. 18/min", text: $befund.priorRespFrequenz)
+                                .multilineTextAlignment(.trailing)
+                                .foregroundStyle(.secondary)
+                                .frame(width: 100)
+                        }
+                    }
+                    // I – Intoxikation
                     Picker("I – Intoxikation", selection: $befund.priorIntoxikation) {
                         Text("Unbekannt").tag("Unbekannt")
                         Text("Nein").tag("Nein")
                         Text("Ja").tag("Ja")
                     }
+                    // O – Orientierung
                     Picker("O – Orientierung", selection: $befund.priorOrientierung) {
                         Text("–").tag("")
                         Text("Orientiert").tag("Orientiert")
                         Text("Desorientiert").tag("Desorientiert")
                         Text("Bewusstlos").tag("Bewusstlos")
                     }
-                    Picker("R – Reizaufnahme", selection: $befund.priorReizaufnahme) {
-                        Text("–").tag("")
-                        Text("Verbal").tag("Verbal")
-                        Text("Schmerz").tag("Schmerz")
-                        Text("Keine").tag("Keine")
+                    // R – Reizaufnahme: nur relevant bei eingeschränktem Bewusstsein
+                    if befund.priorOrientierung == "Desorientiert" || befund.priorOrientierung == "Bewusstlos" {
+                        Picker("R – Reizaufnahme", selection: $befund.priorReizaufnahme) {
+                            Text("–").tag("")
+                            Text("Verbal").tag("Verbal")
+                            Text("Schmerz").tag("Schmerz")
+                            Text("Keine").tag("Keine")
+                        }
                     }
                 } header: {
-                    Label("PRIOR-Triage", systemImage: "figure.stand.line.dotted.figure.stand")
+                    Label("PRIOR-Triage – dieser Patient", systemImage: "figure.stand.line.dotted.figure.stand")
                 } footer: {
-                    Text("Puls · Respiration · Intoxikation · Orientierung · Reizaufnahme")
+                    Text("Puls · Respiration · Intoxikation · Orientierung · Reizaufnahme — wird pro Patient erhoben")
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }
@@ -469,6 +524,142 @@ private struct SKZeile: View {
             NumpadSheet(mode: .integer(label: kuerzel, unit: "Personen", maxDigits: 3),
                         initial: "\(count)") { val in count = Int(val) ?? count }
         }
+    }
+}
+
+// MARK: - PRIOR Personen-Zeile
+
+private struct PRIORPersonZeile: View {
+    let person: PRIORPatient
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(person.skFarbe == .black
+                          ? Color.black
+                          : person.skFarbe == .yellow ? Color.yellow : person.skFarbe.opacity(0.15))
+                    .frame(width: 44, height: 32)
+                Text(person.sichtungskategorie.isEmpty ? "?" : person.sichtungskategorie)
+                    .font(.caption).fontWeight(.bold)
+                    .foregroundColor(person.skFarbe == .yellow ? .black
+                                     : person.skFarbe == .black ? .white
+                                     : person.sichtungskategorie.isEmpty ? .secondary
+                                     : person.skFarbe)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Person \(person.nummer)").font(.subheadline).fontWeight(.semibold)
+                Text(person.kurzuebersicht)
+                    .font(.caption).foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            Spacer()
+            if !person.vorgeschlagenesk.isEmpty && person.sichtungskategorie.isEmpty {
+                Text("→ \(person.vorgeschlagenesk)")
+                    .font(.caption2).foregroundStyle(.orange)
+            }
+        }
+    }
+}
+
+// MARK: - PRIOR Detail-Ansicht pro Person
+
+struct PRIORDetailView: View {
+    @Binding var person: PRIORPatient
+
+    var body: some View {
+        Form {
+            Section {
+                HStack {
+                    Text("Person")
+                    Spacer()
+                    Text("P\(person.nummer)").fontWeight(.semibold)
+                }
+            }
+
+            Section {
+                Picker("P – Puls", selection: $person.priorPuls) {
+                    Text("–").tag("")
+                    Text("Tastbar").tag("Tastbar")
+                    Text("Nicht tastbar").tag("Nicht tastbar")
+                }
+                if person.priorPuls == "Tastbar" {
+                    HStack {
+                        Text("Herzfrequenz").font(.subheadline).foregroundStyle(.secondary)
+                        Spacer()
+                        TextField("z.B. 100/min", text: $person.priorPulsFrequenz)
+                            .multilineTextAlignment(.trailing).foregroundStyle(.secondary).frame(width: 110)
+                    }
+                }
+                Picker("R – Respiration", selection: $person.priorRespiration) {
+                    Text("–").tag("")
+                    Text("Vorhanden").tag("Vorhanden")
+                    Text("Keine").tag("Keine")
+                }
+                if person.priorRespiration == "Vorhanden" {
+                    HStack {
+                        Text("Atemfrequenz").font(.subheadline).foregroundStyle(.secondary)
+                        Spacer()
+                        TextField("z.B. 18/min", text: $person.priorRespFrequenz)
+                            .multilineTextAlignment(.trailing).foregroundStyle(.secondary).frame(width: 110)
+                    }
+                }
+                Picker("I – Intoxikation", selection: $person.priorIntoxikation) {
+                    Text("Unbekannt").tag("Unbekannt")
+                    Text("Nein").tag("Nein")
+                    Text("Ja").tag("Ja")
+                }
+                Picker("O – Orientierung", selection: $person.priorOrientierung) {
+                    Text("–").tag("")
+                    Text("Orientiert").tag("Orientiert")
+                    Text("Desorientiert").tag("Desorientiert")
+                    Text("Bewusstlos").tag("Bewusstlos")
+                }
+                if person.priorOrientierung == "Desorientiert" || person.priorOrientierung == "Bewusstlos" {
+                    Picker("R – Reizaufnahme", selection: $person.priorReizaufnahme) {
+                        Text("–").tag("")
+                        Text("Verbal").tag("Verbal")
+                        Text("Schmerz").tag("Schmerz")
+                        Text("Keine").tag("Keine")
+                    }
+                }
+            } header: {
+                Label("PRIOR-Assessment", systemImage: "figure.stand.line.dotted.figure.stand")
+            } footer: {
+                if !person.vorgeschlagenesk.isEmpty {
+                    Text("PRIOR-Ergebnis: \(person.vorgeschlagenesk)")
+                        .font(.caption).foregroundStyle(.orange)
+                }
+            }
+
+            Section {
+                Picker("Sichtungskategorie", selection: $person.sichtungskategorie) {
+                    Text("–").tag("")
+                    Text("SK I – Rot (sofort)").tag("SK I")
+                    Text("SK II – Gelb (aufgeschoben)").tag("SK II")
+                    Text("SK III – Grün (leicht verletzt)").tag("SK III")
+                    Text("SK IV – Blau (ohne Überlebenschance)").tag("SK IV")
+                    Text("T – Schwarz (verstorben)").tag("T")
+                }
+                .pickerStyle(.inline)
+                if !person.vorgeschlagenesk.isEmpty && person.sichtungskategorie.isEmpty {
+                    Button("PRIOR-Vorschlag übernehmen: \(person.vorgeschlagenesk)") {
+                        person.sichtungskategorie = person.vorgeschlagenesk
+                    }
+                    .font(.subheadline)
+                    .foregroundColor(Color("RDOrange"))
+                }
+            } header: {
+                Label("Sichtungskategorie", systemImage: "tag.fill")
+            }
+
+            Section {
+                TextField("Bemerkung", text: $person.bemerkung, axis: .vertical)
+                    .lineLimit(2...5)
+            } header: { Text("Bemerkung") }
+        }
+        .navigationTitle("Person \(person.nummer)")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

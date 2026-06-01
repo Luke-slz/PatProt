@@ -145,16 +145,25 @@ struct UebergabeBefundeView: View {
                 DualCheckRow(label: "Abs. Arrhythmie",
                              ankunft: protokoll.circulation.absoluteArrhythmie,
                              uebergabe: $protokoll.uebergabeBefunde.absoluteArrhythmie)
-                DualCheckRow(label: "AV-Block II°/III°",
-                             ankunft: protokoll.circulation.avBlock,
-                             uebergabe: $protokoll.uebergabeBefunde.avBlock)
+                DualCheckRow(label: "AV-Block I°",
+                             ankunft: protokoll.circulation.avBlockI,
+                             uebergabe: $protokoll.uebergabeBefunde.avBlockI)
+                DualCheckRow(label: "AV-Block II°",
+                             ankunft: protokoll.circulation.avBlockII,
+                             uebergabe: $protokoll.uebergabeBefunde.avBlockII)
+                DualCheckRow(label: "AV-Block III°",
+                             ankunft: protokoll.circulation.avBlockIII,
+                             uebergabe: $protokoll.uebergabeBefunde.avBlockIII)
                 DualCheckRow(label: "QRS-Tachy breit",
                              ankunft: protokoll.circulation.qrsTachykardieBreit,
                              uebergabe: $protokoll.uebergabeBefunde.qrsTachykardieBreit)
                 DualCheckRow(label: "QRS-Tachy schmal",
                              ankunft: protokoll.circulation.qrsTachykardieSchmal,
                              uebergabe: $protokoll.uebergabeBefunde.qrsTachykardieSchmal)
-                DualCheckRow(label: "Kammerflattern",
+                DualCheckRow(label: "Kammerflimmern (VF)",
+                             ankunft: protokoll.circulation.kammerflimmern,
+                             uebergabe: $protokoll.uebergabeBefunde.kammerflimmern)
+                DualCheckRow(label: "Kammerflattern (VFlutter)",
                              ankunft: protokoll.circulation.kammerflattern,
                              uebergabe: $protokoll.uebergabeBefunde.kammerflattern)
                 DualCheckRow(label: "PEA",

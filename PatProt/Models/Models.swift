@@ -359,10 +359,14 @@ struct CirculationBefund: Codable {
     var rekapillierungZeit:      Double? = nil
     var sinusrhythmus:           Bool = false
     var absoluteArrhythmie:      Bool = false
-    var avBlock:                 Bool = false
+    var avBlockI:                Bool = false
+    var avBlockII:               Bool = false
+    var avBlockIII:              Bool = false
+    var avBlock:                 Bool = false  // legacy, nicht mehr in UI verwendet
     var qrsTachykardieBreit:     Bool = false
     var qrsTachykardieSchmal:    Bool = false
     var kammerflattern:          Bool = false
+    var kammerflimmern:          Bool = false
     var pea:                     Bool = false
     var asystolie:               Bool = false
     var schrittmacher:           Bool = false
@@ -429,6 +433,25 @@ struct DisabilityBefund: Codable {
     var neuroNichtBeurteilbar:      Bool = false
 
     var gcsGesamt: Int { gcsAugen + gcsVerbal + gcsMotor }
+
+    // ZOP-Orientierungstest
+    var zopAktiv:  Bool = false
+    var zopZeit:   String = ""  // "Orientiert" / "Desorientiert" / "Nicht testbar"
+    var zopOrt:    String = ""
+    var zopPerson: String = ""
+
+    var zopPunkte: Int {
+        [zopZeit, zopOrt, zopPerson].filter { $0 == "Orientiert" }.count
+    }
+    var zopText: String {
+        guard zopAktiv else { return "" }
+        let parts = [
+            zopZeit.isEmpty   ? nil : "Z: \(zopZeit.prefix(3))",
+            zopOrt.isEmpty    ? nil : "O: \(zopOrt.prefix(3))",
+            zopPerson.isEmpty ? nil : "P: \(zopPerson.prefix(3))",
+        ].compactMap { $0 }
+        return parts.isEmpty ? "" : "\(zopPunkte)/3 · " + parts.joined(separator: " · ")
+    }
 }
 
 struct ExposureBefund: Codable {
@@ -500,10 +523,14 @@ struct UebergabeBefunde: Codable {
     var rekapillierung:          Bool = false
     var sinusrhythmus:           Bool = false
     var absoluteArrhythmie:      Bool = false
-    var avBlock:                 Bool = false
+    var avBlockI:                Bool = false
+    var avBlockII:               Bool = false
+    var avBlockIII:              Bool = false
+    var avBlock:                 Bool = false  // legacy
     var qrsTachykardieBreit:     Bool = false
     var qrsTachykardieSchmal:    Bool = false
     var kammerflattern:          Bool = false
+    var kammerflimmern:          Bool = false
     var pea:                     Bool = false
     var asystolie:               Bool = false
     var schrittmacher:           Bool = false
@@ -830,6 +857,48 @@ struct ErgebnisData: Codable {
 
 // MARK: - Notfallgeschehen
 
+struct PRIORPatient: Codable, Identifiable {
+    var id = UUID()
+    var nummer: Int = 1
+    var priorPuls: String = ""
+    var priorPulsFrequenz: String = ""
+    var priorRespiration: String = ""
+    var priorRespFrequenz: String = ""
+    var priorIntoxikation: String = "Unbekannt"
+    var priorOrientierung: String = ""
+    var priorReizaufnahme: String = ""
+    var sichtungskategorie: String = ""
+    var bemerkung: String = ""
+
+    var vorgeschlagenesk: String {
+        if priorRespiration == "Keine" || priorPuls == "Nicht tastbar" { return "SK I" }
+        if priorOrientierung == "Bewusstlos" { return "SK I" }
+        if priorIntoxikation == "Ja" { return "SK II" }
+        if priorOrientierung == "Desorientiert" { return "SK II" }
+        if priorOrientierung == "Orientiert" { return "SK III" }
+        return ""
+    }
+
+    var kurzuebersicht: String {
+        var parts: [String] = []
+        if !priorPuls.isEmpty { parts.append("P: \(priorPuls)") }
+        if !priorRespiration.isEmpty { parts.append("R: \(priorRespiration)") }
+        if !priorOrientierung.isEmpty { parts.append("O: \(priorOrientierung)") }
+        return parts.isEmpty ? "Noch nicht erfasst" : parts.joined(separator: " · ")
+    }
+
+    var skFarbe: Color {
+        switch sichtungskategorie {
+        case "SK I":  return .red
+        case "SK II": return .yellow
+        case "SK III":return .green
+        case "SK IV": return Color(red: 0.2, green: 0.4, blue: 0.9)
+        case "T":     return .black
+        default:      return .gray
+        }
+    }
+}
+
 struct NotfallgeschehenBefund: Codable {
     var erstbefundVorOrt = ""
     var patientGefunden = ""
@@ -859,12 +928,17 @@ struct NotfallgeschehenBefund: Codable {
     var notfallFreitext: String = ""
     var manvGesamtSK: Int { manvSK1 + manvSK2 + manvSK3 + manvSK4 + manvVerstorben }
 
-    // PRIOR-Triage (nur bei MANV/Ersteintreffen)
-    var priorPuls: String = ""           // Pulsfrequenz oder "nicht tastbar"
-    var priorRespiration: String = ""    // AF/min oder "keine"
-    var priorIntoxikation: String = "Unbekannt"  // Ja / Nein / Unbekannt
-    var priorOrientierung: String = ""   // orientiert / desorientiert / bewusstlos
-    var priorReizaufnahme: String = ""   // verbal / Schmerz / keine
+    // PRIOR-Triage dieses Patienten
+    var priorPuls: String = ""
+    var priorPulsFrequenz: String = ""
+    var priorRespiration: String = ""
+    var priorRespFrequenz: String = ""
+    var priorIntoxikation: String = "Unbekannt"
+    var priorOrientierung: String = ""
+    var priorReizaufnahme: String = ""
+
+    // PRIOR-Triage aller Personen am MANV-Ort
+    var triagiertePersonen: [PRIORPatient] = []
 }
 
 // MARK: - Verdachtsdiagnose (Trichter)

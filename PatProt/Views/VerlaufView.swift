@@ -12,7 +12,7 @@ struct VerlaufView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 14) {
-                dysrhythmieHinweis
+                kreislaufHinweis
                 if !messungen.isEmpty {
                     trendUebersicht
                 }
@@ -61,28 +61,23 @@ struct VerlaufView: View {
         }
     }
 
-    // MARK: - Dysrhythmie-Hinweis
+    // MARK: - Kreislauf-Hinweis
 
-    private var dysrhythmieHinweis: some View {
+    private var kreislaufHinweis: some View {
         let sorted = messungen.sorted { $0.zeitpunkt < $1.zeitpunkt }
         let letzte3 = sorted.suffix(3).compactMap { $0.blutdruckSys }
         let pathologisch = letzte3.count >= 3 && letzte3.allSatisfy { $0 < 90 || $0 > 180 }
-        let arrhythmieNochNicht = protokoll.circulation.pulsRhythmus != "arrhythmisch"
 
         return Group {
-            if pathologisch && arrhythmieNochNicht {
+            if pathologisch {
                 HStack(spacing: 10) {
                     Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Persistentes Blutdruckproblem").font(.subheadline).fontWeight(.semibold)
-                        Text("3 konsekutive pathologische Werte – Dysrhythmie prüfen.")
+                        Text("Kreislaufinstabilität").font(.subheadline).fontWeight(.semibold)
+                        Text("3 konsekutive pathologische Blutdruckwerte – Kreislauf neu beurteilen.")
                             .font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()
-                    Button("→ Arrhythmisch") {
-                        protokoll.circulation.pulsRhythmus = "arrhythmisch"
-                    }
-                    .font(.caption).buttonStyle(.bordered).tint(.orange)
                 }
                 .padding(12)
                 .background(Color.orange.opacity(0.12))
@@ -135,7 +130,7 @@ struct VerlaufView: View {
     private var messungsListe: some View {
         VStack(spacing: 10) {
             if dreifachRRWarnung {
-                Label("Blutdruck seit 3 Messungen pathologisch – Kreislauf neu beurteilen",
+                Label("Kreislaufinstabilität: Blutdruck seit 3 Messungen pathologisch – Kreislauf neu beurteilen",
                       systemImage: "exclamationmark.triangle.fill")
                     .font(.caption).foregroundStyle(.orange)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -337,7 +332,7 @@ private struct MessungsKarte: View {
     }
 
     private func atemFarbe(_ v: Int) -> Color {
-        (12...20).contains(v) ? .green : (v < 8 || v > 25) ? .red : .orange
+        (12...20).contains(v) ? .green : (v < 8 || v > 30) ? .red : .orange
     }
     private func spo2Farbe(_ v: Int) -> Color {
         v >= 95 ? .green : v >= 90 ? .orange : .red

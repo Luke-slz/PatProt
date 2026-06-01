@@ -113,7 +113,8 @@ struct SAMPLERView: View {
                     placeholder: "Freitext",
                     text: $befund.letzteRegelblutung,
                     zeit: $befund.letzteRegelblutungZeit,
-                    unbekannt: $befund.letzteRegelblutungUnbekannt
+                    unbekannt: $befund.letzteRegelblutungUnbekannt,
+                    datumKomponenten: .date
                 )
                 Text("→ PDF S. 1 · SAMPLER · L").font(.caption2).foregroundColor(.secondary)
             }
@@ -178,6 +179,7 @@ private struct SamplerLRow: View {
     @Binding var text: String
     @Binding var zeit: Date?
     @Binding var unbekannt: Bool
+    var datumKomponenten: DatePickerComponents = .hourAndMinute
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -200,9 +202,9 @@ private struct SamplerLRow: View {
                         DatePicker("", selection: Binding(
                             get: { zeit ?? Date() },
                             set: { zeit = $0 }
-                        ), displayedComponents: .hourAndMinute)
+                        ), displayedComponents: datumKomponenten)
                         .labelsHidden()
-                        .frame(width: 80)
+                        .frame(width: datumKomponenten == .date ? 120 : 80)
                         Button {
                             zeit = nil
                         } label: {
