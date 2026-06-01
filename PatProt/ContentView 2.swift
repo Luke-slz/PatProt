@@ -246,9 +246,7 @@ struct iPhoneContentView: View {
         protokoll.einsatzOrt.sondersignal  = daten.sondersignal
         protokoll.einsatzOrt.notarzt       = daten.notarzt
         if let zeit = daten.alarmzeit {
-            protokoll.einsatzOrt.alarmzeit   = zeit
-            protokoll.einsatzOrt.abfahrtzeit = zeit
-            protokoll.einsatzOrt.ankunftzeit = zeit
+            protokoll.einsatzOrt.alarmzeit = zeit
         }
         protokoll.patientDaten.geschlecht = daten.geschlecht
         protokoll.sampler.ereignis        = daten.ereignis

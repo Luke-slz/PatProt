@@ -11,27 +11,27 @@ struct iPhoneMenuView: View {
         List {
             // Einsatz-Basisdaten
             Section {
-                menuRow("Konfiguration",    icon: "gearshape.fill",         color: .gray,   step: .konfiguration,    badge: konfigurationBadge)
-                menuRow("Einsatzzeiten",    icon: "clock.fill",              color: .blue,   step: .einsatzzeiten,    badge: nil)
-                menuRow("Patient",          icon: "person.fill",             color: .teal,   step: .patient,          badge: patientBadge, warnBadge: patientWarnBadge)
+                menuRow("Konfiguration",    icon: "gearshape.fill",         color: .gray,   step: .konfiguration,    warnBadge: konfigWarn)
+                menuRow("Einsatzzeiten",    icon: "clock.fill",              color: .blue,   step: .einsatzzeiten)
+                menuRow("Patient",          icon: "person.fill",             color: .teal,   step: .patient,          warnBadge: patientWarn)
             }
 
             // Klinische Erfassung
             Section {
-                menuRow("Notfallgeschehen", icon: "bell.fill",               color: .orange, step: .notfallGeschehen, badge: notfallBadge)
-                menuRow("ABCDE",            icon: "staroflife.fill",         color: .red,    step: .abcde,            badge: befundeBadge, warnBadge: abcdeWarnBadge)
-                menuRow("SAMPLER-Schema",   icon: "list.clipboard.fill",     color: .indigo, step: .sampler,          badge: nil)
-                menuRow("Diagnosen",        icon: "eye.fill",                color: .purple, step: .diagnose,         badge: diagnoseBadge)
+                menuRow("Notfallgeschehen", icon: "bell.fill",               color: .orange, step: .notfallGeschehen)
+                menuRow("ABCDE",            icon: "staroflife.fill",         color: .red,    step: .abcde,            warnBadge: abcdeWarn)
+                menuRow("SAMPLER-Schema",   icon: "list.clipboard.fill",     color: .indigo, step: .sampler)
+                menuRow("Diagnosen",        icon: "eye.fill",                color: .purple, step: .diagnose)
             }
 
             // Verlauf & Therapie
             Section {
-                menuRow("Verlauf und Therapie",  icon: "waveform.path.ecg",              color: Color(.systemGreen),  step: .verlauf,    badge: verlaufBadge)
-                menuRow("Maßnahmen",             icon: "cross.fill",                      color: .green,               step: .massnahmen, badge: moduleBadge)
-                menuRow("SINNHAFT-Schema",       icon: "bubble.left.and.bubble.right.fill", color: .cyan,             step: .sinnhaft,   badge: nil)
-                menuRow("Reanimation und Tod",   icon: "heart.fill",                      color: .red,                 step: .reanimation,badge: nil)
-                menuRow("Bilder & Dateien",      icon: "photo.stack.fill",               color: .brown,               step: .bilder,          badge: bilderBadge)
-                menuRow("Übergabe-Befunde",      icon: "cross.case.fill",                color: Color("RDOrange"),    step: .uebergabeBefunde, badge: nil)
+                menuRow("Verlauf und Therapie",  icon: "waveform.path.ecg",               color: Color(.systemGreen),  step: .verlauf)
+                menuRow("Maßnahmen",             icon: "cross.fill",                       color: .green,               step: .massnahmen)
+                menuRow("SINNHAFT-Schema",       icon: "bubble.left.and.bubble.right.fill", color: .cyan,              step: .sinnhaft)
+                menuRow("Reanimation und Tod",   icon: "heart.fill",                       color: .red,                 step: .reanimation)
+                menuRow("Bilder & Dateien",      icon: "photo.stack.fill",                color: .brown,               step: .bilder)
+                menuRow("Übergabe-Befunde",      icon: "cross.case.fill",                 color: Color("RDOrange"),    step: .uebergabeBefunde)
             }
 
             // Abschluss
@@ -105,10 +105,9 @@ struct iPhoneMenuView: View {
 
     // MARK: - Menu Row
 
-    private func menuRow(_ title: String, icon: String, color: Color, step: iPhoneAppStep, badge: Int?, warnBadge: Int? = nil) -> some View {
-        Button {
-            path.append(step)
-        } label: {
+    private func menuRow(_ title: String, icon: String, color: Color,
+                         step: iPhoneAppStep, warnBadge: Int? = nil) -> some View {
+        Button { path.append(step) } label: {
             HStack(spacing: 14) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 10)
@@ -122,21 +121,12 @@ struct iPhoneMenuView: View {
                     .foregroundColor(.primary)
                     .fontWeight(.medium)
                 Spacer()
-                if let count = warnBadge, count > 0 {
-                    Text("\(min(count, 99))")
+                if let n = warnBadge, n > 0 {
+                    Text("\(n)")
                         .font(.caption.weight(.bold))
                         .foregroundColor(.white)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
+                        .padding(.horizontal, 7).padding(.vertical, 3)
                         .background(Color.red)
-                        .clipShape(Capsule())
-                } else if let count = badge, count > 0 {
-                    Text("\(min(count, 99))")
-                        .font(.caption.weight(.bold))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
-                        .background(Color("RDOrange"))
                         .clipShape(Capsule())
                 } else {
                     Image(systemName: "chevron.right")
@@ -147,99 +137,32 @@ struct iPhoneMenuView: View {
         }
     }
 
-    // MARK: - Patient Gate
+    // MARK: - Pflichtfeld-Warnungen (rote Zahl = Anzahl fehlender Pflichtfelder)
 
-    private var patientErfasst: Bool {
-        let p = protokoll.patientDaten
-        return !p.vorname.isEmpty || !p.nachname.isEmpty
-    }
-
-    // MARK: - Badge Berechnungen
-
-    private var konfigurationBadge: Int? {
+    /// Konfiguration: Adresse + Stichwort sind Pflicht
+    private var konfigWarn: Int? {
         let eo = protokoll.einsatzOrt
-        var count = 0
-        if !eo.adresse.isEmpty       { count += 1 }
-        if !eo.einsatzNummer.isEmpty { count += 1 }
-        if !eo.stichwort.isEmpty     { count += 1 }
-        if !eo.fahrzeugName.isEmpty  { count += 1 }
-        return count > 0 ? count : nil
+        var m = 0
+        if eo.adresse.isEmpty  { m += 1 }
+        if eo.stichwort.isEmpty { m += 1 }
+        return m > 0 ? m : nil
     }
 
-    private var patientBadge: Int? {
+    /// Patient: Vorname, Nachname, Geburtsdatum sind Pflicht
+    private var patientWarn: Int? {
         let p = protokoll.patientDaten
-        var count = 0
-        if !p.vorname.isEmpty         { count += 1 }
-        if !p.nachname.isEmpty        { count += 1 }
-        if p.geburtsDatum != nil      { count += 1 }
-        if p.geschlecht != .unbekannt { count += 1 }
-        return count > 0 ? count : nil
+        var m = 0
+        if p.vorname.isEmpty     { m += 1 }
+        if p.nachname.isEmpty    { m += 1 }
+        if p.geburtsDatum == nil { m += 1 }
+        return m > 0 ? m : nil
     }
 
-    private var patientWarnBadge: Int? {
-        let p = protokoll.patientDaten
-        var missing = 0
-        if p.vorname.isEmpty      { missing += 1 }
-        if p.nachname.isEmpty     { missing += 1 }
-        if p.geburtsDatum == nil  { missing += 1 }
-        return missing > 0 ? missing : nil
-    }
-
-    private var abcdeWarnBadge: Int? {
-        let unbewertet = [protokoll.airway.status,
-                          protokoll.breathing.status,
-                          protokoll.circulation.status,
-                          protokoll.disability.status,
-                          protokoll.exposure.status]
-            .filter { $0 == .unbewertet }.count
-        return unbewertet > 0 ? unbewertet : nil
-    }
-
-    private var notfallBadge: Int? {
-        let b = protokoll.notfallGeschehen
-        var count = 0
-        if !b.unfallhergangAuswahl.isEmpty                              { count += 1 }
-        if !b.unfallmechanismus.isEmpty                                  { count += 1 }
-        if !b.preEmergencyStatus.isEmpty                                 { count += 1 }
-        if !b.erstbefundAuswahl.isEmpty || !b.erstbefundVorOrt.isEmpty  { count += 1 }
-        if !b.verlaufsbemerkungen.isEmpty                                { count += 1 }
-        return count > 0 ? count : nil
-    }
-
-    private var diagnoseBadge: Int? {
-        let c = protokoll.diagnose.verdachtsdiagnosen.count
-        return c > 0 ? c : nil
-    }
-
-    private var befundeBadge: Int? {
-        let count = [protokoll.airway.status,
-                     protokoll.breathing.status,
-                     protokoll.circulation.status,
-                     protokoll.disability.status,
-                     protokoll.exposure.status]
-            .filter { $0 != .unbewertet }.count
-        return count > 0 ? count : nil
-    }
-
-    private var verlaufBadge: Int? {
-        let c = protokoll.verlaufMessungen.count
-        return c > 0 ? c : nil
-    }
-
-    private var moduleBadge: Int? {
-        let m = protokoll.massnahmen
-        var count = protokoll.medikamente.count
-        if m.sauerstoffgabe  { count += 1 }
-        if m.maskenbeatmung  { count += 1 }
-        if m.supraglottisch  { count += 1 }
-        if m.peripherVenoes  { count += 1 }
-        if m.vakuummatratze  { count += 1 }
-        if m.tourniquet      { count += 1 }
-        return count > 0 ? count : nil
-    }
-
-    private var bilderBadge: Int? {
-        let c = protokoll.fotos.count
-        return c > 0 ? c : nil
+    /// ABCDE: alle 5 Komponenten müssen bewertet sein
+    private var abcdeWarn: Int? {
+        let n = [protokoll.airway.status, protokoll.breathing.status,
+                 protokoll.circulation.status, protokoll.disability.status,
+                 protokoll.exposure.status].filter { $0 == .unbewertet }.count
+        return n > 0 ? n : nil
     }
 }

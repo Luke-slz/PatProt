@@ -223,24 +223,24 @@ struct iPadMainView: View {
             einsatzInfoHeader
 
             Section {
-                iPadNavRow(icon: "gearshape.fill",  farbe: .gray,   titel: "Konfiguration",  section: .konfiguration,  badge: konfigurationBadge)
+                iPadNavRow(icon: "gearshape.fill",  farbe: .gray,   titel: "Konfiguration",  section: .konfiguration,  warnBadge: konfigWarn)
                 iPadNavRow(icon: "clock.fill",       farbe: .blue,   titel: "Einsatzzeiten",  section: .einsatzzeiten)
-                iPadNavRow(icon: "person.fill",      farbe: .teal,   titel: "Patient",         section: .patient,         badge: patientBadge)
+                iPadNavRow(icon: "person.fill",      farbe: .teal,   titel: "Patient",         section: .patient,         warnBadge: patientWarn)
             }
 
             Section {
-                iPadNavRow(icon: "bell.fill",                        farbe: .orange, titel: "Notfallgeschehen",   section: .notfallGeschehen, badge: notfallBadge)
-                iPadNavRow(icon: "staroflife.fill",                  farbe: .red,    titel: "ABCDE",               section: .abcde,            badge: befundeBadge)
+                iPadNavRow(icon: "bell.fill",                        farbe: .orange, titel: "Notfallgeschehen",   section: .notfallGeschehen)
+                iPadNavRow(icon: "staroflife.fill",                  farbe: .red,    titel: "ABCDE",               section: .abcde,            warnBadge: abcdeWarn)
                 iPadNavRow(icon: "list.clipboard.fill",              farbe: .indigo, titel: "SAMPLER-Schema",      section: .sampler)
-                iPadNavRow(icon: "eye.fill",                         farbe: .purple, titel: "Diagnosen",           section: .diagnose,         badge: diagnoseBadge)
+                iPadNavRow(icon: "eye.fill",                         farbe: .purple, titel: "Diagnosen",           section: .diagnose)
             }
 
             Section {
-                iPadNavRow(icon: "waveform.path.ecg",                farbe: Color(.systemGreen), titel: "Verlauf und Therapie",   section: .verlauf,    badge: verlaufBadge)
-                iPadNavRow(icon: "cross.fill",                       farbe: .green,              titel: "Maßnahmen",               section: .massnahmen, badge: moduleBadge)
+                iPadNavRow(icon: "waveform.path.ecg",                farbe: Color(.systemGreen), titel: "Verlauf und Therapie",   section: .verlauf)
+                iPadNavRow(icon: "cross.fill",                       farbe: .green,              titel: "Maßnahmen",               section: .massnahmen)
                 iPadNavRow(icon: "bubble.left.and.bubble.right.fill",farbe: .cyan,               titel: "SINNHAFT-Schema",          section: .sinnhaft)
                 iPadNavRow(icon: "heart.fill",                       farbe: .red,                titel: "Reanimation und Tod",      section: .reanimation)
-                iPadNavRow(icon: "photo.stack.fill",                 farbe: .brown,              titel: "Bilder & Dateien",         section: .bilder,           badge: bilderBadge)
+                iPadNavRow(icon: "photo.stack.fill",                 farbe: .brown,              titel: "Bilder & Dateien",         section: .bilder)
                 iPadNavRow(icon: "cross.case.fill",                  farbe: Color("RDOrange"),   titel: "Übergabe-Befunde",          section: .uebergabeBefunde)
             }
 
@@ -432,9 +432,7 @@ struct iPadMainView: View {
                 protokoll.einsatzOrt.sondersignal  = daten.sondersignal
                 protokoll.einsatzOrt.notarzt       = daten.notarzt
                 if let zeit = daten.alarmzeit {
-                    protokoll.einsatzOrt.alarmzeit   = zeit
-                    protokoll.einsatzOrt.abfahrtzeit = zeit
-                    protokoll.einsatzOrt.ankunftzeit = zeit
+                    protokoll.einsatzOrt.alarmzeit = zeit
                 }
                 protokoll.patientDaten.geschlecht = daten.geschlecht
                 protokoll.sampler.ereignis        = daten.ereignis
@@ -452,74 +450,30 @@ struct iPadMainView: View {
         return !p.vorname.isEmpty || !p.nachname.isEmpty || p.geburtsDatum != nil
     }
 
-    // MARK: - Badge Berechnungen
+    // MARK: - Pflichtfeld-Warnungen (rote Zahl = Anzahl fehlender Pflichtfelder)
 
-    private var konfigurationBadge: Int? {
+    private var konfigWarn: Int? {
         let eo = protokoll.einsatzOrt
-        var count = 0
-        if !eo.adresse.isEmpty       { count += 1 }
-        if !eo.einsatzNummer.isEmpty { count += 1 }
-        if !eo.stichwort.isEmpty     { count += 1 }
-        if !eo.fahrzeugName.isEmpty  { count += 1 }
-        return count > 0 ? count : nil
+        var m = 0
+        if eo.adresse.isEmpty  { m += 1 }
+        if eo.stichwort.isEmpty { m += 1 }
+        return m > 0 ? m : nil
     }
 
-    private var patientBadge: Int? {
+    private var patientWarn: Int? {
         let p = protokoll.patientDaten
-        var count = 0
-        if !p.vorname.isEmpty         { count += 1 }
-        if !p.nachname.isEmpty        { count += 1 }
-        if p.geburtsDatum != nil      { count += 1 }
-        if p.geschlecht != .unbekannt { count += 1 }
-        return count > 0 ? count : nil
+        var m = 0
+        if p.vorname.isEmpty     { m += 1 }
+        if p.nachname.isEmpty    { m += 1 }
+        if p.geburtsDatum == nil { m += 1 }
+        return m > 0 ? m : nil
     }
 
-    private var notfallBadge: Int? {
-        let b = protokoll.notfallGeschehen
-        var count = 0
-        if !b.unfallhergangAuswahl.isEmpty                              { count += 1 }
-        if !b.unfallmechanismus.isEmpty                                  { count += 1 }
-        if !b.preEmergencyStatus.isEmpty                                 { count += 1 }
-        if !b.erstbefundAuswahl.isEmpty || !b.erstbefundVorOrt.isEmpty  { count += 1 }
-        if !b.verlaufsbemerkungen.isEmpty                                { count += 1 }
-        return count > 0 ? count : nil
-    }
-
-    private var diagnoseBadge: Int? {
-        let c = protokoll.diagnose.verdachtsdiagnosen.count
-        return c > 0 ? c : nil
-    }
-
-    private var befundeBadge: Int? {
-        let count = [protokoll.airway.status,
-                     protokoll.breathing.status,
-                     protokoll.circulation.status,
-                     protokoll.disability.status,
-                     protokoll.exposure.status]
-            .filter { $0 != .unbewertet }.count
-        return count > 0 ? count : nil
-    }
-
-    private var verlaufBadge: Int? {
-        let c = protokoll.verlaufMessungen.count
-        return c > 0 ? c : nil
-    }
-
-    private var moduleBadge: Int? {
-        let m = protokoll.massnahmen
-        var count = protokoll.medikamente.count
-        if m.sauerstoffgabe  { count += 1 }
-        if m.maskenbeatmung  { count += 1 }
-        if m.supraglottisch  { count += 1 }
-        if m.peripherVenoes  { count += 1 }
-        if m.vakuummatratze  { count += 1 }
-        if m.tourniquet      { count += 1 }
-        return count > 0 ? count : nil
-    }
-
-    private var bilderBadge: Int? {
-        let c = protokoll.fotos.count
-        return c > 0 ? c : nil
+    private var abcdeWarn: Int? {
+        let n = [protokoll.airway.status, protokoll.breathing.status,
+                 protokoll.circulation.status, protokoll.disability.status,
+                 protokoll.exposure.status].filter { $0 == .unbewertet }.count
+        return n > 0 ? n : nil
     }
 }
 
@@ -530,7 +484,7 @@ private struct iPadNavRow: View {
     let farbe: Color
     let titel: String
     let section: iPadMainView.iPadSection
-    var badge: Int? = nil
+    var warnBadge: Int? = nil
 
     var body: some View {
         HStack(spacing: 14) {
@@ -546,13 +500,12 @@ private struct iPadNavRow: View {
                 .foregroundColor(.primary)
                 .fontWeight(.medium)
             Spacer()
-            if let count = badge, count > 0 {
-                Text("\(min(count, 99))")
+            if let n = warnBadge, n > 0 {
+                Text("\(n)")
                     .font(.caption.weight(.bold))
                     .foregroundColor(.white)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 3)
-                    .background(Color("RDOrange"))
+                    .padding(.horizontal, 7).padding(.vertical, 3)
+                    .background(Color.red)
                     .clipShape(Capsule())
             }
         }

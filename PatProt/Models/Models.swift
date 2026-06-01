@@ -284,7 +284,7 @@ struct PatientDaten: Codable {
     var versicherungsNummer = ""
     var kostentraeger = ""
     var gewicht: Double? = nil
-    var ansprechbar = false
+    var ansprechbar = true
 
     var alter: Int? {
         guard let geb = geburtsDatum else { return nil }
