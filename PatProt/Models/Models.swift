@@ -839,6 +839,7 @@ struct ErgebnisData: Codable {
     var transportZiel: TransportZiel = .anderesRettungsmittel
 
     // Einsatzbesonderheiten
+    var frEinsatz: Bool = true           // First-Responder-Einsatz (Standard: Ja)
     var ambulantVorOrt: Bool = false
     var naechstesKHNichtErreichbar: Bool = false
     var patNichtTransportfaehig: Bool = false

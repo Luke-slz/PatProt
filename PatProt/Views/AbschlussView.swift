@@ -107,6 +107,7 @@ struct AbschlussView: View {
 
             // Einsatzbesonderheiten
             Section {
+                CheckboxRow("FR-Einsatz (First Responder)", isOn: $protokoll.ergebnis.frEinsatz)
                 CheckboxRow("Ambulante Versorgung vor Ort", isOn: $protokoll.ergebnis.ambulantVorOrt)
                 CheckboxRow("Nächstes KH nicht erreichbar", isOn: $protokoll.ergebnis.naechstesKHNichtErreichbar)
                 CheckboxRow("Patient nicht transportfähig", isOn: $protokoll.ergebnis.patNichtTransportfaehig)

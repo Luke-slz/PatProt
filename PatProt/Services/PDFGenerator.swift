@@ -1685,6 +1685,7 @@ struct DINPDFGenerator {
 
         // Einsatzbesonderheiten checkboxes
         let besItems: [(String,Bool)] = [
+            ("FR-Einsatz", p.ergebnis.frEinsatz),
             ("Ambulant vor Ort", p.ergebnis.ambulantVorOrt),
             ("KH nicht erreichbar", p.ergebnis.naechstesKHNichtErreichbar),
             ("Pat. nicht transp.fähig", p.ergebnis.patNichtTransportfaehig),
