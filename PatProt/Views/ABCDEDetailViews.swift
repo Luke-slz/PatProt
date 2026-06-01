@@ -282,11 +282,31 @@ struct BreathingView: View {
             Section {
                 Toggle("Sauerstoffgabe", isOn: $massnahmen.sauerstoffgabe)
                 if massnahmen.sauerstoffgabe {
-                    HStack {
-                        TextField("Liter/min", text: $massnahmen.sauerstoffLitMin)
-                            .keyboardType(.decimalPad)
-                        Text("l/min").foregroundColor(.secondary)
+                    VStack(spacing: 4) {
+                        HStack {
+                            Text("Flussrate")
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Text(massnahmen.sauerstoffLitMin.isEmpty ? "0 l/min"
+                                 : "\(massnahmen.sauerstoffLitMin) l/min")
+                                .fontWeight(.semibold)
+                                .monospacedDigit()
+                        }
+                        Slider(
+                            value: Binding(
+                                get: { Double(massnahmen.sauerstoffLitMin) ?? 0 },
+                                set: { massnahmen.sauerstoffLitMin = $0 == 0 ? "" : String(Int($0)) }
+                            ),
+                            in: 0...15, step: 1
+                        )
+                        .tint(Color("RDOrange"))
+                        HStack {
+                            Text("0").font(.caption2).foregroundStyle(.secondary)
+                            Spacer()
+                            Text("15 l/min").font(.caption2).foregroundStyle(.secondary)
+                        }
                     }
+                    .padding(.vertical, 2)
                 }
                 CheckboxRow("Maskenbeatmung", isOn: $massnahmen.maskenbeatmung)
                 CheckboxRow("Maschinelle Beatmung", isOn: $massnahmen.maschinelleBeatmung)
