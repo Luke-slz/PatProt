@@ -113,15 +113,18 @@ enum ScreenshotParser {
                 let (strasse, plz, ort) = splitAdresse(raw)
                 result.adresse = strasse
                 result.plz     = plz
-                // Wenn PLZ gefunden aber kein Ort → nächste Zeile prüfen
-                if !plz.isEmpty && ort.isEmpty && i + 1 < lines.count {
-                    let next = lines[i + 1].trimmingCharacters(in: .whitespaces)
-                    if looksLikeStadt(next) {
-                        // Mehrteilige Stadtnamen kürzen (z.B. "Geesthacht Geesthacht")
-                        result.ort = erstesWort(next)
-                    }
-                } else {
+                if !ort.isEmpty {
                     result.ort = ort
+                } else if !plz.isEmpty {
+                    // PLZ gefunden aber kein Ort auf derselben Zeile →
+                    // nächste bis zu 4 Zeilen auf Stadtnamen prüfen
+                    for j in (i + 1)..<min(i + 5, lines.count) {
+                        let candidate = lines[j].trimmingCharacters(in: .whitespaces)
+                        if looksLikeStadt(candidate) {
+                            result.ort = erstesWort(candidate)
+                            break
+                        }
+                    }
                 }
             }
 
@@ -330,11 +333,30 @@ enum ScreenshotParser {
         return (strasse, plz, ort)
     }
 
-    /// Erkennt ob eine Zeile ein Stadtname ist (nur Buchstaben/Bindestriche, keine Ziffern)
+    // Bekannte Meldezettel-Feldbezeichnungen, die kein Stadtname sind
+    private static let keinStadt: [String] = [
+        "autor", "schnittstelle", "meldung", "rückmeldung", "ruckmeldung",
+        "stichwort", "adresse", "priorität", "prioritat", "einsatzbeginn",
+        "einsatznummer", "messenger", "öffnen", "objekt", "stockwerk",
+        "patient", "anfahrt", "unbekannt", "notarzt", "sondersignal",
+        "einsatzart", "fahrzeug", "besatzung", "konfiguration", "heute",
+        "gestern", "uhr"
+    ]
+
+    /// Erkennt ob eine Zeile ein Stadtname ist
     private static func looksLikeStadt(_ line: String) -> Bool {
-        guard line.count >= 3 else { return false }
-        // Darf keine Ziffern enthalten, muss Buchstaben enthalten
-        return !line.contains(where: { $0.isNumber }) && line.contains(where: { $0.isLetter })
+        let s = line.trimmingCharacters(in: .whitespaces)
+        guard s.count >= 3, s.count <= 50 else { return false }
+        let lower = s.lowercased()
+        // Keine Ziffern
+        guard !s.contains(where: { $0.isNumber }) else { return false }
+        // Keine Sonderzeichen die auf Feldinhalt hindeuten
+        guard !s.contains(":"), !s.contains(">"), !s.contains("/") else { return false }
+        // Muss mit Großbuchstaben beginnen (Städte sind Eigennamen)
+        guard let first = s.first, first.isUppercase else { return false }
+        // Kein bekanntes Meldezettel-Label (exakt oder als Prefix mit Leerzeichen)
+        guard !keinStadt.contains(where: { lower == $0 || lower.hasPrefix($0 + " ") }) else { return false }
+        return true
     }
 
     /// Erstes Wort einer Zeichenkette (bei Doppelungen wie "Geesthacht Geesthacht")
