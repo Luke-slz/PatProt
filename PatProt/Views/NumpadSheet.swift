@@ -121,6 +121,26 @@ struct NumpadSheet: View {
         if !digits.isEmpty { digits.removeLast() }
     }
 
+    // ±-Anpassung für Zeitmodus
+    private func timeAdjust(_ minutes: Int) {
+        // Ausgangswert: aktuell eingegebene Zeit oder aktuelle Uhrzeit
+        let base: String
+        if digits.count == 4 {
+            base = Self.formatDisplay(digits: digits, mode: .time(label: ""))
+        } else {
+            let f = DateFormatter(); f.dateFormat = "HH:mm"
+            base = f.string(from: Date())
+        }
+        let parts = base.split(separator: ":")
+        guard parts.count == 2,
+              let h = Int(parts[0]), let m = Int(parts[1]) else { return }
+        let totalMinutes = h * 60 + m + minutes
+        let clamped = ((totalMinutes % 1440) + 1440) % 1440
+        let newH = clamped / 60
+        let newM = clamped % 60
+        digits = String(format: "%02d%02d", newH, newM)
+    }
+
     private func confirm() {
         switch mode {
         case .bloodPressure:
@@ -171,6 +191,27 @@ struct NumpadSheet: View {
                 .padding(.horizontal)
 
             Divider().padding(.bottom, 10)
+
+            // Schnell-Buttons für Zeitmodus
+            if case .time = mode {
+                HStack(spacing: 8) {
+                    ForEach([(-10, "−10"), (-5, "−5"), (5, "+5"), (10, "+10")], id: \.0) { delta, label in
+                        Button {
+                            timeAdjust(delta)
+                        } label: {
+                            Text(label)
+                                .font(.subheadline.monospacedDigit())
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 8)
+                                .background(Color(.systemGray5))
+                                .cornerRadius(8)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 10)
+                .padding(.bottom, 6)
+            }
 
             VStack(spacing: 10) {
                 ForEach([[7, 8, 9], [4, 5, 6], [1, 2, 3]], id: \.self) { row in

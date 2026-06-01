@@ -239,22 +239,9 @@ struct iPhoneContentView: View {
         let code = daten.einsatzArt
         protokoll.einsatzOrt.stichwort  = code
         protokoll.einsatzOrt.einsatzArt = bestDiagnose(code: code, ocrDiagnose: daten.stichwort)
-        // Adresse aufsplitten: Straße in adresse, PLZ+Ort separat
-        let adresseRaw = daten.adresse
-        if let match = adresseRaw.range(of: #"(\d{5})\s+(.+)"#, options: .regularExpression) {
-            let plzOrtTeil = String(adresseRaw[match])
-            let teile = plzOrtTeil.split(separator: " ", maxSplits: 1).map(String.init)
-            if teile.count == 2 {
-                protokoll.einsatzOrt.plz = teile[0]
-                protokoll.einsatzOrt.ort = teile[1]
-            }
-            // Straße ist alles vor der PLZ
-            let strasseTeil = adresseRaw[adresseRaw.startIndex..<match.lowerBound]
-                .trimmingCharacters(in: .init(charactersIn: ", "))
-            protokoll.einsatzOrt.adresse = strasseTeil.isEmpty ? adresseRaw : strasseTeil
-        } else {
-            protokoll.einsatzOrt.adresse = adresseRaw
-        }
+        protokoll.einsatzOrt.adresse = daten.adresse
+        if !daten.plz.isEmpty { protokoll.einsatzOrt.plz = daten.plz }
+        if !daten.ort.isEmpty { protokoll.einsatzOrt.ort = daten.ort }
         protokoll.einsatzOrt.zusatz        = daten.zusatz
         protokoll.einsatzOrt.sondersignal  = daten.sondersignal
         protokoll.einsatzOrt.notarzt       = daten.notarzt

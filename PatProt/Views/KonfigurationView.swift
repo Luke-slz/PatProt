@@ -106,7 +106,15 @@ struct KonfigurationView: View {
         .navigationTitle("Konfiguration")
         .navigationBarTitleDisplayMode(.large)
         .onChange(of: locationManager.address) { _, newAddress in
-            if !newAddress.isEmpty { protokoll.einsatzOrt.adresse = newAddress }
+            if !newAddress.isEmpty {
+                protokoll.einsatzOrt.adresse = locationManager.street.isEmpty ? newAddress : locationManager.street
+            }
+        }
+        .onChange(of: locationManager.postalCode) { _, pc in
+            if !pc.isEmpty { protokoll.einsatzOrt.plz = pc }
+        }
+        .onChange(of: locationManager.city) { _, c in
+            if !c.isEmpty { protokoll.einsatzOrt.ort = c }
         }
         .sheet(isPresented: $zeigeStichwortPicker) {
             StichwortPickerSheet(

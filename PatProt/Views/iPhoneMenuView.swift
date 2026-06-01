@@ -22,17 +22,7 @@ struct iPhoneMenuView: View {
                 menuRow("ABCDE",            icon: "staroflife.fill",         color: .red,    step: .abcde,            badge: befundeBadge, warnBadge: abcdeWarnBadge)
                 menuRow("SAMPLER-Schema",   icon: "list.clipboard.fill",     color: .indigo, step: .sampler,          badge: nil)
                 menuRow("Diagnosen",        icon: "eye.fill",                color: .purple, step: .diagnose,         badge: diagnoseBadge)
-            } footer: {
-                if !patientErfasst {
-                    Label("Kein Patient erfasst – Abschnitte gesperrt", systemImage: "lock.fill")
-                        .font(.caption).foregroundStyle(.orange)
-                } else if !protokoll.massnahmenDurchgefuehrt {
-                    Label("Keine Maßnahmen – klinische Abschnitte gesperrt", systemImage: "lock.fill")
-                        .font(.caption).foregroundStyle(.orange)
-                }
             }
-            .disabled(!patientErfasst || !protokoll.massnahmenDurchgefuehrt)
-            .opacity(patientErfasst && protokoll.massnahmenDurchgefuehrt ? 1 : 0.4)
 
             // Verlauf & Therapie
             Section {
@@ -43,8 +33,6 @@ struct iPhoneMenuView: View {
                 menuRow("Bilder & Dateien",      icon: "photo.stack.fill",               color: .brown,               step: .bilder,          badge: bilderBadge)
                 menuRow("Übergabe-Befunde",      icon: "cross.case.fill",                color: Color("RDOrange"),    step: .uebergabeBefunde, badge: nil)
             }
-            .disabled(!patientErfasst || !protokoll.massnahmenDurchgefuehrt)
-            .opacity(patientErfasst && protokoll.massnahmenDurchgefuehrt ? 1 : 0.4)
 
             // Abschluss
             Section {

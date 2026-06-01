@@ -234,8 +234,6 @@ struct iPadMainView: View {
                 iPadNavRow(icon: "list.clipboard.fill",              farbe: .indigo, titel: "SAMPLER-Schema",      section: .sampler)
                 iPadNavRow(icon: "eye.fill",                         farbe: .purple, titel: "Diagnosen",           section: .diagnose,         badge: diagnoseBadge)
             }
-            .disabled(!patientErfasst)
-            .opacity(patientErfasst ? 1 : 0.45)
 
             Section {
                 iPadNavRow(icon: "waveform.path.ecg",                farbe: Color(.systemGreen), titel: "Verlauf und Therapie",   section: .verlauf,    badge: verlaufBadge)
@@ -245,8 +243,6 @@ struct iPadMainView: View {
                 iPadNavRow(icon: "photo.stack.fill",                 farbe: .brown,              titel: "Bilder & Dateien",         section: .bilder,           badge: bilderBadge)
                 iPadNavRow(icon: "cross.case.fill",                  farbe: Color("RDOrange"),   titel: "Übergabe-Befunde",          section: .uebergabeBefunde)
             }
-            .disabled(!patientErfasst)
-            .opacity(patientErfasst ? 1 : 0.45)
 
             Section {
                 HStack(spacing: 14) {
@@ -429,7 +425,9 @@ struct iPadMainView: View {
                 let code = daten.einsatzArt
                 protokoll.einsatzOrt.stichwort  = code
                 protokoll.einsatzOrt.einsatzArt = code
-                protokoll.einsatzOrt.adresse       = daten.adresse
+                protokoll.einsatzOrt.adresse = daten.adresse
+                if !daten.plz.isEmpty { protokoll.einsatzOrt.plz = daten.plz }
+                if !daten.ort.isEmpty { protokoll.einsatzOrt.ort = daten.ort }
                 protokoll.einsatzOrt.zusatz        = daten.zusatz
                 protokoll.einsatzOrt.sondersignal  = daten.sondersignal
                 protokoll.einsatzOrt.notarzt       = daten.notarzt

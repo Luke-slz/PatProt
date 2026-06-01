@@ -5,10 +5,12 @@ import UIKit
 
 struct ParsedMeldungDaten {
     var einsatzNummer: String = ""
-    var einsatzArt: String = ""       // z.B. "NOTF 01"
-    var stichwort: String = ""        // z.B. "Alkohol-Intox"
-    var adresse: String = ""          // z.B. "Norderstraße, 21502 Geesthacht"
-    var zusatz: String = ""           // Objekt + Stockwerk ohne Labels
+    var einsatzArt: String = ""
+    var stichwort: String = ""
+    var adresse: String = ""   // nur Straße + Hausnummer
+    var plz: String = ""
+    var ort: String = ""
+    var zusatz: String = ""
     var alarmzeit: Date? = nil
     var sondersignal: Bool = false
     var notarzt: Bool = false
@@ -106,10 +108,21 @@ enum ScreenshotParser {
             }
 
             // ── Adresse ────────────────────────────────────────────────
-            // Enthält PLZ (5 Ziffern) ODER Komma-Format.
-            // OCR liest oft "Adresse  Norderstraße..." als eine Zeile → Label abschneiden.
             if result.adresse.isEmpty, looksLikeAddress(line) {
-                result.adresse = stripKnownPrefix(line, prefix: "adresse")
+                let raw = stripKnownPrefix(line, prefix: "adresse")
+                let (strasse, plz, ort) = splitAdresse(raw)
+                result.adresse = strasse
+                result.plz     = plz
+                // Wenn PLZ gefunden aber kein Ort → nächste Zeile prüfen
+                if !plz.isEmpty && ort.isEmpty && i + 1 < lines.count {
+                    let next = lines[i + 1].trimmingCharacters(in: .whitespaces)
+                    if looksLikeStadt(next) {
+                        // Mehrteilige Stadtnamen kürzen (z.B. "Geesthacht Geesthacht")
+                        result.ort = erstesWort(next)
+                    }
+                } else {
+                    result.ort = ort
+                }
             }
 
 
@@ -294,5 +307,43 @@ enum ScreenshotParser {
         if lower.contains("patient: w") || lower.contains("patient: f")
             || lower.contains("patient:w") || lower.contains("patient:f") { return .weiblich }
         return .unbekannt
+    }
+
+    // MARK: - Adresse aufteilen
+
+    /// "Norderstraße 42, 21502 Geesthacht" → (strasse:"Norderstraße 42", plz:"21502", ort:"Geesthacht")
+    /// "Elbuferstraße 1, 21502" → (strasse:"Elbuferstraße 1", plz:"21502", ort:"")
+    private static func splitAdresse(_ raw: String) -> (strasse: String, plz: String, ort: String) {
+        // Suche PLZ (5 Ziffern) mit optionalem Stadtname dahinter
+        guard let range = raw.range(of: #"\b(\d{5})\b"#, options: .regularExpression) else {
+            return (raw, "", "")
+        }
+        let plz = String(raw[range]).trimmingCharacters(in: .whitespaces)
+        // Straße = alles vor PLZ
+        let strasse = raw[raw.startIndex..<range.lowerBound]
+            .trimmingCharacters(in: .init(charactersIn: ", "))
+        // Ort = alles nach PLZ (kann leer sein)
+        let afterPlz = raw[range.upperBound...]
+            .trimmingCharacters(in: .whitespaces)
+        // Mehrteilige Städtenamen kürzen ("Geesthacht Geesthacht" → "Geesthacht")
+        let ort = afterPlz.isEmpty ? "" : erstesWort(String(afterPlz))
+        return (strasse, plz, ort)
+    }
+
+    /// Erkennt ob eine Zeile ein Stadtname ist (nur Buchstaben/Bindestriche, keine Ziffern)
+    private static func looksLikeStadt(_ line: String) -> Bool {
+        guard line.count >= 3 else { return false }
+        // Darf keine Ziffern enthalten, muss Buchstaben enthalten
+        return !line.contains(where: { $0.isNumber }) && line.contains(where: { $0.isLetter })
+    }
+
+    /// Erstes Wort einer Zeichenkette (bei Doppelungen wie "Geesthacht Geesthacht")
+    private static func erstesWort(_ s: String) -> String {
+        let words = s.split(separator: " ").map(String.init)
+        // Wenn erstes Wort identisch mit zweitem, nur einmal zurückgeben
+        if words.count >= 2, words[0].lowercased() == words[1].lowercased() {
+            return words[0]
+        }
+        return words.first ?? s
     }
 }
