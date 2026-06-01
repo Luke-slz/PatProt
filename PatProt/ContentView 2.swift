@@ -229,7 +229,7 @@ struct iPhoneContentView: View {
             await MainActor.run {
                 applyToCurrentProtokoll(daten)
                 isParsing = false
-                path = [.menu]
+                path = [.menu, .konfiguration]
             }
         }
     }

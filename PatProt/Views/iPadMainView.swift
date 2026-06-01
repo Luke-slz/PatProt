@@ -440,7 +440,7 @@ struct iPadMainView: View {
                 protokoll.sampler.ereignis        = daten.ereignis
                 isParsing = false
                 showingStart = false
-                selectedSection = .notfallGeschehen
+                selectedSection = .konfiguration
             }
         }
     }

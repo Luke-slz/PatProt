@@ -431,6 +431,16 @@ struct StichwortFormSheet: View {
     let onSpeichern: () -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @AppStorage(StichwortStore.key) private var storeJSON: String = "[]"
+    @State private var andereKategorie = false
+
+    // Alle vorhandenen Kategorien aus Default-Einträgen + gespeicherten Einträgen
+    private var vorhandeneKategorien: [String] {
+        let defaultKats = StichwortPickerSheet.defaultEinträge.map(\.2)
+        let gespeichert = StichwortStore.laden().map(\.kategorie)
+        var seen = Set<String>()
+        return (defaultKats + gespeichert).filter { !$0.isEmpty && seen.insert($0).inserted }
+    }
 
     var body: some View {
         NavigationStack {
@@ -444,11 +454,36 @@ struct StichwortFormSheet: View {
                     TextField("z.B. Bewusstlose Person", text: $diagnose)
                 }
                 Section("Kategorie") {
-                    TextField("z.B. Kritisch (NOTF 11)", text: $kategorie)
+                    if !andereKategorie {
+                        Picker("Kategorie wählen", selection: $kategorie) {
+                            Text("—").tag("")
+                            ForEach(vorhandeneKategorien, id: \.self) { kat in
+                                Text(kat).tag(kat)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        Button("Neue Kategorie eingeben…") {
+                            andereKategorie = true
+                            kategorie = ""
+                        }
+                        .font(.subheadline)
+                        .foregroundColor(Color("RDOrange"))
+                    } else {
+                        TextField("Kategorie eingeben", text: $kategorie)
+                        Button("Aus vorhandenen wählen") {
+                            andereKategorie = false
+                        }
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    }
                 }
             }
             .navigationTitle(titel)
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                // Wenn die aktuelle Kategorie nicht in der Liste ist → freies Feld zeigen
+                andereKategorie = !kategorie.isEmpty && !vorhandeneKategorien.contains(kategorie)
+            }
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Speichern") {
