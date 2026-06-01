@@ -75,22 +75,19 @@ struct NotfallgeschehenView: View {
             }
 
             Section {
-                Picker("NACA-Score", selection: Binding(
-                    get: { befund.nacaScoreWert ?? NacaScore.naca3 },
+                Picker("", selection: Binding(
+                    get: { befund.nacaScoreWert },
                     set: { befund.nacaScoreWert = $0 }
                 )) {
+                    Text("— nicht gesetzt —").tag(nil as NacaScore?)
                     ForEach(NacaScore.allCases, id: \.self) { score in
-                        Text(score.beschreibung).tag(score as NacaScore)
+                        Text(score.beschreibung).tag(score as NacaScore?)
                     }
                 }
                 .pickerStyle(.inline)
-                if befund.nacaScoreWert != nil {
-                    Button(role: .destructive) {
-                        befund.nacaScoreWert = nil
-                    } label: {
-                        Label("Auswahl aufheben", systemImage: "xmark.circle")
-                    }
-                }
+                .labelsHidden()
+            } header: {
+                Label("NACA-Score", systemImage: "staroflife.fill")
             }
             Section {
                 TextField("Freitext Notfallgeschehen", text: $befund.notfallFreitext, axis: .vertical)
