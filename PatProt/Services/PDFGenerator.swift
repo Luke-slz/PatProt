@@ -93,8 +93,9 @@ struct DINPDFGenerator {
         guard !s.isEmpty else { return minH }
         let ps = NSMutableParagraphStyle()
         let attrs: [NSAttributedString.Key: Any] = [.font: font, .paragraphStyle: ps]
+        // Tatsächliche Höhe ohne Cap messen, dann auf maxH begrenzen
         let br = (s as NSString).boundingRect(
-            with: CGSize(width: width, height: maxH),
+            with: CGSize(width: width, height: 9999),
             options: .usesLineFragmentOrigin, attributes: attrs, context: nil)
         return max(minH, min(ceil(br.height) + 5, maxH))
     }
@@ -700,7 +701,7 @@ struct DINPDFGenerator {
         for i in 0..<5 {
             let isOB = abcdeRaw[i].isEmpty
             let rowFont: UIFont = isOB ? UIFont.italicSystemFont(ofSize: 7) : f7
-            let rowH: CGFloat = isOB ? 11 : fieldH(abcdeVals[i], width: cw - 4)
+            let rowH: CGFloat = isOB ? 11 : fieldH(abcdeVals[i], width: cw - 4, maxH: 88)
             // Letter box A-E
             fillRect(CGRect(x:lx, y:abcdeY, width:12, height:rowH), subBlue)
             txt(abcdeLetters[i], CGRect(x:lx+1, y:abcdeY+2, width:10, height:rowH-4),
