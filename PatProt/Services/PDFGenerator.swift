@@ -327,8 +327,13 @@ struct DINPDFGenerator {
             field("Name des Patienten",
                   "\(p.patientDaten.nachname), \(p.patientDaten.vorname)",
                   x:x, y:y, w:w, h:14, lw:w*0.38, hl:true)
-            field("geb. am", d(p.patientDaten.geburtsDatum),
-                  x:x, y:y+14, w:w*0.55, h:12, lw:38)
+            let gebStr: String = {
+                var s = d(p.patientDaten.geburtsDatum)
+                if let a = p.patientDaten.alter { s += s.isEmpty ? "\(a) J." : " (\(a) J.)" }
+                return s
+            }()
+            field("geb. am / Alter", gebStr,
+                  x:x, y:y+14, w:w*0.55, h:12, lw:52)
             let geschlechtVal = [p.patientDaten.geschlecht.rawValue, p.patientDaten.ansprechbar ? "Ansprechbar" : ""].filter { !$0.isEmpty }.joined(separator: " · ")
             field("Geschlecht", geschlechtVal,
                   x:x+w*0.55, y:y+14, w:w*0.45, h:12, lw:42)

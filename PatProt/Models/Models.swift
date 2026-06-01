@@ -285,11 +285,21 @@ struct PatientDaten: Codable {
     var kostentraeger = ""
     var gewicht: Double? = nil
     var ansprechbar = true
+    var alterManuell: Int? = nil  // überschreibt errechnetes Alter
 
-    var alter: Int? {
+    // Errechnetes Alter aus Geburtsdatum
+    private var alterBerechnet: Int? {
         guard let geb = geburtsDatum else { return nil }
         return Calendar.current.dateComponents([.year], from: geb, to: Date()).year
     }
+
+    // Effektives Alter: manuelle Eingabe hat Vorrang, sonst Berechnung
+    var alter: Int? { alterManuell ?? alterBerechnet }
+
+    // Ob das angezeigte Alter manuell gesetzt wurde
+    var alterIstManuell: Bool { alterManuell != nil }
+    // Ob ein errechneter Wert vorliegt (aber ggf. von manuell überschrieben)
+    var alterErrechnet: Int? { alterBerechnet }
 }
 
 struct Besatzung: Codable {

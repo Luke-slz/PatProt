@@ -187,6 +187,7 @@ struct EinsatzOrtView: View {
                 }
                 .contentShape(Rectangle())
                 .onTapGesture { zeigeGeburtsdatumNumpad = true }
+                AlterFeld(patientDaten: $protokoll.patientDaten)
                 TextField("Versicherungsnummer", text: $protokoll.patientDaten.versicherungsNummer)
                 TextField("Kostenträger / Krankenkasse", text: $protokoll.patientDaten.kostentraeger)
                 Button {
@@ -844,5 +845,66 @@ struct ZeitFeld: View {
         comps.hour = h
         comps.minute = m
         datum = Calendar.current.date(from: comps)
+    }
+}
+
+// MARK: - Alter-Feld (errechnet oder manuell)
+
+struct AlterFeld: View {
+    @Binding var patientDaten: PatientDaten
+    @State private var zeigeNumpad = false
+
+    private var anzeigeText: String {
+        if let a = patientDaten.alter {
+            return "\(a) J."
+        }
+        return "—"
+    }
+
+    private var hinweisText: String? {
+        if patientDaten.alterIstManuell, let errechnet = patientDaten.alterErrechnet,
+           errechnet != patientDaten.alterManuell {
+            return "Geb.: \(errechnet) J."
+        }
+        if !patientDaten.alterIstManuell && patientDaten.geburtsDatum != nil {
+            return "aus Geburtsdatum"
+        }
+        return nil
+    }
+
+    var body: some View {
+        HStack {
+            Text("Alter")
+            Spacer()
+            if let hinweis = hinweisText {
+                Text(hinweis)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Text(anzeigeText)
+                .foregroundStyle(patientDaten.alter == nil ? .secondary : .primary)
+                .monospacedDigit()
+            if patientDaten.alterIstManuell {
+                Button {
+                    patientDaten.alterManuell = nil
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                        .font(.caption)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture { zeigeNumpad = true }
+        .sheet(isPresented: $zeigeNumpad) {
+            NumpadSheet(
+                mode: .integer(label: "Alter", unit: "Jahre", maxDigits: 3),
+                initial: patientDaten.alterManuell.map(String.init)
+                    ?? patientDaten.alterErrechnet.map(String.init) ?? ""
+            ) { val in
+                patientDaten.alterManuell = Int(val)
+            }
+        }
     }
 }
