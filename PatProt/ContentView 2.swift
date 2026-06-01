@@ -249,7 +249,7 @@ struct iPhoneContentView: View {
             protokoll.einsatzOrt.alarmzeit = zeit
         }
         protokoll.patientDaten.geschlecht = daten.geschlecht
-        protokoll.sampler.ereignis        = daten.ereignis
+        // ereignis (SAMPLER E) wird nicht aus dem Meldezettel übernommen
     }
 
     private func bestDiagnose(code: String, ocrDiagnose: String) -> String {
