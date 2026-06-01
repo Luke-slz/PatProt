@@ -114,7 +114,7 @@ struct SAMPLERView: View {
                     text: $befund.letzteRegelblutung,
                     zeit: $befund.letzteRegelblutungZeit,
                     unbekannt: $befund.letzteRegelblutungUnbekannt,
-                    datumKomponenten: .date
+                    nurDatum: true
                 )
                 Text("→ PDF S. 1 · SAMPLER · L").font(.caption2).foregroundColor(.secondary)
             }
@@ -179,7 +179,16 @@ private struct SamplerLRow: View {
     @Binding var text: String
     @Binding var zeit: Date?
     @Binding var unbekannt: Bool
-    var datumKomponenten: DatePickerComponents = .hourAndMinute
+    var nurDatum: Bool = false   // true = Regelblutung (Datum ohne Uhrzeit)
+
+    @State private var zeigeNumpad = false
+
+    private var zeitFormatiert: String {
+        guard let d = zeit else { return "" }
+        let f = DateFormatter()
+        f.dateFormat = nurDatum ? "dd.MM.yyyy" : "HH:mm"
+        return f.string(from: d)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -198,29 +207,62 @@ private struct SamplerLRow: View {
                     TextField(placeholder, text: $text)
                         .font(.subheadline)
                     Spacer()
-                    if let _ = zeit {
-                        DatePicker("", selection: Binding(
-                            get: { zeit ?? Date() },
-                            set: { zeit = $0 }
-                        ), displayedComponents: datumKomponenten)
-                        .labelsHidden()
-                        .frame(width: datumKomponenten == .date ? 120 : 80)
-                        Button {
-                            zeit = nil
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundColor(.secondary)
-                        }
-                        .buttonStyle(.plain)
-                    } else {
-                        Button("Setzen") { zeit = Date() }
-                            .font(.caption)
+                    // Uhrzeit/Datum Anzeige – immer tippen um zu setzen
+                    HStack(spacing: 6) {
+                        if nurDatum {
+                            // Datum: kompakter DatePicker ohne Gate
+                            DatePicker("", selection: Binding(
+                                get: { zeit ?? Date() },
+                                set: { zeit = $0 }
+                            ), displayedComponents: .date)
+                            .labelsHidden()
+                            .frame(width: 120)
+                            .onAppear { if zeit == nil { /* kein Auto-Set */ } }
+                        } else {
+                            // Uhrzeit: NumpadSheet wie ZeitFeld
+                            Text(zeitFormatiert.isEmpty ? "--:--" : zeitFormatiert)
+                                .foregroundStyle(zeit == nil ? .secondary : .primary)
+                                .monospacedDigit()
+                                .frame(width: 44, alignment: .trailing)
+                                .contentShape(Rectangle())
+                                .onTapGesture { zeigeNumpad = true }
+                            Button("Jetzt") {
+                                let now = Date()
+                                let cal = Calendar.current
+                                var c = cal.dateComponents([.year, .month, .day], from: Date())
+                                c.hour   = cal.component(.hour,   from: now)
+                                c.minute = cal.component(.minute, from: now)
+                                zeit = cal.date(from: c)
+                            }
                             .buttonStyle(.bordered)
+                            .tint(Color("RDOrange"))
+                            .controlSize(.small)
+                        }
+                        if zeit != nil {
+                            Button {
+                                zeit = nil
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
                 }
             }
         }
         .padding(.vertical, 2)
+        .sheet(isPresented: $zeigeNumpad) {
+            NumpadSheet(mode: .time(label: titel), initial: zeitFormatiert) { timeStr in
+                guard timeStr.count == 5 else { return }
+                let parts = timeStr.split(separator: ":")
+                guard parts.count == 2,
+                      let h = Int(parts[0]), let m = Int(parts[1]) else { return }
+                var c = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+                c.hour = h; c.minute = m
+                zeit = Calendar.current.date(from: c)
+            }
+        }
     }
 }
 

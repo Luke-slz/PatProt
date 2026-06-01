@@ -141,12 +141,18 @@ enum ScreenshotParser {
                 var j = i + 1
                 while j < lines.count {
                     let next = lines[j].trimmingCharacters(in: .whitespaces)
-                    if next.lowercased().hasPrefix("rückmeldung")
-                        || next.lowercased().hasPrefix("ruckmeldung") { break }
+                    let nextLower = next.lowercased()
+                    if nextLower.hasPrefix("rückmeldung")
+                        || nextLower.hasPrefix("ruckmeldung") { break }
                     if !next.isEmpty { block.append(next) }
                     j += 1
                 }
-                result.ereignis = block.joined(separator: "\n")
+                // Objekt: und Patient: gehören in andere Felder, nicht ins Ereignis
+                let ereignisZeilen = block.filter { line in
+                    let l = line.lowercased()
+                    return !l.hasPrefix("objekt:") && !l.hasPrefix("patient:")
+                }
+                result.ereignis = ereignisZeilen.joined(separator: "\n")
 
                 // Zusatz = Werte von Objekt/Stockwerk ohne Label
                 let teile: [String] = block.compactMap { bLine in
