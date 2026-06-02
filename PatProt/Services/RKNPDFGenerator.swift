@@ -7,6 +7,22 @@ struct RKNPDFGenerator {
     static let W: CGFloat = 595
     static let H: CGFloat = 842
 
+    // MARK: - Layout-Konstanten Seite 1
+    private static let p1HeaderY: CGFloat = 4
+    private static let p1S1Y: CGFloat     = 33
+    private static let p1S2Y: CGFloat     = 127
+    private static let p1S3Y: CGFloat     = 193
+    private static let p1S4Y: CGFloat     = 465
+
+    // MARK: - Layout-Konstanten Seite 2
+    private static let p2S42Y: CGFloat    = 4
+    private static let p2GrafY: CGFloat   = 143
+    private static let p2S6Y: CGFloat     = 245
+    private static let p2S65Y: CGFloat    = 560
+    private static let p2S8Y: CGFloat     = 684
+    private static let p2S9Y: CGFloat     = 758
+    private static let p2NacaY: CGFloat   = 820
+
     // MARK: - Farben
     private static let cBlack  = UIColor.black
     private static let cBorder = UIColor(white: 0.3, alpha: 1)
@@ -130,11 +146,15 @@ struct RKNPDFGenerator {
     // MARK: - Seite 1 (Dispatcher)
     private static func drawPage1(protokoll: EinsatzProtokoll) {
         fillR(CGRect(x: 0, y: 0, width: W, height: H))
+        // outer border drawn last so it's on top
         drawHeader(protokoll: protokoll)
         drawSection1(protokoll: protokoll)
         drawSection2(protokoll: protokoll)
         drawSection3(protokoll: protokoll)
         drawSection4(protokoll: protokoll)
+        UIColor(white:0.2, alpha:1).setStroke()
+        let b1 = UIBezierPath(rect: CGRect(x: 3, y: 3, width: W-6, height: H-6))
+        b1.lineWidth = 0.6; b1.stroke()
     }
 
     // MARK: - Seite 2 (Dispatcher)
@@ -149,6 +169,9 @@ struct RKNPDFGenerator {
         drawSection8(protokoll: protokoll)
         drawSection9(protokoll: protokoll)
         drawNaca(protokoll: protokoll)
+        UIColor(white:0.2, alpha:1).setStroke()
+        let b2 = UIBezierPath(rect: CGRect(x: 3, y: 3, width: W-6, height: H-6))
+        b2.lineWidth = 0.6; b2.stroke()
     }
 
     // MARK: - Platzhalter (werden in späteren Tasks implementiert)
@@ -186,6 +209,10 @@ struct RKNPDFGenerator {
         // Betriebsstätten-Nr / Datum
         txt("Betriebsstätten-Nr. / Datum", CGRect(x: 476, y: 5, width: 115, height: 6), font: f5, color: UIColor(white: 0.4, alpha: 1))
         txt(d(e.alarmzeit), CGRect(x: 476, y: 12, width: 115, height: 8), font: f6b)
+        let verfasser = protokoll.verfasser.rawValue
+        if !verfasser.isEmpty {
+            txt("Verfasser: \(verfasser)", CGRect(x: 476, y: 19, width: 115, height: 6), font: f5)
+        }
 
         hline(4, 32, W-8)
     }
@@ -269,12 +296,19 @@ struct RKNPDFGenerator {
         hline(rx, y+45, W/2-6)
 
         // Besatzung
-        let besatzungsText: String = {
-            let namen = [b.sanitaeter1, b.sanitaeter2, b.sanitaeter3, b.sanitaeter4].filter { !$0.isEmpty }
-            return namen.joined(separator: ", ")
-        }()
         txt("Besatzung:", CGRect(x: rx+2, y: y+47, width: 38, height: 7), font: f5b)
-        txt(besatzungsText, CGRect(x: rx+42, y: y+47, width: W/2-50, height: 14), font: f5)
+        let besatzungMitQual: String = {
+            let eintraege: [(String, Qualifikation)] = [
+                (b.sanitaeter1, b.qualifikation1),
+                (b.sanitaeter2, b.qualifikation2),
+                (b.sanitaeter3, b.qualifikation3),
+                (b.sanitaeter4, b.qualifikation4),
+            ]
+            return eintraege.filter { !$0.0.isEmpty }
+                .map { "\($0.0) (\($0.1.rawValue))" }
+                .joined(separator: ", ")
+        }()
+        txt(besatzungMitQual, CGRect(x: rx+42, y: y+47, width: W/2-50, height: 14), font: f5)
 
         // Untere Abschlusskante Sektion 1
         hline(lx, trRow+13, W-8)
@@ -1050,7 +1084,120 @@ struct RKNPDFGenerator {
         vline(rx, y0, 120)
         hline(rx, y0+120, w)
     }
-    private static func drawSection8(protokoll: EinsatzProtokoll) {}
-    private static func drawSection9(protokoll: EinsatzProtokoll) {}
-    private static func drawNaca(protokoll: EinsatzProtokoll) {}
+    private static func drawSection8(protokoll: EinsatzProtokoll) {
+        let er = protokoll.ergebnis
+        let lx: CGFloat = 4
+        let y0: CGFloat = 684
+
+        secHeader("8. Ergebnis", x: lx, y: y0, w: W*0.55)
+        subHeader("Einsatzbesonderheiten", x: lx+W*0.55, y: y0, w: W*0.45-4)
+
+        var y  = y0 + 10
+        var y2 = y0 + 10
+
+        for (l, c) in [
+            ("ambulante Vers. vor Ort",         er.ambulantVorOrt),
+            ("nächstes KH nicht aufnehmefähig", er.naechstesKHNichtErreichbar),
+            ("Pat. nicht transportfähig",        er.patNichtTransportfaehig),
+            ("Tod an Einsatzstelle",             er.todAnEinsatzstelle),
+            ("Mitfahrverweigerung",              er.mifahrverweigerung),
+            ("Zwangsunterbringung",              er.zwangsunterbringung),
+        ] as [(String,Bool)] { cbLabel(l, checked: c, x: lx+2, y: y, labelW: W*0.55-14); y += 8 }
+
+        let bx = lx + W*0.55 + 2
+        for (l, c) in [
+            ("LNA/OrgL im Einsatz",    er.lnaGrleimEinsatz),
+            ("mehrere Patienten",      er.mehrerePatient),
+            ("aufwendige Rettung",     er.aufwaendigeRettung),
+            ("Infektionsschutz",       er.infektionsSchutz),
+            ("Schwerlasttransport",    er.schwerlasttransport),
+            ("Voranmeldung",           er.voranmeldung),
+            ("Gelb Alarm",             er.gelbAlarm),
+            ("Rot Alarm",              er.rotAlarm),
+        ] as [(String,Bool)] { cbLabel(l, checked: c, x: bx, y: y2, labelW: W*0.45-14); y2 += 8 }
+
+        vline(lx+W*0.55, y0, 70)
+        hline(lx, y0+70, W-8)
+    }
+    private static func drawSection9(protokoll: EinsatzProtokoll) {
+        let er = protokoll.ergebnis
+        let lx: CGFloat = 4
+        let y0: CGFloat = 758
+
+        secHeader("9. Übergabe / Transportziel", x: lx, y: y0, w: W*0.65)
+        secHeader("Bemerkungen", x: lx+W*0.65, y: y0, w: W*0.35-4)
+
+        let cw3 = W*0.65 / 3
+        var y = y0 + 10
+
+        let ziele: [(String, Bool)] = [
+            ("ZNA / INA",              er.transportzielZna),
+            ("Herzkatheterlabor",       er.transportzielKathLabor),
+            ("DP direkt",              false),
+            ("Stroke Unit",            er.transportzielStrokeUnit),
+            ("Intensivstation",        false),
+            ("Fachambulanz",           false),
+            ("CPU",                    false),
+            ("Normalstation",          false),
+            ("Sonstiges KH",           !er.transportzielSonstigesKH.isEmpty),
+        ]
+        for (i, (label, checked)) in ziele.enumerated() {
+            let col = CGFloat(i % 3)
+            let row = CGFloat(i / 3)
+            cbLabel(label, checked: checked, x: lx+2+col*cw3, y: y+row*8, labelW: cw3-12)
+        }
+        y += CGFloat((ziele.count + 2) / 3) * 8
+
+        if !er.transportzielSonstigesKH.isEmpty {
+            txt(er.transportzielSonstigesKH, CGRect(x: lx+2, y: y, width: W*0.65-4, height: 7), font: f5b); y += 8
+        }
+
+        // Bemerkungen rechts
+        let bx = lx + W*0.65 + 2
+        mtxt(er.anmerkungen, CGRect(x: bx, y: y0+10, width: W*0.35-8, height: 48), font: f5)
+
+        vline(lx+W*0.65, y0, 60)
+        hline(lx, y0+60, W-8)
+    }
+    private static func drawNaca(protokoll: EinsatzProtokoll) {
+        let naca = protokoll.notfallGeschehen.nacaScoreWert
+        let lx: CGFloat = 4
+        let y0: CGFloat = 820
+
+        secHeader("NACA Score", x: lx, y: y0, w: W-8)
+        var y = y0 + 10
+        var x = lx + 2
+
+        for i in 1...7 {
+            let isSelected = naca?.rawValue == i
+            let boxW: CGFloat = (W-12) / 7
+            let boxR = CGRect(x: x, y: y, width: boxW-1, height: 10)
+            fillR(boxR, isSelected ? UIColor(white:0.15, alpha:1) : .white)
+            strokeR(boxR, lw: 0.4)
+            let label: String
+            switch i {
+            case 1: label = "1 – Geringe Störung"
+            case 2: label = "2 – Ambulante Behandlung"
+            case 3: label = "3 – Stationär, keine Lebensgefahr"
+            case 4: label = "4 – Lebensgefahr nicht ausgeschl."
+            case 5: label = "5 – Akute Lebensgefahr"
+            case 6: label = "6 – Reanimation"
+            case 7: label = "7 – Tod"
+            default: label = "\(i)"
+            }
+            txt(label, boxR.insetBy(dx: 2, dy: 1.5),
+                font: f5, color: isSelected ? .white : .black)
+            x += boxW
+        }
+        y += 10
+
+        // Übergabe-Zeile
+        hline(lx, y, W-8); y += 2
+        txt("Übergabe an:", CGRect(x: lx+2, y: y+1, width: 46, height: 7), font: f5)
+        txt(protokoll.uebergabeAn, CGRect(x: lx+50, y: y+1, width: 160, height: 7), font: f6b)
+        txt("Unterschrift:", CGRect(x: W*0.5, y: y+1, width: 46, height: 7), font: f5)
+        strokeR(CGRect(x: W*0.5+48, y: y, width: W*0.5-56, height: 12), lw: 0.4)
+
+        hline(lx, y+12, W-8)
+    }
 }
