@@ -810,26 +810,23 @@ struct DINPDFGenerator {
         let samplerW  = rx - samplerX       // SAMPLER right column
         let sec2StartY = y
 
-        // ABCDE left column
+        // ABCDE left column — FESTE Zeilenhöhe 11pt wie Referenzformular
+        let abcdeRowH: CGFloat = 11
         var abcdeY = sec2StartY
         let abcdeContentW = abcdeColW - 12
         for i in 0..<5 {
             let isOB = abcdeRaw[i].isEmpty
-            let rowFont: UIFont = isOB ? UIFont.italicSystemFont(ofSize: 7) : f7
-            let rowH: CGFloat = isOB ? 11 : fieldH(abcdeVals[i], width: abcdeContentW - 4, maxH: 40)
-            fillRect(CGRect(x:lx, y:abcdeY, width:12, height:rowH), subBlue)
-            txt(abcdeLetters[i], CGRect(x:lx+1, y:abcdeY+2, width:10, height:rowH-4),
+            fillRect(CGRect(x:lx, y:abcdeY, width:12, height:abcdeRowH), subBlue)
+            txt(abcdeLetters[i], CGRect(x:lx+1, y:abcdeY+2, width:10, height:abcdeRowH-4),
                 font:f7b, color:.white, align:.center)
-            fillRect(CGRect(x:lx+12, y:abcdeY, width:abcdeContentW, height:rowH),
+            fillRect(CGRect(x:lx+12, y:abcdeY, width:abcdeContentW, height:abcdeRowH),
                      i%2==0 ? .white : UIColor(white:0.97,alpha:1))
-            strokeRect(CGRect(x:lx+12, y:abcdeY, width:abcdeContentW, height:rowH))
-            if isOB {
-                txt(abcdeVals[i], CGRect(x:lx+14, y:abcdeY+2, width:abcdeContentW-4, height:rowH-4),
-                    font: rowFont, color: abcdeColors[i])
-            } else {
-                mtxt(abcdeVals[i], CGRect(x:lx+14, y:abcdeY+2, width:abcdeContentW-4, height:rowH-4), font: rowFont)
-            }
-            abcdeY += rowH
+            strokeRect(CGRect(x:lx+12, y:abcdeY, width:abcdeContentW, height:abcdeRowH))
+            let displayVal = abcdeVals[i]
+            txt(displayVal, CGRect(x:lx+14, y:abcdeY+2, width:abcdeContentW-4, height:abcdeRowH-4),
+                font: isOB ? UIFont.italicSystemFont(ofSize: 6) : f6,
+                color: isOB ? .lightGray : abcdeColors[i])
+            abcdeY += abcdeRowH
         }
 
         // SAMPLER right column
@@ -859,19 +856,20 @@ struct DINPDFGenerator {
             ("E", p.sampler.ereignisUnbekannt ? "Unbekannt" : p.sampler.ereignis),
             ("R", p.sampler.risikofaktorenUnbekannt ? "Unbekannt" : p.sampler.risikofaktoren),
         ]
+        // SAMPLER right column — FESTE Zeilenhöhe 11pt wie Referenzformular
         let sLblW: CGFloat = 9
+        let sRowH: CGFloat = 11
         let sValColW = samplerW - sLblW
         var samplerY = sec2StartY
         for (i, (letter, value)) in samplerRows.enumerated() {
-            let rowH = fieldH(value, width: sValColW - 4, minH: 11, maxH: 30)
             let bg: UIColor = i%2==0 ? .white : UIColor(white:0.97,alpha:1)
-            fillRect(CGRect(x:samplerX, y:samplerY, width:sLblW, height:rowH), subBlue)
-            txt(letter, CGRect(x:samplerX+1, y:samplerY+2, width:sLblW-2, height:rowH-4),
+            fillRect(CGRect(x:samplerX, y:samplerY, width:sLblW, height:sRowH), subBlue)
+            txt(letter, CGRect(x:samplerX+1, y:samplerY+2, width:sLblW-2, height:sRowH-4),
                 font:f6b, color:.white, align:.center)
-            fillRect(CGRect(x:samplerX+sLblW, y:samplerY, width:sValColW, height:rowH), bg)
-            strokeRect(CGRect(x:samplerX+sLblW, y:samplerY, width:sValColW, height:rowH))
-            mtxt(value, CGRect(x:samplerX+sLblW+2, y:samplerY+1.5, width:sValColW-4, height:rowH-3), font:f6)
-            samplerY += rowH
+            fillRect(CGRect(x:samplerX+sLblW, y:samplerY, width:sValColW, height:sRowH), bg)
+            strokeRect(CGRect(x:samplerX+sLblW, y:samplerY, width:sValColW, height:sRowH))
+            txt(value, CGRect(x:samplerX+sLblW+2, y:samplerY+2, width:sValColW-4, height:sRowH-4), font:f6)
+            samplerY += sRowH
         }
 
         y = max(abcdeY, samplerY) + 2
@@ -934,8 +932,8 @@ struct DINPDFGenerator {
         let mvColY = y
         let dCbH: CGFloat = 8.0   // kompakt wie Referenz
 
-        // ── Messwerte (dual Ankunft/Übergabe) ──
-        let mvH: CGFloat = 9.5
+        // ── Messwerte (dual Ankunft/Übergabe) — fixe Zeilenhöhe
+        let mvH: CGFloat = 9.0
         let u = p.uebergabeMesswerte
         let mvItems: [(String, String, String)] = [
             ("RR syst.",   p.circulation.blutdruckSystolisch.map  { "\($0)" } ?? "", u.rrSys),
@@ -1201,7 +1199,7 @@ struct DINPDFGenerator {
         var maxColH: CGFloat = 0
         for (i, (title, items)) in dCols.enumerated() {
             let cx = lx + CGFloat(i) * dColW
-            let h = cbCol(title, items: items, x: cx, y: y, w: dColW, rowH: 7.5)
+            let h = cbCol(title, items: items, x: cx, y: y, w: dColW, rowH: 7.0)
             maxColH = max(maxColH, h)
         }
         y += maxColH + 2
