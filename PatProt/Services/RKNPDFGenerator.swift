@@ -848,9 +848,208 @@ struct RKNPDFGenerator {
 
         hline(lx, y0+h, w)
     }
-    private static func drawSection6(protokoll: EinsatzProtokoll) {}
-    private static func drawSection65(protokoll: EinsatzProtokoll) {}
-    private static func drawSection7(protokoll: EinsatzProtokoll) {}
+    private static func drawSection6(protokoll: EinsatzProtokoll) {
+        let m = protokoll.massnahmen
+        let lx: CGFloat = 4
+        let y0: CGFloat = 245
+        let colW = (W-8) / 3
+
+        secHeader("6. Maßnahmen", x: lx, y: y0, w: W-8)
+        let y = y0 + 10
+
+        // ── Spalte 1: Airway / Stabilisation ────────────────────────────────
+        subHeader("Airway / Stabilisation", x: lx, y: y, w: colW)
+        var y1 = y + 8.5
+        for (l, c) in [
+            ("Atemweg freimachen/freihalten", m.atemwegFreimachen),
+            ("Cervikalstütze/HWS-Stabil.",   m.cervikalStuetze),
+            ("Absaugung",                     m.absaugung),
+            ("Sauerstoffgabe",                m.sauerstoffgabe),
+            ("Maskenbeatmung",                m.maskenbeatmung),
+            ("Maskenbeatm. unmöglich",        m.maskenbeatmungUnmoeglich),
+            ("Supraglottisch",                m.supraglottisch),
+            ("Guedel-Tubus",                  m.guedelTubus),
+            ("Wendel-Tubus",                  m.wendlTubus),
+            ("Intubation",                    protokoll.airway.intubiert),
+            ("Konikotomie",                   protokoll.airway.konikotomie),
+            ("Atemwegszugang erschwert",      m.atemwegErschwert),
+        ] as [(String,Bool)] { cbLabel(l, checked: c, x: lx+2, y: y1, labelW: colW-12); y1 += 8 }
+        if m.sauerstoffgabe && !m.sauerstoffLitMin.isEmpty {
+            txt("O₂: \(m.sauerstoffLitMin) l/min", CGRect(x: lx+10, y: y1, width: colW-14, height: 7), font: f5b)
+            y1 += 8
+        }
+        if m.maschinelleBeatmung {
+            subHeader("Beatmung", x: lx, y: y1, w: colW); y1 += 8.5
+            if !m.fio2.isEmpty       { txt("FiO₂: \(m.fio2)%",       CGRect(x: lx+2, y: y1, width: colW-4, height: 7), font: f5); y1 += 7 }
+            if !m.peep.isEmpty       { txt("PEEP: \(m.peep)",         CGRect(x: lx+2, y: y1, width: colW-4, height: 7), font: f5); y1 += 7 }
+            if !m.tidalvolumen.isEmpty { txt("AZV: \(m.tidalvolumen) ml", CGRect(x: lx+2, y: y1, width: colW-4, height: 7), font: f5); y1 += 7 }
+        }
+
+        // ── Spalte 2: Atmung + Zirkulation ──────────────────────────────────
+        let x2 = lx + colW
+        subHeader("Atmung", x: x2, y: y, w: colW)
+        var y2 = y + 8.5
+        for (l, c) in [
+            ("Thoraxdrainage",       false),
+            ("CPAP/NIV",             m.cpap),
+            ("Maschinelle Beatmung", m.maschinelleBeatmung),
+            ("Heimlich-Manöver",     m.heimlich),
+        ] as [(String,Bool)] { cbLabel(l, checked: c, x: x2+2, y: y2, labelW: colW-12); y2 += 8 }
+
+        y2 += 3
+        subHeader("Cirkulation", x: x2, y: y2, w: colW); y2 += 8.5
+        cbLabel("peripher-ven. Zugang", checked: m.peripherVenoes, x: x2+2, y: y2, labelW: colW-12); y2 += 8
+        if m.peripherVenoes {
+            let zugInfo = [m.peripherVenoesOrt, m.peripherVenoesGroesse.isEmpty ? "" : "\(m.peripherVenoesGroesse) G"]
+                .filter { !$0.isEmpty }.joined(separator: "  ")
+            if !zugInfo.isEmpty { txt(zugInfo, CGRect(x: x2+10, y: y2, width: colW-14, height: 7), font: f5); y2 += 7 }
+        }
+        cbLabel("intraossärer Zugang",  checked: m.intraossaer,    x: x2+2, y: y2, labelW: colW-12); y2 += 8
+        if m.intraossaer && !m.intraossaerOrt.isEmpty {
+            txt(m.intraossaerOrt, CGRect(x: x2+10, y: y2, width: colW-14, height: 7), font: f5); y2 += 7
+        }
+        cbLabel("Defibrillation",       checked: m.defibrillation, x: x2+2, y: y2, labelW: colW-12); y2 += 8
+        if m.defibrillation {
+            txt("\(m.defiAnzahl)× \(m.defiJoule) J", CGRect(x: x2+10, y: y2, width: colW-14, height: 7), font: f5); y2 += 7
+        }
+        cbLabel("Kardioversion",        checked: m.kardioversion,  x: x2+2, y: y2, labelW: colW-12); y2 += 8
+        if m.kardioversion {
+            txt("\(m.kardioversionJoule) J", CGRect(x: x2+10, y: y2, width: colW-14, height: 7), font: f5); y2 += 7
+        }
+
+        // ── Spalte 3: Weitere + Lagerung + Monitoring ────────────────────────
+        let x3 = lx + 2*colW
+        subHeader("Weitere Maßnahmen", x: x3, y: y, w: colW)
+        var y3 = y + 8.5
+        for (l, c) in [
+            ("Kühlung",            m.kuehlung),
+            ("Wärmeerhalt",        m.waermeerhalt),
+            ("Entbindung",         m.entbindung),
+            ("Krisenintervention", m.krisenintervention),
+            ("Tourniquet",         m.tourniquet),
+        ] as [(String,Bool)] { cbLabel(l, checked: c, x: x3+2, y: y3, labelW: colW-12); y3 += 8 }
+
+        y3 += 3
+        subHeader("Lagerung / Transport", x: x3, y: y3, w: colW); y3 += 8.5
+        for (l, c) in [
+            ("OK-Hochlagerung",       m.okHochlagerung),
+            ("Flachlagerung",         m.flachlagerung),
+            ("Schocklagerung",        m.schocklagerung),
+            ("Linksseitenlage",       m.linksseitenlage),
+            ("Vakuummatratze",        m.vakuummatratze),
+            ("Schaufeltrage",         m.schaufeltrage),
+            ("Extremitätenschienung", m.extremitaetenschienung),
+            ("Verband",               m.verband),
+            ("Beckenschlinge",        m.beckenschlinge),
+        ] as [(String,Bool)] { cbLabel(l, checked: c, x: x3+2, y: y3, labelW: colW-12); y3 += 8 }
+
+        y3 += 3
+        subHeader("Monitoring", x: x3, y: y3, w: colW); y3 += 8.5
+        for (l, c) in [
+            ("EKG",          m.monEkg),
+            ("12-Kanal-EKG", false),
+            ("NIBP",         m.monNibp),
+            ("BZ",           m.monBz),
+            ("SpO₂",         m.monSpo2),
+            ("Temperatur",   m.monTemperatur),
+        ] as [(String,Bool)] { cbLabel(l, checked: c, x: x3+2, y: y3, labelW: colW-12); y3 += 7 }
+
+        let s6Bottom = max(y1, y2, y3) + 4
+        vline(x2, y+8.5, s6Bottom - y - 8.5)
+        vline(x3, y+8.5, s6Bottom - y - 8.5)
+        hline(lx, s6Bottom, W-8)
+    }
+    private static func drawSection65(protokoll: EinsatzProtokoll) {
+        let meds = protokoll.medikamente
+        let lx: CGFloat = 4
+        let y0: CGFloat = 560
+        let w = W * 0.55 - 2
+
+        secHeader("6.5 Medikamente", x: lx, y: y0, w: w)
+
+        // Spalten-Definition: (header, x-offset, width)
+        let cols: [(String, CGFloat, CGFloat)] = [
+            ("Medikament", 0,   88),
+            ("Dosis",      88,  28),
+            ("mg",         116, 20),
+            ("ml",         136, 20),
+            ("IE",         156, 20),
+            ("Route",      176, 28),
+            ("Zeit",       204, w-204),
+        ]
+        var y = y0 + 10
+        // Header-Zeile
+        for (header, xOff, cw) in cols {
+            strokeR(CGRect(x: lx+xOff, y: y, width: cw, height: 8))
+            txt(header, CGRect(x: lx+xOff+1.5, y: y+1, width: cw-3, height: 6), font: f5b)
+        }
+        y += 8
+
+        let medTimeFmt = DateFormatter()
+        medTimeFmt.dateFormat = "HH:mm"
+
+        let maxRows = 8
+        for i in 0..<maxRows {
+            let med: MedikamentEintrag? = i < meds.count ? meds[i] : nil
+            for (_, xOff, cw) in cols {
+                strokeR(CGRect(x: lx+xOff, y: y, width: cw, height: 10))
+            }
+            if let med = med {
+                txt(med.name,  CGRect(x: lx+1.5,   y: y+2, width: 86,  height: 7), font: f5)
+                txt(med.dosis, CGRect(x: lx+89.5,  y: y+2, width: 26,  height: 7), font: f5)
+                switch med.einheit {
+                case "mg": txt(med.dosis, CGRect(x: lx+117.5, y: y+2, width: 18, height: 7), font: f5)
+                case "ml": txt(med.dosis, CGRect(x: lx+137.5, y: y+2, width: 18, height: 7), font: f5)
+                case "IE": txt(med.dosis, CGRect(x: lx+157.5, y: y+2, width: 18, height: 7), font: f5)
+                default: break
+                }
+                txt(med.route, CGRect(x: lx+177.5, y: y+2, width: 26,  height: 7), font: f5)
+                txt(medTimeFmt.string(from: med.zeit), CGRect(x: lx+205.5, y: y+2, width: w-207, height: 7), font: f5)
+            }
+            y += 10
+        }
+        hline(lx, y, w)
+    }
+    private static func drawSection7(protokoll: EinsatzProtokoll) {
+        let rea = protokoll.reanimation
+        let aktiv = protokoll.reanimationAktiv
+        let rx = W * 0.55 + 2
+        let y0: CGFloat = 560
+        let w = W - rx - 4
+
+        secHeader("7. Reanimation / Tod", x: rx, y: y0, w: w)
+        var y = y0 + 10
+
+        cbLabel("Beginn CPR",         checked: aktiv,             x: rx+2, y: y); y += 8
+        cbLabel("Ersthelfer",         checked: rea.erstHelfer,    x: rx+2, y: y); y += 8
+        cbLabel("Vorab Telefon-Rea.", checked: rea.vorabTelefonRea, x: rx+2, y: y); y += 8
+        cbLabel("Rettungsdienst",     checked: aktiv,             x: rx+2, y: y); y += 8
+        hline(rx, y, w); y += 2
+
+        cbLabel("ROSC im Verlauf",    checked: rea.roscImVerlauf, x: rx+2,  y: y)
+        cbLabel("niemals ROSC",       checked: rea.nieROSC,       x: rx+50, y: y); y += 8
+        cbLabel("erfolgreiche Rea.",  checked: rea.erfolgreicheRea, x: rx+2, y: y); y += 8
+        hline(rx, y, w); y += 2
+
+        if let kz = rea.kollapsZeit {
+            txt("Kollaps: \(t(kz))", CGRect(x: rx+2, y: y, width: w-4, height: 7), font: f5); y += 8
+        }
+        if rea.dnrOrder { cbLabel("DNR Order", checked: true, x: rx+2, y: y); y += 8 }
+
+        hline(rx, y, w); y += 2
+        if rea.defiAnzahl > 0 {
+            cbLabel("Defibrillation", checked: true, x: rx+2, y: y); y += 8
+            txt("Anzahl: \(rea.defiAnzahl)   \(rea.defiJoule) J",
+                CGRect(x: rx+10, y: y, width: w-14, height: 7), font: f5); y += 8
+        }
+        if let tod = rea.todFeststellungsZeit {
+            hline(rx, y, w); y += 2
+            txt("Sterbezeitpunkt: \(t(tod))", CGRect(x: rx+2, y: y, width: w-4, height: 7), font: f5b)
+        }
+
+        vline(rx, y0, 120)
+        hline(rx, y0+120, w)
+    }
     private static func drawSection8(protokoll: EinsatzProtokoll) {}
     private static func drawSection9(protokoll: EinsatzProtokoll) {}
     private static func drawNaca(protokoll: EinsatzProtokoll) {}
