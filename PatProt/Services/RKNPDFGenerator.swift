@@ -606,9 +606,248 @@ struct RKNPDFGenerator {
         // ── Diagnose/Leitsymptom ─────────────────────────────────────────────
         labeledField("Diagnose/Leitsymptom", d.leitsymptom, x: lx, y: diagBottom, w: W-8, h: 14)
     }
-    private static func drawSection42(protokoll: EinsatzProtokoll) {}
-    private static func drawSection5(protokoll: EinsatzProtokoll) {}
-    private static func drawVerlaufsgrafik(protokoll: EinsatzProtokoll) {}
+    private static func drawSection42(protokoll: EinsatzProtokoll) {
+        let d = protokoll.diagnose
+        let vm = d.verletzungsMatrix
+        let lx: CGFloat = 4
+        let y0: CGFloat = 4
+        let colW = W * 0.55
+
+        secHeader("4.2 Verletzungen", x: lx, y: y0, w: colW)
+
+        // Header-Zeile der Matrix
+        var y = y0 + 10
+        fillR(CGRect(x: lx, y: y, width: colW, height: 8), cLight)
+        strokeR(CGRect(x: lx, y: y, width: colW, height: 8))
+        txt("Region",  CGRect(x: lx+2,    y: y+1, width: 80, height: 6), font: f5b)
+        txt("keine",   CGRect(x: lx+102,  y: y+1, width: 22, height: 6), font: f5b, align: .center)
+        txt("leicht",  CGRect(x: lx+124,  y: y+1, width: 22, height: 6), font: f5b, align: .center)
+        txt("schwer",  CGRect(x: lx+146,  y: y+1, width: 22, height: 6), font: f5b, align: .center)
+        vline(lx+100, y, 8); vline(lx+122, y, 8); vline(lx+144, y, 8); vline(lx+166, y, 8)
+        y += 8
+
+        let verletzungen: [(String, Verletzungsgrad)] = [
+            ("Schädel-Hirn/Gesicht", vm.schaedelHirn),
+            ("HWS",                  vm.hws),
+            ("Thorax",               vm.thorax),
+            ("Abdomen",              vm.abdomen),
+            ("BWS / LWS",            vm.bwsLws),
+            ("Becken",               vm.becken),
+            ("Obere Extremitäten",   vm.obereExtrem),
+            ("Untere Extremitäten",  vm.untereExtrem),
+            ("Weichteile",           vm.weichteile),
+        ]
+        for (name, grad) in verletzungen {
+            strokeR(CGRect(x: lx, y: y, width: colW, height: 9))
+            txt(name, CGRect(x: lx+2, y: y+1.5, width: 96, height: 6), font: f5)
+            vline(lx+100, y, 9); vline(lx+122, y, 9); vline(lx+144, y, 9); vline(lx+166, y, 9)
+            cb(grad == .keine,  x: lx+108, y: y+2)
+            cb(grad == .leicht, x: lx+130, y: y+2)
+            cb(grad == .schwer, x: lx+152, y: y+2)
+            y += 9
+        }
+
+        // Verletzungsmuster
+        hline(lx, y, colW); y += 3
+        let muster = d.verletzungsMuster
+        cbLabel("Einzelverletzung",   checked: muster == "Einzelverletzung",   x: lx+2,   y: y)
+        cbLabel("Mehrfachverletzung", checked: muster == "Mehrfachverletzung", x: lx+72,  y: y)
+        cbLabel("Polytrauma",         checked: muster == "Polytrauma",         x: lx+148, y: y)
+        y += 9
+        let art = d.verletzungsArt
+        cbLabel("offen",        checked: art.lowercased().contains("offen"),   x: lx+2,   y: y)
+        cbLabel("stumpf",       checked: art.lowercased().contains("stumpf"),  x: lx+60,  y: y)
+        cbLabel("penetrierend", checked: art.lowercased().contains("penetr"),  x: lx+120, y: y)
+        y += 9
+
+        // Spezielle Traumen
+        hline(lx, y, colW); y += 3
+        txt("Spezielle Traumen:", CGRect(x: lx+2, y: y, width: colW-4, height: 6), font: f5b); y += 7
+        let spec: [(String, Bool)] = [
+            ("Verbr./Verbrüh.",   d.spezVerbrVerbrh),
+            ("Tauchunfall",       d.spezTauchunfall),
+            ("Elektrounfall",     d.spezElektrounfall),
+            ("PKW/LKW-Insasse",   d.spezPkwLkw),
+            ("Motorradfahrer",    d.spezMotorrad),
+            ("Fahrradfahrer",     d.spezFahrrad),
+            ("Fußgänger",         d.spezFussgaenger),
+            ("Sturz >3m Höhe",    d.spezSturzHoehe),
+            ("and. Verkehrsteil.",d.spezAndVerkehr),
+            ("Maschinenunfall",   d.spezMaschine),
+            ("Gewaltverbrechen",  d.spezGewalt),
+            ("anderer Unfall",    d.spezAndererUnfall),
+        ]
+        var sx = lx + 2
+        for (i, (label, checked)) in spec.enumerated() {
+            cbLabel(label, checked: checked, x: sx, y: y, labelW: colW/2 - 12)
+            if i % 2 == 1 { y += 8; sx = lx+2 } else { sx = lx + colW/2 }
+        }
+
+        // Körperschema rechts in der Spalte
+        drawKoerperschema(vm: vm, x: lx + colW - 58, y: y0 + 12)
+
+        // Rechte Spalte: Spezielle Traumen Label
+        let rx2 = lx + colW + 2
+        secHeader("Spezielle Traumen", x: rx2, y: y0, w: W - rx2 - 4)
+        vline(lx + colW, y0, y - y0 + 8)
+        hline(lx, y+8, W-8)
+    }
+
+    private static func drawKoerperschema(vm: VerletzungsMatrix, x: CGFloat, y: CGFloat) {
+        func colorFor(_ g: Verletzungsgrad) -> UIColor {
+            switch g {
+            case .schwer: return UIColor(red:0.8, green:0.1, blue:0.1, alpha:0.7)
+            case .leicht: return UIColor(red:1.0, green:0.6, blue:0.0, alpha:0.7)
+            case .keine:  return UIColor(white: 0.88, alpha: 1)
+            }
+        }
+        // Kopf (oval)
+        let kopfR = CGRect(x: x+19, y: y, width: 14, height: 14)
+        colorFor(vm.schaedelHirn).setFill()
+        UIBezierPath(ovalIn: kopfR).fill()
+        UIColor(white:0.4,alpha:1).setStroke()
+        let kopfPath = UIBezierPath(ovalIn: kopfR); kopfPath.lineWidth = 0.5; kopfPath.stroke()
+
+        // Hals/HWS
+        fillR(CGRect(x: x+23, y: y+14, width: 6, height: 5), colorFor(vm.hws))
+        strokeR(CGRect(x: x+23, y: y+14, width: 6, height: 5), lw: 0.4)
+
+        // Rumpf (Thorax + Abdomen)
+        let rumpfColor: UIColor = [vm.thorax, vm.abdomen].contains(.schwer) ? colorFor(.schwer) :
+                                   [vm.thorax, vm.abdomen].contains(.leicht) ? colorFor(.leicht) : colorFor(.keine)
+        fillR(CGRect(x: x+14, y: y+19, width: 24, height: 26), rumpfColor)
+        strokeR(CGRect(x: x+14, y: y+19, width: 24, height: 26), lw: 0.4)
+
+        // BWS/Becken (unter Rumpf)
+        let beckenColor: UIColor = [vm.bwsLws, vm.becken].contains(.schwer) ? colorFor(.schwer) :
+                                    [vm.bwsLws, vm.becken].contains(.leicht) ? colorFor(.leicht) : colorFor(.keine)
+        fillR(CGRect(x: x+16, y: y+45, width: 20, height: 8), beckenColor)
+        strokeR(CGRect(x: x+16, y: y+45, width: 20, height: 8), lw: 0.4)
+
+        // Arme
+        fillR(CGRect(x: x+3,  y: y+19, width: 9, height: 22), colorFor(vm.obereExtrem))
+        strokeR(CGRect(x: x+3, y: y+19, width: 9, height: 22), lw: 0.4)
+        fillR(CGRect(x: x+40, y: y+19, width: 9, height: 22), colorFor(vm.obereExtrem))
+        strokeR(CGRect(x: x+40, y: y+19, width: 9, height: 22), lw: 0.4)
+
+        // Beine
+        fillR(CGRect(x: x+16, y: y+53, width: 8, height: 28), colorFor(vm.untereExtrem))
+        strokeR(CGRect(x: x+16, y: y+53, width: 8, height: 28), lw: 0.4)
+        fillR(CGRect(x: x+28, y: y+53, width: 8, height: 28), colorFor(vm.untereExtrem))
+        strokeR(CGRect(x: x+28, y: y+53, width: 8, height: 28), lw: 0.4)
+    }
+
+    private static func drawSection5(protokoll: EinsatzProtokoll) {
+        let d = protokoll.diagnose
+        let rx = W * 0.55 + 4
+        let y0: CGFloat = 4
+        let w = W - rx - 4
+
+        secHeader("5. Verlauf", x: rx, y: y0, w: w)
+        strokeR(CGRect(x: rx, y: y0+10, width: w, height: 128))
+        mtxt(d.verlauf, CGRect(x: rx+2, y: y0+12, width: w-4, height: 124), font: f6)
+        vline(W * 0.55 + 2, y0, 138)
+    }
+
+    private static func drawVerlaufsgrafik(protokoll: EinsatzProtokoll) {
+        let messungen = protokoll.verlaufMessungen.sorted { $0.zeitpunkt < $1.zeitpunkt }
+        let lx: CGFloat = 4
+        let y0: CGFloat = 143
+        let h: CGFloat = 98
+        let w = W - 8
+        let labelW: CGFloat = 30
+        let plotX = lx + labelW
+        let plotW = w - labelW - 4
+
+        // Rahmen
+        strokeR(CGRect(x: lx, y: y0, width: w, height: h))
+
+        // Header-Zeile
+        fillR(CGRect(x: lx, y: y0, width: w, height: 8), cLight)
+        txt("UHRZEIT", CGRect(x: lx+2, y: y0+1, width: 26, height: 6), font: f5b)
+        hline(lx, y0+8, w)
+
+        let plotY = y0 + 8
+        let plotH = h - 8 - 8   // 8 header, 8 legend bottom
+
+        // Y-Achse 60–260, 20er-Schritte
+        let yMin: CGFloat = 60; let yMax: CGFloat = 260
+        for val in stride(from: Int(yMin), through: Int(yMax), by: 20) {
+            let fy = plotY + plotH * (1 - CGFloat(val - Int(yMin)) / CGFloat(yMax - yMin))
+            hline(plotX-2, fy, plotW+2, lw: 0.15)
+            txt("\(val)", CGRect(x: lx, y: fy-3, width: labelW-2, height: 6), font: f5, align: .right)
+        }
+
+        // Y-Achsen-Beschriftungen links
+        let axisLabels: [(String, CGFloat)] = [
+            ("Puls",  plotY + plotH * 0.1),
+            ("RR",    plotY + plotH * 0.3),
+            ("HF",    plotY + plotH * 0.5),
+            ("HDM",   plotY + plotH * 0.65),
+            ("Defi",  plotY + plotH * 0.78),
+        ]
+        for (label, fy) in axisLabels {
+            txt(label, CGRect(x: lx+1, y: fy-3, width: labelW-3, height: 6), font: f5)
+        }
+
+        // Kurven zeichnen (nur wenn Messungen vorhanden)
+        guard messungen.count >= 2 else {
+            hline(lx, y0+h, w)
+            return
+        }
+        let tMin = messungen.first!.zeitpunkt.timeIntervalSinceReferenceDate
+        let tMax = max(messungen.last!.zeitpunkt.timeIntervalSinceReferenceDate, tMin + 60)
+        let tRange = tMax - tMin
+
+        func xFor(_ ti: TimeInterval) -> CGFloat {
+            plotX + plotW * CGFloat((ti - tMin) / tRange)
+        }
+        func yFor(_ v: Int) -> CGFloat {
+            plotY + plotH * (1 - CGFloat(v - Int(yMin)) / CGFloat(yMax - yMin))
+        }
+
+        func drawCurve(_ points: [CGPoint], color: UIColor, lw: CGFloat = 0.7) {
+            guard points.count >= 2 else { return }
+            color.setStroke()
+            let path = UIBezierPath(); path.lineWidth = lw
+            path.move(to: points[0])
+            points.dropFirst().forEach { path.addLine(to: $0) }
+            path.stroke()
+            color.setFill()
+            points.forEach { p in
+                UIBezierPath(ovalIn: CGRect(x: p.x-1.5, y: p.y-1.5, width: 3, height: 3)).fill()
+            }
+        }
+
+        drawCurve(messungen.compactMap { m in m.puls.map { CGPoint(x: xFor(m.zeitpunkt.timeIntervalSinceReferenceDate), y: yFor($0)) } },
+                  color: .red)
+        drawCurve(messungen.compactMap { m in m.blutdruckSys.map { CGPoint(x: xFor(m.zeitpunkt.timeIntervalSinceReferenceDate), y: yFor($0)) } },
+                  color: .blue)
+        drawCurve(messungen.compactMap { m in m.blutdruckDia.map { CGPoint(x: xFor(m.zeitpunkt.timeIntervalSinceReferenceDate), y: yFor($0)) } },
+                  color: UIColor(red:0.3, green:0.3, blue:1, alpha:1), lw: 0.5)
+        drawCurve(messungen.compactMap { m in m.spo2.map { CGPoint(x: xFor(m.zeitpunkt.timeIntervalSinceReferenceDate), y: yFor($0)) } },
+                  color: UIColor(red:0, green:0.6, blue:0, alpha:1))
+
+        // Zeitstempel X-Achse
+        for m in messungen {
+            let x = xFor(m.zeitpunkt.timeIntervalSinceReferenceDate)
+            vline(x, plotY, plotH, lw: 0.15)
+            txt(t(m.zeitpunkt), CGRect(x: x-9, y: plotY+plotH+1, width: 20, height: 5), font: f5, align: .center)
+        }
+
+        // Legende
+        let ly = y0 + h - 6
+        UIColor.red.setFill();  UIRectFill(CGRect(x: plotX, y: ly+1, width: 10, height: 3))
+        txt("Puls", CGRect(x: plotX+12, y: ly, width: 18, height: 6), font: f5)
+        UIColor.blue.setFill(); UIRectFill(CGRect(x: plotX+34, y: ly+1, width: 10, height: 3))
+        txt("RR sys", CGRect(x: plotX+46, y: ly, width: 22, height: 6), font: f5)
+        UIColor(red:0.3,green:0.3,blue:1,alpha:1).setFill(); UIRectFill(CGRect(x: plotX+72, y: ly+1, width: 10, height: 3))
+        txt("RR dia", CGRect(x: plotX+84, y: ly, width: 22, height: 6), font: f5)
+        UIColor(red:0,green:0.6,blue:0,alpha:1).setFill(); UIRectFill(CGRect(x: plotX+110, y: ly+1, width: 10, height: 3))
+        txt("SpO₂", CGRect(x: plotX+122, y: ly, width: 20, height: 6), font: f5)
+
+        hline(lx, y0+h, w)
+    }
     private static func drawSection6(protokoll: EinsatzProtokoll) {}
     private static func drawSection65(protokoll: EinsatzProtokoll) {}
     private static func drawSection7(protokoll: EinsatzProtokoll) {}
