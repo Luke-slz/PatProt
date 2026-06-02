@@ -279,7 +279,38 @@ struct RKNPDFGenerator {
         // Untere Abschlusskante Sektion 1
         hline(lx, trRow+13, W-8)
     }
-    private static func drawSection2(protokoll: EinsatzProtokoll) {}
+    private static func drawSection2(protokoll: EinsatzProtokoll) {
+        let ng = protokoll.notfallGeschehen
+        let s  = protokoll.sampler
+        let lx: CGFloat = 4
+        let y0: CGFloat = 127   // under section 1 bottom line
+
+        secHeader("2. Notfallgeschehen / Anamnese / Erstbefund", x: lx, y: y0, w: W-8)
+
+        let lines: [(String, String, String)] = [
+            ("A", ng.erstbefundVorOrt,              "S"),
+            ("B", ng.patientGefunden,               "A"),
+            ("C", ng.unfallhergangFreitext,         "M"),
+            ("D", s.patientenVorgeschichte,         "P"),
+            ("E", s.ereignis,                       "L"),
+        ]
+        let lineH: CGFloat = 13
+        var y = y0 + 10
+        for (letter, value, samplerLetter) in lines {
+            // Buchstabe links
+            fillR(CGRect(x: lx, y: y, width: 12, height: lineH), cLight)
+            txt(letter, CGRect(x: lx+2, y: y+3, width: 8, height: 8), font: f7b)
+            vline(lx+12, y, lineH)
+            // Inhalt
+            strokeR(CGRect(x: lx+12, y: y, width: W-30, height: lineH))
+            mtxt(value, CGRect(x: lx+14, y: y+2, width: W-34, height: lineH-3))
+            // SAMPLER-Buchstabe rechts
+            fillR(CGRect(x: W-14, y: y, width: 10, height: lineH), cLight)
+            txt(samplerLetter, CGRect(x: W-13, y: y+3, width: 8, height: 8), font: f7b)
+            hline(lx, y+lineH, W-8)
+            y += lineH
+        }
+    }
     private static func drawSection3(protokoll: EinsatzProtokoll) {}
     private static func drawSection4(protokoll: EinsatzProtokoll) {}
     private static func drawSection42(protokoll: EinsatzProtokoll) {}
