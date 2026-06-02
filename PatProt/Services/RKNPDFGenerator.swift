@@ -189,7 +189,96 @@ struct RKNPDFGenerator {
 
         hline(4, 32, W-8)
     }
-    private static func drawSection1(protokoll: EinsatzProtokoll) {}
+    private static func drawSection1(protokoll: EinsatzProtokoll) {
+        let e = protokoll.einsatzOrt
+        let p = protokoll.patientDaten
+        let b = protokoll.besatzung
+        let lx: CGFloat = 4
+        let y: CGFloat = 33
+
+        // ── Linke Hälfte: Sektionsheader ──────────────────────────────────────
+        secHeader("1. Rettungstechnische Daten", x: lx, y: y, w: W/2 - 2)
+
+        // ── Fahrzeugtyp-Checkboxen ────────────────────────────────────────────
+        let fahrzeug = e.fahrzeugName.uppercased()
+        let fahrzeuge: [(String, Bool)] = [
+            ("RTW",      fahrzeug.contains("RTW")),
+            ("KTW",      fahrzeug.contains("KTW")),
+            ("NEF",      fahrzeug.contains("NEF")),
+            ("NAW",      fahrzeug.contains("NAW") && !fahrzeug.contains("BABY")),
+            ("Baby NAW", fahrzeug.contains("BABY")),
+            ("V-RTW",    fahrzeug.contains("V-RTW") || fahrzeug.contains("VRTW")),
+        ]
+        var cx = lx + 2
+        let fyRow: CGFloat = y + 12
+        for (label, checked) in fahrzeuge {
+            cb(checked, x: cx, y: fyRow)
+            txt(label, CGRect(x: cx+7, y: fyRow-0.5, width: 34, height: 7), font: f5b)
+            cx += label.count > 3 ? 36 : 28
+        }
+
+        // ── Sondersignal / mit Patient / Notarzt ─────────────────────────────
+        let syRow: CGFloat = fyRow + 9
+        cbLabel("Sondersignal Hin",      checked: e.sondersignal,  x: lx+2,   y: syRow)
+        cbLabel("mit Patient",           checked: e.mitPatient,    x: lx+68,  y: syRow)
+        cbLabel("Notarzt nachgefordert", checked: e.notarzt,       x: lx+120, y: syRow)
+
+        hline(lx, syRow+8, W/2-2)
+
+        // ── Zeitenraster ──────────────────────────────────────────────────────
+        let tRow: CGFloat = syRow + 8
+        let tw: CGFloat = 46
+        timeField("Alarmzeit",   t(e.alarmzeit),           x: lx,        y: tRow, w: tw)
+        timeField("Ausfahrt",    "",                        x: lx+tw,     y: tRow, w: tw)
+        timeField("Ankunft",     t(e.ankunftzeit),          x: lx+tw*2,   y: tRow, w: tw)
+        timeField("Abfahrt",     t(e.abfahrtzeit),          x: lx+tw*3,   y: tRow, w: tw)
+        timeField("KH-Ankunft",  t(e.krankenHausAnkunft),  x: lx+tw*4,   y: tRow, w: tw)
+        timeField("Ende",        "",                        x: lx+tw*5,   y: tRow, w: tw-4)
+
+        // ── Transportziel ─────────────────────────────────────────────────────
+        let trRow: CGFloat = tRow + 13
+        labeledField("Transportziel / Straße", e.adresse, x: lx,       y: trRow, w: 160, h: 13)
+        labeledField("Haus-Nr.",               e.zusatz,  x: lx+160,   y: trRow, w: 40,  h: 13)
+        labeledField("PLZ",                    e.plz,     x: lx+200,   y: trRow, w: 34,  h: 13)
+        labeledField("Ort",                    e.ort,     x: lx+234,   y: trRow, w: W/2-238, h: 13)
+
+        // ── Rechte Hälfte: EINSATZPROTOKOLL-Titel ─────────────────────────────
+        vline(W/2, y, 59)
+        let rx = W/2 + 2
+
+        txt("EINSATZPROTOKOLL", CGRect(x: rx, y: y+3, width: W/2-10, height: 14), font: f12b, align: .center)
+        hline(rx, y+18, W/2-6)
+
+        // Notarzt / NetSan Checkboxen
+        cb(e.notarzt,  x: rx+4,  y: y+21)
+        txt("Notarzt",             CGRect(x: rx+11, y: y+20, width: 50,  height: 7), font: f6b)
+        cb(!e.notarzt, x: rx+70,  y: y+21)
+        txt("NetSan/RettAss/RS",   CGRect(x: rx+77, y: y+20, width: 90,  height: 7), font: f6b)
+        hline(rx, y+30, W/2-6)
+
+        // Einsatznummer + Standort
+        labeledField("Einsatznummer", e.einsatzNummer, x: rx,     y: y+31, w: 82,       h: 13)
+        labeledField("Standort RM",   e.fahrzeugName,  x: rx+82,  y: y+31, w: 82,       h: 13)
+
+        // Männlich / Weiblich
+        cb(p.geschlecht == .maennlich, x: rx+172, y: y+33)
+        txt("männlich", CGRect(x: rx+179, y: y+32, width: 42, height: 7), font: f5)
+        cb(p.geschlecht == .weiblich,  x: rx+172, y: y+41)
+        txt("weiblich",  CGRect(x: rx+179, y: y+40, width: 42, height: 7), font: f5)
+
+        hline(rx, y+45, W/2-6)
+
+        // Besatzung
+        let besatzungsText: String = {
+            let namen = [b.sanitaeter1, b.sanitaeter2, b.sanitaeter3, b.sanitaeter4].filter { !$0.isEmpty }
+            return namen.joined(separator: ", ")
+        }()
+        txt("Besatzung:", CGRect(x: rx+2, y: y+47, width: 38, height: 7), font: f5b)
+        txt(besatzungsText, CGRect(x: rx+42, y: y+47, width: W/2-50, height: 14), font: f5)
+
+        // Untere Abschlusskante Sektion 1
+        hline(lx, trRow+13, W-8)
+    }
     private static func drawSection2(protokoll: EinsatzProtokoll) {}
     private static func drawSection3(protokoll: EinsatzProtokoll) {}
     private static func drawSection4(protokoll: EinsatzProtokoll) {}
