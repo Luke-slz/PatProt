@@ -152,7 +152,43 @@ struct RKNPDFGenerator {
     }
 
     // MARK: - Platzhalter (werden in späteren Tasks implementiert)
-    private static func drawHeader(protokoll: EinsatzProtokoll) {}
+    private static func drawHeader(protokoll: EinsatzProtokoll) {
+        let p = protokoll.patientDaten
+        let e = protokoll.einsatzOrt
+        // Äußerer Rahmen oben
+        strokeR(CGRect(x: 4, y: 4, width: W-8, height: 28))
+
+        // Krankenkasse / Kostenträger
+        txt("Krankenkasse bzw. Kostenträger", CGRect(x: 6, y: 5, width: 130, height: 6), font: f5, color: UIColor(white: 0.4, alpha: 1))
+        txt(p.kostentraeger, CGRect(x: 6, y: 12, width: 130, height: 8), font: f6b)
+        vline(138, 4, 28)
+
+        // Name
+        txt("Name, Vorname des Versicherten", CGRect(x: 140, y: 5, width: 140, height: 6), font: f5, color: UIColor(white: 0.4, alpha: 1))
+        let nameStr = [p.nachname, p.vorname].filter { !$0.isEmpty }.joined(separator: ", ")
+        txt(nameStr, CGRect(x: 140, y: 12, width: 140, height: 8), font: f6b)
+        vline(282, 4, 28)
+
+        // geb. am
+        txt("geb. am", CGRect(x: 284, y: 5, width: 60, height: 6), font: f5, color: UIColor(white: 0.4, alpha: 1))
+        txt(d(p.geburtsDatum), CGRect(x: 284, y: 12, width: 60, height: 8), font: f6b)
+        vline(346, 4, 28)
+
+        // Versicherten-Nr
+        txt("Versicherten-Nr.", CGRect(x: 348, y: 5, width: 80, height: 6), font: f5, color: UIColor(white: 0.4, alpha: 1))
+        txt(p.versicherungsNummer, CGRect(x: 348, y: 12, width: 80, height: 8), font: f6b)
+        vline(430, 4, 28)
+
+        // Status
+        txt("Status", CGRect(x: 432, y: 5, width: 40, height: 6), font: f5, color: UIColor(white: 0.4, alpha: 1))
+        vline(474, 4, 28)
+
+        // Betriebsstätten-Nr / Datum
+        txt("Betriebsstätten-Nr. / Datum", CGRect(x: 476, y: 5, width: 115, height: 6), font: f5, color: UIColor(white: 0.4, alpha: 1))
+        txt(d(e.alarmzeit), CGRect(x: 476, y: 12, width: 115, height: 8), font: f6b)
+
+        hline(4, 32, W-8)
+    }
     private static func drawSection1(protokoll: EinsatzProtokoll) {}
     private static func drawSection2(protokoll: EinsatzProtokoll) {}
     private static func drawSection3(protokoll: EinsatzProtokoll) {}
