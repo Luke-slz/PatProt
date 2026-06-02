@@ -106,4 +106,64 @@ struct RKNPDFGenerator {
         txt(label, CGRect(x: x+1.5, y: y+1, width: w-3, height: 5.5), font: f5, color: UIColor(white: 0.35, alpha: 1))
         txt(value, CGRect(x: x+1.5, y: y+7, width: w-3, height: 6), font: f6b)
     }
+
+    // MARK: - Öffentlicher Einstiegspunkt
+
+    static func generate(protokoll: EinsatzProtokoll) -> URL? {
+        let tmp = FileManager.default.temporaryDirectory
+            .appendingPathComponent("RKN_\(protokoll.id).pdf")
+        let bounds = CGRect(x: 0, y: 0, width: W, height: H)
+        let renderer = UIGraphicsPDFRenderer(bounds: bounds)
+        do {
+            try renderer.writePDF(to: tmp) { ctx in
+                ctx.beginPage()
+                drawPage1(protokoll: protokoll)
+                ctx.beginPage()
+                drawPage2(protokoll: protokoll)
+            }
+            return tmp
+        } catch {
+            return nil
+        }
+    }
+
+    // MARK: - Seite 1 (Dispatcher)
+    private static func drawPage1(protokoll: EinsatzProtokoll) {
+        fillR(CGRect(x: 0, y: 0, width: W, height: H))
+        drawHeader(protokoll: protokoll)
+        drawSection1(protokoll: protokoll)
+        drawSection2(protokoll: protokoll)
+        drawSection3(protokoll: protokoll)
+        drawSection4(protokoll: protokoll)
+    }
+
+    // MARK: - Seite 2 (Dispatcher)
+    private static func drawPage2(protokoll: EinsatzProtokoll) {
+        fillR(CGRect(x: 0, y: 0, width: W, height: H))
+        drawSection42(protokoll: protokoll)
+        drawSection5(protokoll: protokoll)
+        drawVerlaufsgrafik(protokoll: protokoll)
+        drawSection6(protokoll: protokoll)
+        drawSection65(protokoll: protokoll)
+        drawSection7(protokoll: protokoll)
+        drawSection8(protokoll: protokoll)
+        drawSection9(protokoll: protokoll)
+        drawNaca(protokoll: protokoll)
+    }
+
+    // MARK: - Platzhalter (werden in späteren Tasks implementiert)
+    private static func drawHeader(protokoll: EinsatzProtokoll) {}
+    private static func drawSection1(protokoll: EinsatzProtokoll) {}
+    private static func drawSection2(protokoll: EinsatzProtokoll) {}
+    private static func drawSection3(protokoll: EinsatzProtokoll) {}
+    private static func drawSection4(protokoll: EinsatzProtokoll) {}
+    private static func drawSection42(protokoll: EinsatzProtokoll) {}
+    private static func drawSection5(protokoll: EinsatzProtokoll) {}
+    private static func drawVerlaufsgrafik(protokoll: EinsatzProtokoll) {}
+    private static func drawSection6(protokoll: EinsatzProtokoll) {}
+    private static func drawSection65(protokoll: EinsatzProtokoll) {}
+    private static func drawSection7(protokoll: EinsatzProtokoll) {}
+    private static func drawSection8(protokoll: EinsatzProtokoll) {}
+    private static func drawSection9(protokoll: EinsatzProtokoll) {}
+    private static func drawNaca(protokoll: EinsatzProtokoll) {}
 }
