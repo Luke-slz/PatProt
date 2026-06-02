@@ -311,7 +311,168 @@ struct RKNPDFGenerator {
             y += lineH
         }
     }
-    private static func drawSection3(protokoll: EinsatzProtokoll) {}
+    private static func drawSection3(protokoll: EinsatzProtokoll) {
+        let ub = protokoll.uebergabeBefunde
+        let um = protokoll.uebergabeMesswerte
+        let lx: CGFloat = 4
+        let y0: CGFloat = 193   // under section 2
+
+        secHeader("3. Befunde", x: lx, y: y0, w: W-8)
+
+        let colW: CGFloat = (W-8) / 4
+        let y = y0 + 10
+
+        // ── Spalte 1: Messwerte ──────────────────────────────────────────────
+        subHeader("Messwerte", x: lx, y: y, w: colW)
+        var y1 = y + 8.5
+
+        let messwerte: [(String, String)] = [
+            ("RR SYS",  um.rrSys),
+            ("RR DIA",  um.rrDia),
+            ("HF",      um.hf),
+            ("SpO₂",    um.spo2),
+            ("AF",      um.af),
+            ("etCO₂",   ""),
+            ("BZ",      um.bz),
+            ("Temp.",   um.temp),
+        ]
+        for (label, value) in messwerte {
+            strokeR(CGRect(x: lx, y: y1, width: colW, height: 11))
+            txt(label, CGRect(x: lx+2, y: y1+1.5, width: 28, height: 6), font: f5, color: UIColor(white:0.4,alpha:1))
+            txt(value, CGRect(x: lx+32, y: y1+2.5, width: colW-34, height: 8), font: f7b)
+            y1 += 11
+        }
+        // Schmerz
+        strokeR(CGRect(x: lx, y: y1, width: colW, height: 11))
+        txt("Schmerz (0–10)", CGRect(x: lx+2, y: y1+1.5, width: colW-4, height: 5.5), font: f5, color: UIColor(white:0.4,alpha:1))
+        txt(ub.schmerz > 0 ? "\(ub.schmerz)" : "", CGRect(x: lx+2, y: y1+7, width: colW-4, height: 7), font: f7b)
+        y1 += 11
+        // GCS
+        strokeR(CGRect(x: lx, y: y1, width: colW, height: 11))
+        txt("GCS", CGRect(x: lx+2, y: y1+1.5, width: 20, height: 5.5), font: f5, color: UIColor(white:0.4,alpha:1))
+        txt("\(ub.gcsAugen)+\(ub.gcsVerbal)+\(ub.gcsMotor)=\(ub.gcsGesamt)", CGRect(x: lx+2, y: y1+7, width: colW-4, height: 7), font: f5b)
+
+        // ── Spalte 2: A+B Atmung ─────────────────────────────────────────────
+        let x2 = lx + colW
+        subHeader("A+B Atmung", x: x2, y: y, w: colW)
+        var y2 = y + 8.5
+
+        let atmung: [(String, Bool)] = [
+            ("unauffällig",       ub.abUnauffaellig),
+            ("Dyspnoe",           ub.dyspnoe),
+            ("Zyanose",           ub.zyanose),
+            ("Spastik",           ub.spastik),
+            ("Rasselgeräusche",   ub.rasselgeraeusche),
+            ("Brodeln",           ub.brodeln),
+            ("Stridor",           ub.stridor),
+            ("Atemwegsverlegung", ub.atemwegsverlegung),
+            ("Schnappatmung",     ub.schnappatmung),
+            ("Apnoe",             ub.apnoe),
+            ("Beatmung",          ub.beatmung),
+            ("Hyperventilation",  ub.hyperventilation),
+            ("n. beurteilbar",    ub.abNichtBeurteilbar),
+        ]
+        for (label, checked) in atmung {
+            cbLabel(label, checked: checked, x: x2+2, y: y2, labelW: colW-12)
+            y2 += 8
+        }
+
+        // ── Spalte 3: C Zirkulation + EKG ───────────────────────────────────
+        let x3 = lx + 2*colW
+        subHeader("C Cirkulat. + EKG", x: x3, y: y, w: colW)
+        var y3 = y + 8.5
+
+        let ekg: [(String, Bool)] = [
+            ("unauffällig",         ub.cUnauffaellig),
+            ("Rekapillierung",      ub.rekapillierung),
+            ("Sinusrhythmus",       ub.sinusrhythmus),
+            ("Abs. Arrhythmie",     ub.absoluteArrhythmie),
+            ("AV-Block I°",         ub.avBlockI),
+            ("AV-Block II°",        ub.avBlockII),
+            ("AV-Block III°",       ub.avBlockIII),
+            ("QRS Tachy breit",     ub.qrsTachykardieBreit),
+            ("QRS Tachy schmal",    ub.qrsTachykardieSchmal),
+            ("Kammerflattern",      ub.kammerflattern),
+            ("Kammerflimmern",      ub.kammerflimmern),
+            ("Asystolie",           ub.asystolie),
+            ("PEA",                 ub.pea),
+            ("Schrittmacher",       ub.schrittmacher),
+            ("Infarkt-EKG (STEMI)", ub.infarktEkg),
+            ("SVES",                ub.sves),
+            ("VES",                 ub.ves),
+            ("ES monomorph",        ub.extrasystolenMonomorph),
+            ("ES polymorph",        ub.extrasystolenPolymorph),
+            ("n. beurteilbar",      ub.cNichtBeurteilbar),
+        ]
+        for (label, checked) in ekg {
+            cbLabel(label, checked: checked, x: x3+2, y: y3, labelW: colW-12)
+            y3 += 7
+        }
+
+        // ── Spalte 4: D Neurologie ───────────────────────────────────────────
+        let x4 = lx + 3*colW
+        subHeader("D Neurologie", x: x4, y: y, w: colW)
+        var y4 = y + 8.5
+
+        txt("Bewusstsein", CGRect(x: x4+2, y: y4, width: colW-4, height: 6), font: f5b)
+        y4 += 7
+        for (label, checked) in [
+            ("wach",            ub.bewWach),
+            ("auf Ansprache",   ub.bewAnsprache),
+            ("auf Schmerzreiz", ub.bewSchmerzreiz),
+            ("bewusstlos",      ub.bewusstlos),
+            ("n. beurteilbar",  ub.dNichtBeurteilbar),
+        ] as [(String, Bool)] {
+            cbLabel(label, checked: checked, x: x4+2, y: y4, labelW: colW-12)
+            y4 += 7
+        }
+        hline(x4, y4, colW); y4 += 3
+        txt("Pupillen re:", CGRect(x: x4+2, y: y4, width: 40, height: 6), font: f5b); y4 += 6
+        for (label, checked) in [
+            ("eng",               ub.pupilleReEng),
+            ("mittel",            ub.pupilleReMittel),
+            ("weit",              ub.pupilleReWeit),
+            ("entrundet",         ub.pupilleReEntrundet),
+            ("keine Lichtreakt.", ub.pupilleReKeineLichtreaktion),
+        ] as [(String, Bool)] {
+            cbLabel(label, checked: checked, x: x4+2, y: y4, labelW: colW-12)
+            y4 += 7
+        }
+        hline(x4, y4, colW); y4 += 3
+        txt("Pupillen li:", CGRect(x: x4+2, y: y4, width: 40, height: 6), font: f5b); y4 += 6
+        for (label, checked) in [
+            ("eng",               ub.pupilleLiEng),
+            ("mittel",            ub.pupilleLiMittel),
+            ("weit",              ub.pupilleLiWeit),
+            ("entrundet",         ub.pupilleLiEntrundet),
+            ("keine Lichtreakt.", ub.pupilleLiKeineLichtreaktion),
+        ] as [(String, Bool)] {
+            cbLabel(label, checked: checked, x: x4+2, y: y4, labelW: colW-12)
+            y4 += 7
+        }
+        hline(x4, y4, colW); y4 += 3
+        for (label, checked) in [
+            ("Vorbestehendes Defizit", ub.neuroVorbestehendesDefizit),
+            ("Facialisparese",         ub.neuroFacialisparese),
+            ("Armparese",              ub.neuroArmparese),
+            ("Sprachstörung",          ub.neuroSprachstoerung),
+            ("Sehstörung",             ub.neuroSehstoerung),
+            ("Babinski",               ub.neuroBabinski),
+            ("Querschnitt",            ub.neuroQuerschnitt),
+            ("Meningismus",            ub.neuroMeningismus),
+            ("Demenz",                 ub.neuroDemenz),
+        ] as [(String, Bool)] {
+            cbLabel(label, checked: checked, x: x4+2, y: y4, labelW: colW-12)
+            y4 += 7
+        }
+
+        // ── Spalten-Trennlinien + untere Abschlusskante ──────────────────────
+        let s3Bottom = max(y1, y2, y3, y4) + 4
+        vline(x2, y+8.5, s3Bottom - y - 8.5)
+        vline(x3, y+8.5, s3Bottom - y - 8.5)
+        vline(x4, y+8.5, s3Bottom - y - 8.5)
+        hline(lx, s3Bottom, W-8)
+    }
     private static func drawSection4(protokoll: EinsatzProtokoll) {}
     private static func drawSection42(protokoll: EinsatzProtokoll) {}
     private static func drawSection5(protokoll: EinsatzProtokoll) {}
