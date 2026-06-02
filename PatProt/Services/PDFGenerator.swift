@@ -254,6 +254,20 @@ struct DINPDFGenerator {
         return 9.5 + 11
     }
 
+    /// Shows ALL dual-checkbox rows (not filtered) — matches reference form style
+    @discardableResult
+    private static func allDualCb(
+        _ items: [(String, Bool, Bool)],
+        x: CGFloat, y: CGFloat, w: CGFloat, h: CGFloat
+    ) -> CGFloat {
+        for (i, (label, ank, ueb)) in items.enumerated() {
+            let bg: UIColor = i % 2 == 0 ? .white : UIColor(white: 0.97, alpha: 1)
+            fillRect(CGRect(x: x, y: y + CGFloat(i)*h, width: w, height: h), bg)
+            dualCb(label, ankunft: ank, uebergabe: ueb, x: x, y: y + CGFloat(i)*h, w: w, h: h)
+        }
+        return CGFloat(items.count) * h
+    }
+
     /// Compact checkbox column — shows ALL items (checked or not), like the reference form
     @discardableResult
     private static func cbCol(
@@ -807,12 +821,12 @@ struct DINPDFGenerator {
         secHeader("3. Befunde", x:lx, y:y, w:rx-lx)
         y += 11
 
-        // Column widths (lx=7, rx=588, total=581)
-        let bW_mv:  CGFloat = 110  // Messwerte
-        let bW_ab:  CGFloat = 120  // A+B Atmung (dual cb)
-        let bW_sch: CGFloat = 40   // Schmerz
-        let bW_c:   CGFloat = 130  // C Kreislauf+EKG (dual cb)
-        let bW_d:   CGFloat = 181  // D Neurologie (dual cb)
+        // Column widths (lx=7, rx=588, total=581) — wie Referenzformular
+        let bW_mv:  CGFloat = 100  // Messwerte (kompakter)
+        let bW_ab:  CGFloat = 110  // A+B Atmung
+        let bW_sch: CGFloat = 0    // Schmerz integriert in Messwerte
+        let bW_c:   CGFloat = 125  // C Kreislauf+EKG
+        let bW_d:   CGFloat = 246  // D Neurologie+Psyche (mehr Platz)
         let xMv  = lx
         let xAb  = xMv + bW_mv
         let xSch = xAb + bW_ab
@@ -831,7 +845,7 @@ struct DINPDFGenerator {
         txt("Ank.",       CGRect(x:xAb+1.5,        y:y+2,   width:13,         height:5.5), font:f5,  color:.white)
         txt("A+B Atmung", CGRect(x:xAb+15,         y:y+1.5, width:bW_ab-30,   height:6.5), font:f6b, color:.white, align:.center)
         txt("Üb.",        CGRect(x:xAb+bW_ab-14.5, y:y+2,   width:13,         height:5.5), font:f5,  color:.white, align:.right)
-        subHeader("Schmerz", x:xSch, y:y, w:bW_sch)
+        // Schmerz ist in Messwerte integriert
         fillRect(CGRect(x:xC, y:y, width:bW_c, height:9.5), subBlue)
         txt("Ank.",           CGRect(x:xC+1.5,       y:y+2,   width:13,        height:5.5), font:f5,  color:.white)
         txt("C Kreislauf+EKG",CGRect(x:xC+15,        y:y+1.5, width:bW_c-30,  height:6.5), font:f6b, color:.white, align:.center)
@@ -843,19 +857,22 @@ struct DINPDFGenerator {
         y += 9.5
 
         let mvColY = y
-        let dCbH: CGFloat = 10
+        let dCbH: CGFloat = 8.0   // kompakt wie Referenz
 
         // ── Messwerte (dual Ankunft/Übergabe) ──
-        let mvH: CGFloat = 11
+        let mvH: CGFloat = 9.5
         let u = p.uebergabeMesswerte
         let mvItems: [(String, String, String)] = [
-            ("RR syst.",  p.circulation.blutdruckSystolisch.map  { "\($0)" } ?? "", u.rrSys),
-            ("RR diast.", p.circulation.blutdruckDiastolisch.map { "\($0)" } ?? "", u.rrDia),
-            ("HF (/min)", p.circulation.puls.map                 { "\($0)" } ?? "", u.hf),
-            ("SpO₂ (%)",  p.breathing.spo2.map                   { "\($0)" } ?? "", u.spo2),
-            ("AF (/min)", p.breathing.atemFrequenz.map            { "\($0)" } ?? "", u.af),
-            ("BZ",        p.disability.blutzucker.map { String(format:"%.0f",$0) } ?? "", u.bz),
-            ("Temp (°C)", p.exposure.temperatur.map   { String(format:"%.1f",$0) } ?? "", u.temp),
+            ("RR syst.",   p.circulation.blutdruckSystolisch.map  { "\($0)" } ?? "", u.rrSys),
+            ("RR diast.",  p.circulation.blutdruckDiastolisch.map { "\($0)" } ?? "", u.rrDia),
+            ("HF (/min)",  p.circulation.puls.map                 { "\($0)" } ?? "", u.hf),
+            ("regelmäßig", p.circulation.pulsRhythmus.isEmpty ? "" : (p.circulation.pulsRhythmus == "regelmäßig" ? "ja" : "nein"), ""),
+            ("SpO₂ (%)",   p.breathing.spo2.map                   { "\($0)" } ?? "", u.spo2),
+            ("AF (/min)",  p.breathing.atemFrequenz.map            { "\($0)" } ?? "", u.af),
+            ("etCO₂",      "",                                     ""),
+            ("BZ (mg/dL)", p.disability.blutzucker.map { String(format:"%.0f",$0) } ?? "", u.bz),
+            ("Temp (°C)",  p.exposure.temperatur.map   { String(format:"%.1f",$0) } ?? "", u.temp),
+            ("Schmerz",    p.disability.schmerz > 0 ? "\(p.disability.schmerz)/10" : "", u.schmerz > 0 ? "\(u.schmerz)/10" : ""),
         ]
         for (i,(label,ankVal,uebVal)) in mvItems.enumerated() {
             let ry = mvColY + CGFloat(i)*mvH
@@ -887,23 +904,7 @@ struct DINPDFGenerator {
             ("Hypervent.",   p.breathing.hyperventilation,           ub.hyperventilation),
             ("n.beurteilb.", p.breathing.abNichtBeurteilbar,        ub.abNichtBeurteilbar),
         ]
-        let abRenderedH = filteredDualCb(abItems, x: xAb, y: mvColY, w: bW_ab, h: dCbH)
-
-        // ── Schmerz ──
-        if p.disability.schmerz > 0 || ub.schmerz > 0 {
-            let schmerzRows: [(String, String)] = [
-                ("Ank.", "\(p.disability.schmerz)/10"),
-                ("Üb.",  "\(ub.schmerz)/10"),
-            ]
-            fillRect(CGRect(x:xSch, y:mvColY, width:bW_sch, height:CGFloat(schmerzRows.count)*dCbH), .white)
-            strokeRect(CGRect(x:xSch, y:mvColY, width:bW_sch, height:CGFloat(schmerzRows.count)*dCbH))
-            for (i,(lbl,val)) in schmerzRows.enumerated() {
-                let ry = mvColY + CGFloat(i)*dCbH
-                if i%2==1 { fillRect(CGRect(x:xSch,y:ry,width:bW_sch,height:dCbH), UIColor(white:0.97,alpha:1)) }
-                txt(lbl, CGRect(x:xSch+1.5, y:ry+1.5, width:13, height:dCbH-3), font:f6, color:.darkGray)
-                txt(val,  CGRect(x:xSch+15,  y:ry+1.5, width:bW_sch-17, height:dCbH-3), font:f7b, align:.center)
-            }
-        }
+        let abRenderedH = allDualCb(abItems, x: xAb, y: mvColY, w: bW_ab, h: dCbH)
 
         // ── C Kreislauf + EKG (dual cb) ──
         let rekapLabel: String = {
@@ -933,7 +934,7 @@ struct DINPDFGenerator {
             ("Polymorph",     p.circulation.extrasystolenPolymorph,    ub.extrasystolenPolymorph),
             ("n.beurteilb.",  p.circulation.cNichtBeurteilbar,         ub.cNichtBeurteilbar),
         ]
-        let cRenderedH = filteredDualCb(cItems, x: xC, y: mvColY, w: bW_c, h: dCbH)
+        let cRenderedH = allDualCb(cItems, x: xC, y: mvColY, w: bW_c, h: dCbH)
 
         // ── D Neurologie (dual cb + GCS-Zeile) ──
         let gcs = p.disability
@@ -967,7 +968,7 @@ struct DINPDFGenerator {
             ("Demenz",        gcs.neuroDemenz,                       ub.neuroDemenz),
             ("n.b. Neuro",    gcs.neuroNichtBeurteilbar,             ub.neuroNichtBeurteilbar),
         ]
-        let dRenderedH = filteredDualCb(dItems, x: xD, y: mvColY, w: bW_d, h: dCbH)
+        let dRenderedH = allDualCb(dItems, x: xD, y: mvColY, w: bW_d, h: dCbH)
         // GCS-Zeile (Ankunft / Übergabe als Werte, kein dual-cb)
         let gcsRy = mvColY + dRenderedH
         fillRect(CGRect(x:xD, y:gcsRy, width:bW_d, height:dCbH), hlYellow)
@@ -978,35 +979,42 @@ struct DINPDFGenerator {
         txt("GCS Üb.: \(ub.gcsGesamt)/15",
             CGRect(x:xD+bW_d/2+2, y:gcsRy+1.5, width:bW_d/2-4, height:dCbH-3), font:f6b)
 
+        // Psyche-Checkboxen hängen an Spalte D (nach den D-Zeilen)
+        let psycheItems: [(String, Bool, Bool)] = [
+            ("unauffällig",  p.psyche.unauffaellig,    false),
+            ("ängstlich",    p.psyche.aengstlich,      false),
+            ("wahnhaft",     p.psyche.wahnhaft,        false),
+            ("suizidal",     p.psyche.suizidal,        false),
+            ("erregt",       p.psyche.erregt,          false),
+            ("verlangsamt",  p.psyche.verlangsamt,     false),
+            ("depressiv",    p.psyche.depressiv,       false),
+            ("euphorisch",   p.psyche.euphorisch,      false),
+            ("verwirrt",     p.psyche.verwirrt,        false),
+            ("motor.unruhig",p.psyche.motorischUnruhig,false),
+            ("aggressiv",    p.psyche.aggressiv,       false),
+            ("n.beurteilb.", p.psyche.nichtBeurteilbar,false),
+        ]
+        // Render Psyche-Spalte unterhalb D-Neurologie in Spalte D
+        let psycheY = mvColY + dRenderedH + dCbH
+        subHeader("Psyche □ unauffällig", x: xD, y: psycheY, w: bW_d, h: 8.0)
+        var psyY = psycheY + 8.0
+        for (i, (label, checked, _)) in psycheItems.enumerated() {
+            let bg: UIColor = i%2==0 ? .white : UIColor(white:0.97,alpha:1)
+            fillRect(CGRect(x:xD, y:psyY, width:bW_d, height:dCbH), bg)
+            strokeRect(CGRect(x:xD, y:psyY, width:bW_d, height:dCbH))
+            cb(label, checked, x:xD+2, y:psyY+0.5, bs:6, lw:bW_d-10)
+            psyY += dCbH
+        }
+
         let mvAbsH = CGFloat(mvItems.count) * mvH
-        let dAbsH  = dRenderedH + dCbH   // +1 for GCS row
+        let dAbsH  = dRenderedH + dCbH + 8.0 + CGFloat(psycheItems.count)*dCbH
         y = mvColY + max(mvAbsH, abRenderedH, cRenderedH, dAbsH) + 2
 
-        // Hautfarbe / Verletzungen
-        field("Hautfarbe", p.exposure.hautfarbe, x:lx, y:y, w:(rx-lx)/2, h:11, lw:42)
-        field("Verletzungen", p.exposure.verletzungen, x:lx+(rx-lx)/2, y:y, w:(rx-lx)/2, h:11, lw:45)
-        y += 11
-
-        // Psyche (E-Befund)
-        let psycheFlags: [String] = [
-            p.psyche.unauffaellig     ? "Unauffällig"       : nil,
-            p.psyche.aengstlich       ? "Ängstlich"         : nil,
-            p.psyche.wahnhaft         ? "Wahnhaft"          : nil,
-            p.psyche.suizidal         ? "Suizidal"          : nil,
-            p.psyche.erregt           ? "Erregt"            : nil,
-            p.psyche.verlangsamt      ? "Verlangsamt"       : nil,
-            p.psyche.depressiv        ? "Depressiv"         : nil,
-            p.psyche.euphorisch       ? "Euphorisch"        : nil,
-            p.psyche.verwirrt         ? "Verwirrt"          : nil,
-            p.psyche.motorischUnruhig ? "Motorisch unruhig" : nil,
-            p.psyche.aggressiv        ? "Aggressiv"         : nil,
-            p.psyche.nichtBeurteilbar ? "Nicht beurteilbar" : nil,
-        ].compactMap { $0 }
-        if !psycheFlags.isEmpty {
-            let psycheText = psycheFlags.joined(separator: " · ")
-            let h = fieldH(psycheText, width: rx-lx-55)
-            field("Psyche", psycheText, x:lx, y:y, w:rx-lx, h:h, lw:52, multiline: true)
-            y += h
+        // Hautfarbe / Verletzungen kompakt
+        if !p.exposure.hautfarbe.isEmpty || !p.exposure.verletzungen.isEmpty {
+            field("Hautfarbe", p.exposure.hautfarbe, x:lx, y:y, w:(rx-lx)/2, h:10, lw:42)
+            field("Verletzungen", p.exposure.verletzungen, x:lx+(rx-lx)/2, y:y, w:(rx-lx)/2, h:10, lw:45)
+            y += 10
         }
 
         // ── SECTION 4 ──────────────────────────────────────
