@@ -340,130 +340,204 @@ struct DINPDFGenerator {
 
     private static func drawPage1(p: EinsatzProtokoll) {
 
-        // ── Header bar ───────────────────────────────────
-        let hh: CGFloat = 22
-        fillRect(CGRect(x:0,y:0,width:pageSize.width,height:hh), colBlue)
+        // ═══════════════════════════════════════════════════
+        // KOPFBEREICH — wie Referenzprotokoll (kein voller Balken)
+        // ═══════════════════════════════════════════════════
+
+        let lw = c1 - lx   // = 185pt linke Spaltenbreite
+        let rw = rx - c1   // = 396pt rechte Spaltenbreite
+        let fh: CGFloat = 9 // Feldhöhe im Kopf
+
+        // ── Linke Spalte oben: Versicherung / Patient ──────
+        var ly: CGFloat = 7
+        // Krankenkasse
+        field("Krankenkasse bzw. Kostenträger", p.patientDaten.kostentraeger,
+              x:lx, y:ly, w:lw, h:fh, lw:lw*0.52)
+        ly += fh
+        // Name
+        field("Name, Vorname des Versicherten",
+              "\(p.patientDaten.nachname), \(p.patientDaten.vorname)",
+              x:lx, y:ly, w:lw, h:fh, lw:lw*0.52, hl:true)
+        ly += fh
+        // geb.am + Alter
+        let gebStr: String = {
+            var s = d(p.patientDaten.geburtsDatum)
+            if let a = p.patientDaten.alter { s += s.isEmpty ? "\(a) J." : " (\(a) J.)" }
+            return s
+        }()
+        field("geb. am", gebStr, x:lx, y:ly, w:lw*0.6, h:fh, lw:32)
+        let geschStr = p.patientDaten.geschlecht == .maennlich ? "m" :
+                       p.patientDaten.geschlecht == .weiblich  ? "w" : "unbek."
+        field("Geschl.", geschStr, x:lx+lw*0.6, y:ly, w:lw*0.4, h:fh, lw:30)
+        ly += fh
+        // Versicherten-Nr + Status
+        field("Versicherten-Nr.", p.patientDaten.versicherungsNummer,
+              x:lx, y:ly, w:lw*0.65, h:fh, lw:lw*0.38)
+        field("Status", "", x:lx+lw*0.65, y:ly, w:lw*0.35, h:fh, lw:28)
+        ly += fh
+        // Betriebsstätten-Nr / Arzt-Nr / Datum
+        field("Betriebs-Nr.", "", x:lx,           y:ly, w:lw*0.38, h:fh, lw:lw*0.22)
+        field("Arzt-Nr.",     "", x:lx+lw*0.38,   y:ly, w:lw*0.32, h:fh, lw:lw*0.19)
+        field("Datum", d(p.einsatzOrt.alarmzeit),  x:lx+lw*0.70, y:ly, w:lw*0.30, h:fh, lw:22)
+        ly += fh   // ly ≈ 52
+
+        // ── Rechte Spalte oben: Section 1 ──────────────────
+        var ry: CGFloat = 7
+        let rx1 = c1
+
+        secHeader("1. Rettungstechnische Daten", x:rx1, y:ry, w:rw)
+        ry += 11
+
+        // Fahrzeug-Zeile
+        let fzUp = p.einsatzOrt.fahrzeugName.uppercased()
+        let vItems: [(String, Bool)] = [
+            ("RTW", fzUp.contains("RTW")), ("KTW", fzUp.contains("KTW")),
+            ("NEF", fzUp.contains("NEF")), ("NAW", fzUp.contains("NAW")),
+            ("Baby NAW", fzUp.contains("BABY")), ("V-RTW", fzUp.contains("V-RTW")),
+        ]
+        let vColW2 = rw * 0.60 / CGFloat(vItems.count)
+        fillRect(CGRect(x:rx1, y:ry, width:rw, height:10), .white)
+        strokeRect(CGRect(x:rx1, y:ry, width:rw, height:10))
+        for (i,(label,checked)) in vItems.enumerated() {
+            cb(label, checked, x:rx1+CGFloat(i)*vColW2+1, y:ry+1.5, bs:7, lw:vColW2-10)
+        }
+        // Sondersignal + Notarzt rechts neben Fahrzeuge
+        cb("Sondersignal",     p.einsatzOrt.sondersignal, x:rx1+rw*0.62, y:ry+1.5, bs:7, lw:45)
+        cb("mit Patient",      p.einsatzOrt.mitPatient,   x:rx1+rw*0.77, y:ry+1.5, bs:7, lw:40)
+        ry += 10
+
+        // Notarzt-Zeile
+        fillRect(CGRect(x:rx1, y:ry, width:rw, height:9), .white)
+        strokeRect(CGRect(x:rx1, y:ry, width:rw, height:9))
+        cb("Notarzt nachgefordert", p.einsatzOrt.notarzt, x:rx1+2, y:ry+1, bs:7, lw:80)
+        field("Weitere Rettungsmittel", p.einsatzOrt.weitereEinsatzmittel.joined(separator:","),
+              x:rx1+rw*0.35, y:ry, w:rw*0.65, h:9, lw:60)
+        ry += 9
+
+        // Einsatzort-Zeile (E-Srt A1)
+        let plzOrt = [p.einsatzOrt.plz, p.einsatzOrt.ort].filter { !$0.isEmpty }.joined(separator: " ")
+        let adresseVoll = [p.einsatzOrt.adresse, p.einsatzOrt.zusatz, plzOrt].filter { !$0.isEmpty }.joined(separator: ", ")
+        fillRect(CGRect(x:rx1, y:ry, width:rw, height:10), .white)
+        strokeRect(CGRect(x:rx1, y:ry, width:rw, height:10))
+        txt("E-Srt A1", CGRect(x:rx1+1, y:ry+1.5, width:28, height:7), font:f5b, color:colBlue)
+        field("Einsatzort / Adresse", adresseVoll,
+              x:rx1+30, y:ry, w:rw-30, h:10, lw:65)
+        ry += 10
+
+        // Stichwort-Zeile (E-Srt A2)
+        let stichwortText = [p.einsatzOrt.stichwort, p.einsatzOrt.einsatzArt].filter{!$0.isEmpty}.joined(separator:" · ")
+        fillRect(CGRect(x:rx1, y:ry, width:rw, height:10), .white)
+        strokeRect(CGRect(x:rx1, y:ry, width:rw, height:10))
+        txt("E-Srt A2", CGRect(x:rx1+1, y:ry+1.5, width:28, height:7), font:f5b, color:colBlue)
+        field("Stichwort", stichwortText, x:rx1+30, y:ry, w:rw*0.55, h:10, lw:38)
+        field("Einsatz-Nr.", p.einsatzOrt.einsatzNummer, x:rx1+30+rw*0.55, y:ry, w:rw-30-rw*0.55, h:10, lw:40)
+        ry += 10   // ry ≈ 57
+
+        // ── EINSATZPROTOKOLL Block (links, ab ly≈52) ────────
+        let epY: CGFloat = ly
+        let epH: CGFloat = 88  // Höhe des EP-Blocks
+
+        fillRect(CGRect(x:lx, y:epY, width:lw, height:epH), vLightB)
+        strokeRect(CGRect(x:lx, y:epY, width:lw, height:epH))
+        // Titel
         txt("EINSATZPROTOKOLL",
-            CGRect(x:lx,y:3,width:230,height:16), font:f13b, color:.white)
-        txt("Einsatz-Nr.: \(p.einsatzOrt.einsatzNummer)   Datum: \(d(p.einsatzOrt.alarmzeit))",
-            CGRect(x:260,y:5,width:240,height:9), font:f7b, color:.white)
-        txt("Seite 1 / 2",
-            CGRect(x:pageSize.width-55,y:13,width:50,height:8), font:f6, color:.white, align:.right)
+            CGRect(x:lx+3, y:epY+2, width:lw-6, height:13), font:f10b, color:colBlue)
+        // Qualifikation
+        let eqY = epY + 16
+        cb("Notarzt",           p.verfasser == .arzt,               x:lx+3,    y:eqY,   bs:6, lw:38)
+        cb("NotSan/RettAss/RS", p.verfasser != .arzt,               x:lx+3,    y:eqY+9, bs:6, lw:65)
+        // Organisation
+        let orgY = eqY + 19
+        txt("DLRG Herzogtum Lauenburg",
+            CGRect(x:lx+3, y:orgY, width:lw-6, height:8), font:f6b, color:colBlue)
+        // Trennlinie
+        hline(lx+2, orgY+9, lw-4, c:subBlue)
+        // Einsatznummer
+        let enrY = orgY + 11
+        txt("Einsatznummer:", CGRect(x:lx+3, y:enrY, width:lw-6, height:7), font:f5, color:.darkGray)
+        txt(p.einsatzOrt.einsatzNummer.isEmpty ? "—" : p.einsatzOrt.einsatzNummer,
+            CGRect(x:lx+3, y:enrY+7, width:lw-6, height:12), font:f13b, color:colBlue)
+        // Datum + Standort
+        let datY = enrY + 20
+        txt("Datum:", CGRect(x:lx+3, y:datY, width:25, height:7), font:f5, color:.darkGray)
+        txt(d(p.einsatzOrt.alarmzeit), CGRect(x:lx+28, y:datY, width:50, height:7), font:f6b, color:.black)
+        txt("Standort RM:", CGRect(x:lx+3, y:datY+8, width:42, height:7), font:f5, color:.darkGray)
+        field("", p.einsatzOrt.fahrzeugName, x:lx+3, y:datY+15, w:lw-6, h:8, lw:0)
+        // Geschlecht
+        let geY = datY + 24
+        cb("männlich",  p.patientDaten.geschlecht == .maennlich, x:lx+3,   y:geY, bs:6, lw:38)
+        cb("weiblich",  p.patientDaten.geschlecht == .weiblich,  x:lx+60,  y:geY, bs:6, lw:35)
+        // Einsatzabbruch
+        let eaY = geY + 9
+        cb("Einsatzabbruch",      false, x:lx+3,  y:eaY, bs:6, lw:55)
+        cb("Transportverweigerung", p.ergebnis.mifahrverweigerung, x:lx+3, y:eaY+9, bs:6, lw:70)
 
-        var y: CGFloat = hh
-
-        // ── Row A: Patient (left) | Section 1 (right) ──
-
-        // Left: patient header (klinisch relevante Felder)
-        do {
-            let x = lx; let w = c1 - lx
-            field("Name des Patienten",
-                  "\(p.patientDaten.nachname), \(p.patientDaten.vorname)",
-                  x:x, y:y, w:w, h:14, lw:w*0.38, hl:true)
-            let gebStr: String = {
-                var s = d(p.patientDaten.geburtsDatum)
-                if let a = p.patientDaten.alter { s += s.isEmpty ? "\(a) J." : " (\(a) J.)" }
-                return s
-            }()
-            field("geb. am / Alter", gebStr,
-                  x:x, y:y+14, w:w*0.55, h:12, lw:52)
-            let geschlechtVal = [p.patientDaten.geschlecht.rawValue, p.patientDaten.ansprechbar ? "Ansprechbar" : ""].filter { !$0.isEmpty }.joined(separator: " · ")
-            field("Geschlecht", geschlechtVal,
-                  x:x+w*0.55, y:y+14, w:w*0.45, h:12, lw:42)
-            let fw2 = w / 2
-            field("Versicherten-Nr.", p.patientDaten.versicherungsNummer,
-                  x:x, y:y+26, w:fw2, h:12, lw:fw2*0.5)
-            let gewStr = p.patientDaten.gewicht.map { String(format: "%.0f kg", $0) } ?? ""
-            field("Gewicht", gewStr, x:x+fw2, y:y+26, w:fw2, h:12, lw:fw2*0.5)
-            if !p.patientDaten.kostentraeger.isEmpty {
-                field("Krankenkasse", p.patientDaten.kostentraeger,
-                      x:x, y:y+38, w:w, h:11, lw:55)
-            }
+        // ── Section 1 – Uhrzeiten (8 Felder, rechts ab ry≈57) ──
+        let tY = ry
+        let tItems: [(String, String)] = [
+            ("Alarm",      t(p.einsatzOrt.alarmzeit)),
+            ("Ausfahrt",   ""),
+            ("Ankunft",    t(p.einsatzOrt.ankunftzeit)),
+            ("Alarm. NA",  ""),
+            ("Abfahrt",    t(p.einsatzOrt.abfahrtzeit)),
+            ("Übergabe",   t(p.einsatzOrt.krankenHausAnkunft)),
+            ("Einsatzzeit",""),
+            ("Ende",       ""),
+        ]
+        let tW3 = rw / CGFloat(tItems.count)
+        for (i,(label,value)) in tItems.enumerated() {
+            let tx = rx1 + CGFloat(i)*tW3
+            // Uhr-Symbol + Label oben
+            fillRect(CGRect(x:tx, y:tY, width:tW3, height:7), vLightB)
+            strokeRect(CGRect(x:tx, y:tY, width:tW3, height:7))
+            txt(label, CGRect(x:tx+1, y:tY+0.5, width:tW3-2, height:6), font:f5, color:colBlue, align:.center)
+            // Wert-Box unten
+            valBox(value, x:tx, y:tY+7, w:tW3, h:11)
         }
+        ry = tY + 18
 
-        // Right: Section 1 Rettungstechnische Daten
-        do {
-            let x = c1; let w = rx - c1
-            secHeader("1. Rettungstechnische Daten", x:x, y:y, w:w)
-            let sh: CGFloat = 11; y += sh
+        // Transport + km Zeile
+        fillRect(CGRect(x:rx1, y:ry, width:rw, height:9), .white)
+        strokeRect(CGRect(x:rx1, y:ry, width:rw, height:9))
+        let kW = rw / 4
+        txt("km:",       CGRect(x:rx1+2,     y:ry+1, width:15, height:7), font:f5, color:.darkGray)
+        vline(rx1+kW,    ry, 9)
+        txt("km ges.:",  CGRect(x:rx1+kW+2,  y:ry+1, width:25, height:7), font:f5, color:.darkGray)
+        vline(rx1+kW*2,  ry, 9)
+        txt("Patient:",  CGRect(x:rx1+kW*2+2,y:ry+1, width:30, height:7), font:f5, color:.darkGray)
+        vline(rx1+kW*3,  ry, 9)
+        txt("gesamt:",   CGRect(x:rx1+kW*3+2,y:ry+1, width:30, height:7), font:f5, color:.darkGray)
+        ry += 9
 
-            // Vehicle checkboxes — auto-detect aus fahrzeugName
-            let fzUp = p.einsatzOrt.fahrzeugName.uppercased()
-            let vItems: [(String, Bool)] = [
-                ("RTW", fzUp.contains("RTW")),
-                ("KTW", fzUp.contains("KTW")),
-                ("NEF", fzUp.contains("NEF")),
-                ("MHW", fzUp.contains("MHW")),
-                ("VRW", fzUp.contains("VRW")),
-                ("RTH", fzUp.contains("RTH")),
-                ("FR",  fzUp.contains("FR") || fzUp.contains("FIRST")),
-            ]
-            let vColW = w / CGFloat(vItems.count)
-            fillRect(CGRect(x:x, y:y, width:w, height:11), .white)
-            strokeRect(CGRect(x:x, y:y, width:w, height:11))
-            for (i,(label,checked)) in vItems.enumerated() {
-                cb(label, checked, x:x+CGFloat(i)*vColW+2, y:y+1.5, bs:7, lw:vColW-11)
-            }
-            y += 11
-
-            // Sondersignal / Notarzt
-            let r2h: CGFloat = 11
-            fillRect(CGRect(x:x,y:y,width:w,height:r2h), .white)
-            strokeRect(CGRect(x:x,y:y,width:w,height:r2h))
-            cb("Sondersignal", p.einsatzOrt.sondersignal, x:x+2, y:y+1.5, bs:7, lw:55)
-            cb("Notarzt", p.einsatzOrt.notarzt, x:x+80, y:y+1.5, bs:7, lw:35)
-            cb("mit Patient", p.einsatzOrt.mitPatient, x:x+130, y:y+1.5, bs:7, lw:45)
-            y += r2h
-
-            // Dokumentations-RM
-            field("Dokumentations-Rettungsmittel", p.einsatzOrt.fahrzeugName,
-                  x:x, y:y, w:w/2, h:11, lw:w*0.22)
-            field("Weitere Rettungsmittel", p.einsatzOrt.weitereEinsatzmittel.joined(separator: ", "),
-                  x:x+w/2, y:y, w:w/2, h:11, lw:w*0.22)
-            y += 11
-
-            // Times block — logical order: Alarm → Ankunft → Übergabe → Ende
-            let tW = w / 3
-            labeledVal("Alarm", t(p.einsatzOrt.alarmzeit),
-                       x:x, y:y, w:tW, labelH:7, valH:11)
-            labeledVal("Ankunft Einsatzort", t(p.einsatzOrt.ankunftzeit),
-                       x:x+tW, y:y, w:tW, labelH:7, valH:11)
-            labeledVal("Übergabe an RD", t(p.einsatzOrt.krankenHausAnkunft),
-                       x:x+tW*2, y:y, w:tW, labelH:7, valH:11)
-            y += 18
-
-            let tW2 = w / 2
-            labeledVal("Einsatz Ende", t(p.einsatzOrt.abfahrtzeit),
-                       x:x, y:y, w:tW2, labelH:7, valH:11)
-            labeledVal("Einsatz-Nr.", p.einsatzOrt.einsatzNummer,
-                       x:x+tW2, y:y, w:tW2, labelH:7, valH:11)
-            y += 18
-            let plzOrt = [p.einsatzOrt.plz, p.einsatzOrt.ort].filter { !$0.isEmpty }.joined(separator: " ")
-            let adresseText = [p.einsatzOrt.adresse, p.einsatzOrt.zusatz, plzOrt].filter { !$0.isEmpty }.joined(separator: ", ")
-            let stichwortText = [p.einsatzOrt.stichwort, p.einsatzOrt.einsatzArt]
-                .filter { !$0.isEmpty }.joined(separator: " · ")
-            field("Einsatzort", adresseText, x:x, y:y, w:w/2, h:11, lw:42)
-            field("Stichwort", stichwortText, x:x+w/2, y:y, w:w/2, h:11, lw:42)
-            y += 11
+        // Qualifikation
+        fillRect(CGRect(x:rx1, y:ry, width:rw, height:9), .white)
+        strokeRect(CGRect(x:rx1, y:ry, width:rw, height:9))
+        let qualItems: [(String, Bool)] = [
+            ("NotSan",       p.verfasser == .notfallsanitaeter),
+            ("NotAss/RS",    p.verfasser == .rettungssanitaeter),
+            ("SanB",         p.verfasser == .sanitaeterB),
+            ("Arzt",         p.verfasser == .arzt),
+        ]
+        let qW = rw * 0.62 / CGFloat(qualItems.count)
+        for (i,(label,checked)) in qualItems.enumerated() {
+            cb(label, checked, x:rx1+CGFloat(i)*qW+1, y:ry+1, bs:6, lw:qW-9)
         }
-        let rightY = y   // Section 1 right column bottom
+        field("Praktikant", "", x:rx1+rw*0.64, y:ry, w:rw*0.36, h:9, lw:38)
+        ry += 9
 
-        // ── EINSATZPROTOKOLL title block (directly below patient block) ──
-        // Shift down 11pt when Krankenkasse row is present (Name14+geb12+VersNr12+KK11)
-        let titleY: CGFloat = hh + 38 + (p.patientDaten.kostentraeger.isEmpty ? 0 : 11)
-        do {
-            let x = lx; let w = c1 - lx; let bh: CGFloat = 36
-            fillRect(CGRect(x:x,y:titleY,width:w,height:bh), vLightB)
-            strokeRect(CGRect(x:x,y:titleY,width:w,height:bh))
-            txt("EINSATZPROTOKOLL",
-                CGRect(x:x+3,y:titleY+3,width:w-6,height:14), font:f13b, color:colBlue)
-            cb("SanB",  p.verfasser == .sanitaeterB,        x:x+3,  y:titleY+19, bs:7, lw:30)
-            cb("RS",    p.verfasser == .rettungssanitaeter, x:x+55, y:titleY+19, bs:7, lw:22)
-            cb("NFS",   p.verfasser == .notfallsanitaeter,  x:x+3,  y:titleY+28, bs:7, lw:25)
-            cb("Arzt",  p.verfasser == .arzt,               x:x+55, y:titleY+28, bs:7, lw:25)
-        }
+        // Personal-Zeile
+        let bestEntries = [(p.besatzung.sanitaeter1, p.besatzung.qualifikation1),
+                           (p.besatzung.sanitaeter2, p.besatzung.qualifikation2)]
+        let bestText = bestEntries.filter{!$0.0.isEmpty}.map{"\($0.0) (\($0.1.rawValue))"}.joined(separator:" · ")
+        field("Besatzung", bestText, x:rx1, y:ry, w:rw, h:9, lw:38)
+        ry += 9
 
-        y = max(rightY, titleY + 36)
+        // Vorsorgebevollmächtigte
+        field("Vorsorgebevollm./Betreuer", "", x:rx1, y:ry, w:rw*0.55, h:9, lw:80)
+        field("Name / Telefon", "", x:rx1+rw*0.55, y:ry, w:rw*0.45, h:9, lw:50)
+        ry += 9
+
+        var y = max(ly + epH, ry) + 2
 
         // ── SECTION 2 ──────────────────────────────────────
         secHeader("2. Notfallgeschehen / Anamnese / Erstbefund", x:lx, y:y, w:rx-lx)
