@@ -711,97 +711,85 @@ struct DINPDFGenerator {
             }
             return parts.filter { !$0.isEmpty }.joined(separator: " · ")
         }
+        // ── ABCDE (links) + SAMPLER (rechts) NEBENEINANDER ──
         let abcdeRaw = [buildAirwayDetail(), buildBreathingDetail(), buildCirculationDetail(), buildDisabilityDetail(), buildExposureDetail()]
         let abcdeVals   = abcdeRaw.map { $0.isEmpty ? "o.B." : $0 }
         let abcdeColors = abcdeRaw.map { $0.isEmpty ? UIColor.lightGray : UIColor.black }
-        let cw = rx - lx - 12
-        var abcdeY = y
+
+        let abcdeColW = (rx - lx) * 0.62  // ABCDE left column
+        let samplerX  = lx + abcdeColW
+        let samplerW  = rx - samplerX       // SAMPLER right column
+        let sec2StartY = y
+
+        // ABCDE left column
+        var abcdeY = sec2StartY
+        let abcdeContentW = abcdeColW - 12
         for i in 0..<5 {
             let isOB = abcdeRaw[i].isEmpty
             let rowFont: UIFont = isOB ? UIFont.italicSystemFont(ofSize: 7) : f7
-            let rowH: CGFloat = isOB ? 11 : fieldH(abcdeVals[i], width: cw - 4, maxH: 88)
-            // Letter box A-E
+            let rowH: CGFloat = isOB ? 11 : fieldH(abcdeVals[i], width: abcdeContentW - 4, maxH: 40)
             fillRect(CGRect(x:lx, y:abcdeY, width:12, height:rowH), subBlue)
             txt(abcdeLetters[i], CGRect(x:lx+1, y:abcdeY+2, width:10, height:rowH-4),
                 font:f7b, color:.white, align:.center)
-            // Content box
-            fillRect(CGRect(x:lx+12, y:abcdeY, width:cw, height:rowH),
+            fillRect(CGRect(x:lx+12, y:abcdeY, width:abcdeContentW, height:rowH),
                      i%2==0 ? .white : UIColor(white:0.97,alpha:1))
-            strokeRect(CGRect(x:lx+12, y:abcdeY, width:cw, height:rowH))
+            strokeRect(CGRect(x:lx+12, y:abcdeY, width:abcdeContentW, height:rowH))
             if isOB {
-                txt(abcdeVals[i], CGRect(x:lx+14, y:abcdeY+2, width:cw-4, height:rowH-4),
+                txt(abcdeVals[i], CGRect(x:lx+14, y:abcdeY+2, width:abcdeContentW-4, height:rowH-4),
                     font: rowFont, color: abcdeColors[i])
             } else {
-                mtxt(abcdeVals[i], CGRect(x:lx+14, y:abcdeY+2, width:cw-4, height:rowH-4), font: rowFont)
+                mtxt(abcdeVals[i], CGRect(x:lx+14, y:abcdeY+2, width:abcdeContentW-4, height:rowH-4), font: rowFont)
             }
             abcdeY += rowH
         }
-        y = abcdeY
 
-        // SAMPLER — immer alle 8 Zeilen anzeigen
+        // SAMPLER right column
         let letztesMahlText: String = {
             if p.sampler.letztesMahlUnbekannt { return "Unbekannt" }
-            let fmt = DateFormatter()
-            fmt.dateFormat = "HH:mm"
+            let fmt = DateFormatter(); fmt.dateFormat = "HH:mm"
             let was = p.sampler.letztesMahl.isEmpty ? "–" : p.sampler.letztesMahl
-            if let zeit = p.sampler.letztesMahlZeit {
-                return "\(was) · \(fmt.string(from: zeit)) Uhr"
-            }
-            return was
-        }()
-        let letzterStuhlgangText: String = {
-            if p.sampler.letzterStuhlgangUnbekannt { return "Unbekannt" }
-            let fmt = DateFormatter()
-            fmt.dateFormat = "HH:mm"
-            let was = p.sampler.letzterStuhlgang.isEmpty ? "–" : p.sampler.letzterStuhlgang
-            if let zeit = p.sampler.letzterStuhlgangZeit { return "\(was) · \(fmt.string(from: zeit)) Uhr" }
-            return was
-        }()
-        let letzteRegelblutungText: String = {
-            if p.sampler.letzteRegelblutungUnbekannt { return "Unbekannt" }
-            let fmt = DateFormatter()
-            fmt.dateFormat = "HH:mm"
-            let was = p.sampler.letzteRegelblutung.isEmpty ? "–" : p.sampler.letzteRegelblutung
-            if let zeit = p.sampler.letzteRegelblutungZeit { return "\(was) · \(fmt.string(from: zeit)) Uhr" }
+            if let zeit = p.sampler.letztesMahlZeit { return "\(was) · \(fmt.string(from: zeit)) Uhr" }
             return was
         }()
         let schwangerschaftText: String = {
             switch p.sampler.schwangerschaftStatus {
             case "Ja":
-                return p.sampler.schwangerschaftSSW == 0 ? "Ja – SSW unbekannt"
-                                                         : "Ja – SSW \(p.sampler.schwangerschaftSSW)"
+                return p.sampler.schwangerschaftSSW == 0 ? "Ja – SSW unbek." : "Ja – SSW \(p.sampler.schwangerschaftSSW)"
             case "Nein": return "Nein"
             default:
-                // "Unbekannt" or legacy data: fall back to old Bool
-                guard p.sampler.schwangerschaft else { return "Unbekannt" }
-                return p.sampler.schwangerschaftSSW == 0 ? "Ja – SSW unbekannt"
-                                                         : "Ja – SSW \(p.sampler.schwangerschaftSSW)"
+                guard p.sampler.schwangerschaft else { return "Unbek." }
+                return p.sampler.schwangerschaftSSW == 0 ? "Ja – SSW unbek." : "Ja – SSW \(p.sampler.schwangerschaftSSW)"
             }
         }()
-        let samplerAllRows: [(String, String)] = [
-            ("S – Symptome",       p.sampler.symptome),
-            ("A – Allergien",      p.sampler.allergienUnbekannt ? "Unbekannt" : p.sampler.allergien),
-            ("M – Medikamente",    p.sampler.medikamenteUnbekannt ? "Unbekannt"
-                                    : (p.medikamentFotos.isEmpty
-                                        ? p.sampler.medikamente
-                                        : "Medikamentenplan: Foto-Anhang (S. 3ff.)")),
-            ("P – Vorgeschichte",  p.sampler.patientenVorgeschichteUnbekannt ? "Unbekannt" : p.sampler.patientenVorgeschichte),
-            ("L – Letztes Essen",  letztesMahlText),
-            ("L – Letzter Stuhlgang",   letzterStuhlgangText),
-            ("L – Letzte Regelblutung", letzteRegelblutungText),
-            ("E – Ereignis",       p.sampler.ereignisUnbekannt ? "Unbekannt" : p.sampler.ereignis),
-            ("R – Risikofaktoren", p.sampler.risikofaktorenUnbekannt ? "Unbekannt" : p.sampler.risikofaktoren),
-            ("Schwangerschaft",    schwangerschaftText),
+        let samplerRows: [(String, String)] = [
+            ("S", p.sampler.symptome),
+            ("A", p.sampler.allergienUnbekannt ? "Unbekannt" : p.sampler.allergien),
+            ("M", p.sampler.medikamenteUnbekannt ? "Unbekannt" : (p.medikamentFotos.isEmpty ? p.sampler.medikamente : "Foto-Anhang")),
+            ("P", p.sampler.patientenVorgeschichteUnbekannt ? "Unbekannt" : p.sampler.patientenVorgeschichte),
+            ("L", letztesMahlText),
+            ("E", p.sampler.ereignisUnbekannt ? "Unbekannt" : p.sampler.ereignis),
+            ("R", p.sampler.risikofaktorenUnbekannt ? "Unbekannt" : p.sampler.risikofaktoren),
         ]
-        let sValW: CGFloat = rx - lx - 88  // value area width for lw:85
-        for (label, value) in samplerAllRows {
-            let rowH = fieldH(value, width: sValW)
-            field(label, value, x:lx, y:y, w:rx-lx, h:rowH, lw:85, multiline: true)
-            y += rowH
+        let sLblW: CGFloat = 9
+        let sValColW = samplerW - sLblW
+        var samplerY = sec2StartY
+        for (i, (letter, value)) in samplerRows.enumerated() {
+            let rowH = fieldH(value, width: sValColW - 4, minH: 11, maxH: 30)
+            let bg: UIColor = i%2==0 ? .white : UIColor(white:0.97,alpha:1)
+            fillRect(CGRect(x:samplerX, y:samplerY, width:sLblW, height:rowH), subBlue)
+            txt(letter, CGRect(x:samplerX+1, y:samplerY+2, width:sLblW-2, height:rowH-4),
+                font:f6b, color:.white, align:.center)
+            fillRect(CGRect(x:samplerX+sLblW, y:samplerY, width:sValColW, height:rowH), bg)
+            strokeRect(CGRect(x:samplerX+sLblW, y:samplerY, width:sValColW, height:rowH))
+            mtxt(value, CGRect(x:samplerX+sLblW+2, y:samplerY+1.5, width:sValColW-4, height:rowH-3), font:f6)
+            samplerY += rowH
         }
 
-        // Auffindewerte = initiale ABCDE-Werte
+        y = max(abcdeY, samplerY) + 2
+
+        // Schwangerschaft + Auffindewerte als kompakte Zeile
         var auffindeTeile: [String] = []
+        if p.sampler.schwangerschaftStatus == "Ja" { auffindeTeile.append("Schwangersch.: \(schwangerschaftText)") }
         if let puls = p.circulation.puls { auffindeTeile.append("Puls \(puls)/min") }
         if let spo2 = p.breathing.spo2   { auffindeTeile.append("SpO₂ \(spo2)%") }
         if let sys = p.circulation.blutdruckSystolisch, let dia = p.circulation.blutdruckDiastolisch {
@@ -1462,61 +1450,143 @@ struct DINPDFGenerator {
 
         y = max(vmY + 20, spezY0 + CGFloat(spezItems.count)*spezH) + 2
 
-        // ── SECTION 5 Verlauf (Zeitraster) ─────────────────
-        secHeader("5. Verlauf / Verlaufsbeschreibung", x:lx, y:y, w:leftW)
+        // ── SECTION 5 Verlauf (Grafischer Chart + Tabelle) ──
+        secHeader("5. Verlauf Verlaufsbeschreibung", x:lx, y:y, w:leftW)
         y += 11
 
-        let vLabelW: CGFloat = 36
-        let vMaxCols = 6
-        let vColW = (leftW - vLabelW) / CGFloat(vMaxCols)
-        let vRowH: CGFloat = 11
+        let vMess = Array(p.verlaufMessungen.sorted { $0.zeitpunkt < $1.zeitpunkt }.prefix(8))
         let vTf = DateFormatter(); vTf.dateFormat = "HH:mm"
-        let vMess = Array(p.verlaufMessungen.sorted { $0.zeitpunkt < $1.zeitpunkt }.prefix(vMaxCols))
-        let vRows: [(String, (VerlaufsMessung) -> String)] = [
-            ("RR sys",  { $0.blutdruckSys.map  { "\($0)" } ?? "" }),
-            ("RR dia",  { $0.blutdruckDia.map  { "\($0)" } ?? "" }),
-            ("HF /min", { $0.puls.map          { "\($0)" } ?? "" }),
-            ("SpO₂ %",  { $0.spo2.map          { "\($0)" } ?? "" }),
-            ("AF /min", { $0.atemFrequenz.map  { "\($0)" } ?? "" }),
-            ("BZ",      { $0.blutzucker.map    { String(format:"%.0f",$0) } ?? "" }),
-            ("Temp °C", { $0.temperatur.map    { String(format:"%.1f",$0) } ?? "" }),
-            ("GCS",     { $0.gcsGesamt.map     { "\($0)" } ?? "" }),
-        ]
-        let vGridY = y
-        let vLabelBg = UIColor(red:0.90, green:0.95, blue:1.0, alpha:1)
 
-        fillRect(CGRect(x:lx, y:vGridY, width:vLabelW, height:vRowH), vLightB)
-        strokeRect(CGRect(x:lx, y:vGridY, width:vLabelW, height:vRowH))
-        txt("Uhrzeit", CGRect(x:lx+2, y:vGridY+2, width:vLabelW-4, height:vRowH-4), font:f6b, color:colBlue)
-        for col in 0..<vMaxCols {
-            let cx = lx + vLabelW + CGFloat(col)*vColW
-            fillRect(CGRect(x:cx, y:vGridY, width:vColW, height:vRowH), vLightB)
-            strokeRect(CGRect(x:cx, y:vGridY, width:vColW, height:vRowH))
-            let ts = col < vMess.count ? vTf.string(from: vMess[col].zeitpunkt) : ""
-            txt(ts, CGRect(x:cx+1, y:vGridY+2, width:vColW-2, height:vRowH-4), font:f6b, color:colBlue, align:.center)
-        }
-        for (row, (label, fn)) in vRows.enumerated() {
-            let ry = vGridY + CGFloat(row + 1) * vRowH
-            let dataBg: UIColor = row%2 == 0 ? .white : UIColor(white:0.97, alpha:1)
-            fillRect(CGRect(x:lx, y:ry, width:vLabelW, height:vRowH), vLabelBg)
-            strokeRect(CGRect(x:lx, y:ry, width:vLabelW, height:vRowH))
-            txt(label, CGRect(x:lx+2, y:ry+2, width:vLabelW-4, height:vRowH-4), font:f6, color:colBlue)
-            for col in 0..<vMaxCols {
-                let cx = lx + vLabelW + CGFloat(col)*vColW
-                fillRect(CGRect(x:cx, y:ry, width:vColW, height:vRowH), dataBg)
-                strokeRect(CGRect(x:cx, y:ry, width:vColW, height:vRowH))
-                let val = col < vMess.count ? fn(vMess[col]) : ""
-                txt(val, CGRect(x:cx+1, y:ry+2, width:vColW-2, height:vRowH-4), font:f7b, color:.black, align:.center)
+        // ── Grafischer Chart (wie Referenz) ──
+        let chartH: CGFloat = 80
+        let chartLblW: CGFloat = 30  // Y-Achsen-Labels
+        let chartX = lx + chartLblW
+        let chartW = leftW - chartLblW
+        let chartY0 = y
+
+        // Hintergrund
+        fillRect(CGRect(x:lx, y:chartY0, width:leftW, height:chartH), .white)
+        strokeRect(CGRect(x:lx, y:chartY0, width:leftW, height:chartH))
+
+        // Y-Achse: 60–260 (Puls/RR), Gridlinien
+        let yMin: CGFloat = 60; let yMax: CGFloat = 260
+        let yTicks: [CGFloat] = [60,80,100,120,140,160,180,200,220,240,260]
+        for tick in yTicks {
+            let gy = chartY0 + chartH - (tick - yMin) / (yMax - yMin) * chartH
+            hline(chartX, gy, chartW, c: UIColor(white:0.85,alpha:1), lw: 0.25)
+            let isMain = Int(tick) % 40 == 0
+            if isMain {
+                txt("\(Int(tick))", CGRect(x:lx+1, y:gy-3, width:chartLblW-3, height:6),
+                    font: UIFont.systemFont(ofSize: 4.5), color: .darkGray, align: .right)
             }
         }
-        y = vGridY + CGFloat(vRows.count + 1) * vRowH + 2
+
+        // X-Achse: Zeitstempel
+        if !vMess.isEmpty {
+            let xStep = chartW / CGFloat(max(vMess.count - 1, 1))
+            for (i, m) in vMess.enumerated() {
+                let cx = chartX + CGFloat(i) * xStep
+                vline(cx, chartY0, chartH, c: UIColor(white:0.85,alpha:1), lw: 0.25)
+                txt(vTf.string(from: m.zeitpunkt),
+                    CGRect(x:cx-12, y:chartY0+chartH-6, width:24, height:5),
+                    font: UIFont.systemFont(ofSize: 4), color: .darkGray, align: .center)
+            }
+
+            func plotLine(_ values: [CGFloat?], color: UIColor) {
+                let pts = values.enumerated().compactMap { (i, v) -> CGPoint? in
+                    guard let v else { return nil }
+                    let px = chartX + CGFloat(i) * (chartW / CGFloat(max(values.count-1, 1)))
+                    let py = chartY0 + chartH - (v - yMin) / (yMax - yMin) * chartH
+                    return CGPoint(x: px, y: min(max(py, chartY0+1), chartY0+chartH-1))
+                }
+                guard pts.count >= 2 else { return }
+                color.setStroke()
+                let path = UIBezierPath(); path.lineWidth = 0.8
+                path.move(to: pts[0])
+                pts.dropFirst().forEach { path.addLine(to: $0) }
+                path.stroke()
+                // Messpunkte
+                for pt in pts {
+                    let dot = UIBezierPath(ovalIn: CGRect(x:pt.x-1.5, y:pt.y-1.5, width:3, height:3))
+                    color.setFill(); dot.fill()
+                }
+            }
+
+            let pulsCurve: [CGFloat?] = vMess.map { $0.puls.map(CGFloat.init) }
+            let rrSysCurve: [CGFloat?] = vMess.map { $0.blutdruckSys.map(CGFloat.init) }
+            let rrDiaCurve: [CGFloat?] = vMess.map { $0.blutdruckDia.map(CGFloat.init) }
+
+            plotLine(rrSysCurve, color: UIColor(red:0.8, green:0.1, blue:0.1, alpha:1))
+            plotLine(rrDiaCurve, color: UIColor(red:1.0, green:0.5, blue:0.0, alpha:1))
+            plotLine(pulsCurve,  color: UIColor(red:0.1, green:0.4, blue:0.8, alpha:1))
+
+            // Legende
+            let legY = chartY0 + 2
+            cb("RR sys", false, x:chartX+2, y:legY, bs:4, lw:20)
+            UIColor(red:0.8,green:0.1,blue:0.1,alpha:1).setFill()
+            UIBezierPath(ovalIn:CGRect(x:chartX+2,y:legY+0.5,width:4,height:4)).fill()
+            txt("RR sys", CGRect(x:chartX+8, y:legY, width:22, height:5), font:UIFont.systemFont(ofSize:4.5), color:.darkGray)
+            UIColor(red:1,green:0.5,blue:0,alpha:1).setFill()
+            UIBezierPath(ovalIn:CGRect(x:chartX+33,y:legY+0.5,width:4,height:4)).fill()
+            txt("RR dia", CGRect(x:chartX+39, y:legY, width:22, height:5), font:UIFont.systemFont(ofSize:4.5), color:.darkGray)
+            UIColor(red:0.1,green:0.4,blue:0.8,alpha:1).setFill()
+            UIBezierPath(ovalIn:CGRect(x:chartX+64,y:legY+0.5,width:4,height:4)).fill()
+            txt("Puls", CGRect(x:chartX+70, y:legY, width:18, height:5), font:UIFont.systemFont(ofSize:4.5), color:.darkGray)
+        }
+        y = chartY0 + chartH + 1
+
+        // ── Datentabelle unter dem Chart ──
+        let vLabelW: CGFloat = 32
+        let vMaxCols = min(vMess.count, 8)
+        if vMaxCols > 0 {
+            let vColW = (leftW - vLabelW) / CGFloat(vMaxCols)
+            let vRowH: CGFloat = 9.5
+            let vLabelBg = UIColor(red:0.90, green:0.95, blue:1.0, alpha:1)
+
+            // Uhrzeit-Header
+            fillRect(CGRect(x:lx, y:y, width:vLabelW, height:vRowH), vLightB)
+            strokeRect(CGRect(x:lx, y:y, width:vLabelW, height:vRowH))
+            txt("Uhrzeit", CGRect(x:lx+1, y:y+2, width:vLabelW-2, height:vRowH-4), font:f5, color:colBlue)
+            for col in 0..<vMaxCols {
+                let cx = lx + vLabelW + CGFloat(col)*vColW
+                fillRect(CGRect(x:cx, y:y, width:vColW, height:vRowH), vLightB)
+                strokeRect(CGRect(x:cx, y:y, width:vColW, height:vRowH))
+                txt(vTf.string(from: vMess[col].zeitpunkt),
+                    CGRect(x:cx+1, y:y+2, width:vColW-2, height:vRowH-4), font:f5, color:colBlue, align:.center)
+            }
+            y += vRowH
+
+            let vRows: [(String, (VerlaufsMessung) -> String)] = [
+                ("Puls",   { $0.puls.map { "\($0)" } ?? "" }),
+                ("RR",     { ($0.blutdruckSys.map{"\($0)"}  ?? "") + ($0.blutdruckDia != nil ? "/\($0.blutdruckDia!)" : "") }),
+                ("SpO₂%",  { $0.spo2.map { "\($0)" } ?? "" }),
+                ("AF",     { $0.atemFrequenz.map { "\($0)" } ?? "" }),
+                ("GCS",    { $0.gcsGesamt.map { "\($0)" } ?? "" }),
+                ("BZ",     { $0.blutzucker.map { String(format:"%.0f",$0) } ?? "" }),
+            ]
+            for (row,(label,fn)) in vRows.enumerated() {
+                let dataBg: UIColor = row%2==0 ? .white : UIColor(white:0.97,alpha:1)
+                fillRect(CGRect(x:lx, y:y, width:vLabelW, height:vRowH), vLabelBg)
+                strokeRect(CGRect(x:lx, y:y, width:vLabelW, height:vRowH))
+                txt(label, CGRect(x:lx+1, y:y+2, width:vLabelW-2, height:vRowH-4), font:f5, color:colBlue)
+                for col in 0..<vMaxCols {
+                    let cx = lx + vLabelW + CGFloat(col)*vColW
+                    fillRect(CGRect(x:cx, y:y, width:vColW, height:vRowH), dataBg)
+                    strokeRect(CGRect(x:cx, y:y, width:vColW, height:vRowH))
+                    txt(fn(vMess[col]), CGRect(x:cx+1, y:y+2, width:vColW-2, height:vRowH-4),
+                        font:f5, color:.black, align:.center)
+                }
+                y += vRowH
+            }
+        }
         if !p.diagnose.verlauf.isEmpty {
-            let vFtH: CGFloat = 22
+            let vFtH: CGFloat = 18
             fillRect(CGRect(x:lx, y:y, width:leftW, height:vFtH), .white)
             strokeRect(CGRect(x:lx, y:y, width:leftW, height:vFtH))
-            mtxt(p.diagnose.verlauf, CGRect(x:lx+2, y:y+2, width:leftW-4, height:vFtH-4), font:f7)
+            mtxt(p.diagnose.verlauf, CGRect(x:lx+2, y:y+2, width:leftW-4, height:vFtH-4), font:f6)
             y += vFtH
         }
+        y += 2
 
         // ── SECTION 4.5 Medikamente ───────────────────────
         if !p.medikamente.isEmpty {
