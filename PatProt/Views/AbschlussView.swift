@@ -6,6 +6,9 @@ struct AbschlussView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var protokoll: EinsatzProtokoll
     @State private var pdfURL: URL? = nil
+    @State private var rknPdfURL: URL? = nil
+    @State private var isGeneratingRKN = false
+    @State private var zeigeRKNShareSheet = false
     @State private var zeigeShareSheet = false
     @State private var isGenerating = false
     @AppStorage("recipientEmail") private var recipientEmail: String = ""
@@ -252,6 +255,39 @@ struct AbschlussView: View {
                 .buttonStyle(.bordered)
                 .tint(Color("RDOrange"))
                 .disabled(isGenerating || recipientEmail.isEmpty)
+
+                Divider()
+
+                Button {
+                    isGeneratingRKN = true
+                    let prot = protokoll
+                    Task.detached(priority: .userInitiated) {
+                        let url = RKNPDFGenerator.generate(protokoll: prot)
+                        await MainActor.run {
+                            rknPdfURL = url
+                            isGeneratingRKN = false
+                            if url != nil {
+                                zeigeRKNShareSheet = true
+                            } else {
+                                pdfFehler = true
+                            }
+                        }
+                    }
+                } label: {
+                    HStack {
+                        if isGeneratingRKN {
+                            ProgressView().padding(.trailing, 4)
+                        } else {
+                            Image(systemName: "doc.text.fill")
+                        }
+                        Text(isGeneratingRKN ? "RKN-Formular wird generiert..." : "RKN-Formular exportieren")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .padding(.vertical, 4)
+                }
+                .buttonStyle(.bordered)
+                .tint(Color("RDOrange"))
+                .disabled(isGeneratingRKN)
             } header: {
                 Label("PDF Export", systemImage: "square.and.arrow.up")
             } footer: {
@@ -273,6 +309,11 @@ struct AbschlussView: View {
                 Button { zeigeEinstellungen = true } label: {
                     Label("Einstellungen", systemImage: "gearshape")
                 }
+            }
+        }
+        .sheet(isPresented: $zeigeRKNShareSheet) {
+            if let url = rknPdfURL {
+                ShareSheet(activityItems: [url])
             }
         }
         .sheet(isPresented: $zeigeShareSheet) {
