@@ -254,6 +254,24 @@ struct DINPDFGenerator {
         return 9.5 + 11
     }
 
+    /// Compact checkbox column — shows ALL items (checked or not), like the reference form
+    @discardableResult
+    private static func cbCol(
+        _ title: String, items: [(String, Bool)],
+        x: CGFloat, y: CGFloat, w: CGFloat, rowH: CGFloat = 8.0
+    ) -> CGFloat {
+        subHeader(title, x: x, y: y, w: w, h: 8.5)
+        var cy = y + 8.5
+        for (i, (label, checked)) in items.enumerated() {
+            let bg: UIColor = i % 2 == 0 ? .white : UIColor(white: 0.97, alpha: 1)
+            fillRect(CGRect(x: x, y: cy, width: w, height: rowH), bg)
+            strokeRect(CGRect(x: x, y: cy, width: w, height: rowH))
+            cb(label, checked, x: x + 2, y: cy + 0.5, bs: 6, lw: w - 10)
+            cy += rowH
+        }
+        return cy - y
+    }
+
     // ─────────────────────────────────────────────────────
     // MARK: - MAIN GENERATE
     // ─────────────────────────────────────────────────────
@@ -1099,22 +1117,23 @@ struct DINPDFGenerator {
             ("Gallen-/Nierenstein", p.diagnose.abdoGalleNiere),
         ]
 
-        // Section 4 compact diagnosis groups — skip any group that would overflow the footer
-        let diagSafe = pageSize.height - 16
-        var dy: CGFloat = 0
-        let allDiagGruppen: [(String, [(String,Bool)])] = [
-            ("ZNS / Neurologie",        col1Items + col1b),
-            ("Herz-Kreislauf",          col2Items),
-            ("Infektionen / Sonstiges", col3Items),
-            ("Psychiatrie",             psyItems),
-            ("Gyn / Geburtshilfe",      gynItems),
-            ("Stoffwechsel / Abdomen",  stoffItems),
+        // Section 4: alle Checkboxen in 6 Spalten nebeneinander (wie Referenzprotokoll)
+        let dCols: [(String, [(String,Bool)])] = [
+            ("ZNS / Neurologie",       col1Items),
+            ("Atmung",                 col1b),
+            ("Herz-Kreislauf",         col2Items),
+            ("Psychiatrie",            psyItems),
+            ("Gyn / Geburtshilfe",     gynItems),
+            ("Infektionen / Sonstiges",col3Items + stoffItems),
         ]
-        for (title, items) in allDiagGruppen {
-            guard y + dy + 20.5 < diagSafe else { break }
-            dy += diagGruppe(title, items: items, x: lx, y: y + dy, w: rx-lx)
+        let dColW = (rx - lx) / CGFloat(dCols.count)
+        var maxColH: CGFloat = 0
+        for (i, (title, items)) in dCols.enumerated() {
+            let cx = lx + CGFloat(i) * dColW
+            let h = cbCol(title, items: items, x: cx, y: y, w: dColW, rowH: 7.5)
+            maxColH = max(maxColH, h)
         }
-        y += dy + 2
+        y += maxColH + 2
 
         // Footer
         drawFooter(erstelltAm: p.erstelltAm)
@@ -1195,18 +1214,173 @@ struct DINPDFGenerator {
         txt("Seite 2 / 2",
             CGRect(x:pageSize.width-55,y:13,width:50,height:8), font:f6, color:.white, align:.right)
 
+        // ── Layout: rechte Spalte Maßnahmen | linke Seite Rest ──
+        let maaX: CGFloat = 395          // rechte Spalte ab hier
+        let maaW: CGFloat = rx - maaX    // ≈ 193 pt
+        let leftW: CGFloat = maaX - lx   // ≈ 388 pt
+
+        // ═══════════════════════════════════════════════════
+        // RECHTE SPALTE: Section 6 Maßnahmen (volle Seitenhöhe)
+        // ═══════════════════════════════════════════════════
+        var mY: CGFloat = hh
+        secHeader("6. Maßnahmen", x: maaX, y: mY, w: maaW)
+        mY += 11
+
+        let maR: CGFloat = 8.0  // Zeilenhöhe Maßnahmen-Checkboxen
+
+        // Airway / Stabilisation
+        subHeader("Airway / Stabilisation □ keine", x: maaX, y: mY, w: maaW, h: 8.5)
+        mY += 8.5
+        let m = p.massnahmen
+        let airItems: [(String, Bool)] = [
+            ("Atemweg freimachen/freihalten", m.atemwegFreimachen),
+            ("Cervikalstütze/HWS Stabilisation", m.cervikalStuetze),
+            ("Absaugung", m.absaugung),
+            ("Guedel-Tubus (OPA)", m.guedelTubus),
+            ("Wendel-Tubus (NPA)", m.wendlTubus),
+            ("Sauerstoffgabe" + (m.sauerstoffLitMin.isEmpty ? "" : " \(m.sauerstoffLitMin) l/min"), m.sauerstoffgabe),
+            ("Maskenbeatmung", m.maskenbeatmung),
+            ("Masch. Beatmung", m.maschinelleBeatmung),
+            ("Beatmung unmögl./erschwert", m.maskenbeatmungUnmoeglich || m.atemwegErschwert),
+            ("EGA supraglottisch" + (m.supraglottischTyp.isEmpty ? "" : " \(m.supraglottischTyp)\(m.supraglottischGr.isEmpty ? "" : " Gr.\(m.supraglottischGr)")"), m.supraglottisch),
+            ("CPAP" + (m.cpapMbar.isEmpty ? "" : " \(m.cpapMbar) mBar"), m.cpap),
+            ("Heimlich-Manöver", m.heimlich),
+            ("Intubation (ETI)", p.airway.intubiert),
+            ("Konikotomie", p.airway.konikotomie),
+        ]
+        for (i, (label, checked)) in airItems.enumerated() {
+            let bg: UIColor = i % 2 == 0 ? .white : UIColor(white: 0.97, alpha: 1)
+            fillRect(CGRect(x: maaX, y: mY, width: maaW, height: maR), bg)
+            strokeRect(CGRect(x: maaX, y: mY, width: maaW, height: maR))
+            cb(label, checked, x: maaX+2, y: mY+0.5, bs: 6, lw: maaW-10)
+            mY += maR
+        }
+
+        // Atmung
+        subHeader("Atmung □ keine", x: maaX, y: mY, w: maaW, h: 8.5); mY += 8.5
+        let atmItems: [(String, Bool)] = [
+            ("CPAP/NIV", m.cpap),
+            ("Thoraxdrainage", false),
+            ("Entlastungspunktion", false),
+            ("Sonstiges", !m.airwaySonstige.isEmpty),
+        ]
+        for (i, (label, checked)) in atmItems.enumerated() {
+            let bg: UIColor = i % 2 == 0 ? .white : UIColor(white: 0.97, alpha: 1)
+            fillRect(CGRect(x: maaX, y: mY, width: maaW, height: maR), bg)
+            strokeRect(CGRect(x: maaX, y: mY, width: maaW, height: maR))
+            cb(label, checked, x: maaX+2, y: mY+0.5, bs: 6, lw: maaW-10)
+            mY += maR
+        }
+        if m.maschinelleBeatmung {
+            let beat = [m.tidalvolumen.isEmpty ? nil : "TV \(m.tidalvolumen)ml",
+                        m.peep.isEmpty ? nil : "PEEP \(m.peep)",
+                        m.fio2.isEmpty ? nil : "FiO₂ \(m.fio2)%"].compactMap{$0}.joined(separator: " ")
+            if !beat.isEmpty {
+                fillRect(CGRect(x: maaX, y: mY, width: maaW, height: maR), .white)
+                strokeRect(CGRect(x: maaX, y: mY, width: maaW, height: maR))
+                txt("Beatmung: \(beat)", CGRect(x: maaX+2, y: mY+1, width: maaW-4, height: maR-2), font: f5)
+                mY += maR
+            }
+        }
+
+        // Cirkulation
+        subHeader("Cirkulation □ keine", x: maaX, y: mY, w: maaW, h: 8.5); mY += 8.5
+        let circItems: [(String, Bool)] = [
+            ("peripher-venöser Zugang" + (m.peripherVenoesOrt.isEmpty ? "" : " (\(m.peripherVenoesOrt)\(m.peripherVenoesGroesse.isEmpty ? "" : " \(m.peripherVenoesGroesse)G"))"), m.peripherVenoes),
+            ("zentral-venöser Zugang", false),
+            ("intrass. Kanüle/Port" + (m.intraossaerOrt.isEmpty ? "" : " (\(m.intraossaerOrt))"), m.intraossaer),
+            ("art. Kanüle", false),
+            ("Defibrillation" + (m.defiAnzahl > 0 ? " \(m.defiAnzahl)× \(m.defiJoule)J" : ""), m.defibrillation),
+            ("Kardioversion" + (m.kardioversionJoule > 0 ? " \(m.kardioversionJoule)J" : ""), m.kardioversion),
+            ("Tourniquet" + (m.tourniquetZeit != nil ? " \(t(m.tourniquetZeit))" : ""), m.tourniquet),
+            ("Verband / Wundversorgung", m.verband),
+            ("Beckenschlinge", m.beckenschlinge),
+        ]
+        for (i, (label, checked)) in circItems.enumerated() {
+            let bg: UIColor = i % 2 == 0 ? .white : UIColor(white: 0.97, alpha: 1)
+            fillRect(CGRect(x: maaX, y: mY, width: maaW, height: maR), bg)
+            strokeRect(CGRect(x: maaX, y: mY, width: maaW, height: maR))
+            cb(label, checked, x: maaX+2, y: mY+0.5, bs: 6, lw: maaW-10)
+            mY += maR
+        }
+
+        // Weitere Maßnahmen
+        subHeader("Weitere Maßnahmen □ keine", x: maaX, y: mY, w: maaW, h: 8.5); mY += 8.5
+        let weitItems: [(String, Bool)] = [
+            ("Kühlung", m.kuehlung),
+            ("Wärmeerhalt", m.waermeerhalt),
+            ("Entbindung", m.entbindung),
+            ("Krisenintervention", m.krisenintervention),
+            ("Kardioversion", m.kardioversion),
+            ("Extremitätenschienung", m.extremitaetenschienung),
+            ("Sonstiges", !m.weitereSonstige.isEmpty),
+        ]
+        for (i, (label, checked)) in weitItems.enumerated() {
+            let bg: UIColor = i % 2 == 0 ? .white : UIColor(white: 0.97, alpha: 1)
+            fillRect(CGRect(x: maaX, y: mY, width: maaW, height: maR), bg)
+            strokeRect(CGRect(x: maaX, y: mY, width: maaW, height: maR))
+            cb(label, checked, x: maaX+2, y: mY+0.5, bs: 6, lw: maaW-10)
+            mY += maR
+        }
+
+        // Lagerung / Transport
+        subHeader("Lagerung / Transport □ keine", x: maaX, y: mY, w: maaW, h: 8.5); mY += 8.5
+        let lagItems: [(String, Bool)] = [
+            ("OK-Hochlagerung", m.okHochlagerung),
+            ("Flachlagerung", m.flachlagerung),
+            ("Schocklagerung", m.schocklagerung),
+            ("Herztieflagung", m.herzTieflage),
+            ("Linksseitenlage", m.linksseitenlage),
+            ("Sitzender Transport", m.sitzenderTransport),
+            ("Vakuummatratze", m.vakuummatratze),
+            ("Schaufeltrage", m.schaufeltrage),
+            ("Reposition", false),
+            ("Verband", m.verband),
+            ("Beckenschlinge", m.beckenschlinge),
+        ]
+        for (i, (label, checked)) in lagItems.enumerated() {
+            let bg: UIColor = i % 2 == 0 ? .white : UIColor(white: 0.97, alpha: 1)
+            fillRect(CGRect(x: maaX, y: mY, width: maaW, height: maR), bg)
+            strokeRect(CGRect(x: maaX, y: mY, width: maaW, height: maR))
+            cb(label, checked, x: maaX+2, y: mY+0.5, bs: 6, lw: maaW-10)
+            mY += maR
+        }
+
+        // Monitoring
+        subHeader("Monitoring □ keine", x: maaX, y: mY, w: maaW, h: 8.5); mY += 8.5
+        let monItems: [(String, Bool)] = [
+            ("EKG", m.monEkg),
+            ("12-Kanal-EKG", false),
+            ("NIBP", m.monNibp),
+            ("BZ", m.monBz),
+            ("SpO₂", m.monSpo2),
+            ("Temperatur", m.monTemperatur),
+            ("Kapnographie", false),
+        ]
+        for (i, (label, checked)) in monItems.enumerated() {
+            let bg: UIColor = i % 2 == 0 ? .white : UIColor(white: 0.97, alpha: 1)
+            fillRect(CGRect(x: maaX, y: mY, width: maaW, height: maR), bg)
+            strokeRect(CGRect(x: maaX, y: mY, width: maaW, height: maR))
+            cb(label, checked, x: maaX+2, y: mY+0.5, bs: 6, lw: maaW-10)
+            mY += maR
+        }
+
         var y: CGFloat = hh
 
+        // ═══════════════════════════════════════════════════
+        // LINKE SEITE: 4.2, 5, 6.5 Medi, 7, 8, 9
+        // ═══════════════════════════════════════════════════
+
         // ── SECTION 4.2 Verletzungen ──────────────────────
-        let v2TotalW = (rx - lx) * 0.42
-        let v2RW = (rx - lx) * 0.58
+        let v2TotalW = leftW * 0.42
+        let v2RW     = leftW * 0.58
         let v2Rx = lx + v2TotalW
         let v2BodyW: CGFloat = 72          // silhouette column
         let v2TableX = lx + v2BodyW
         let v2TableW = v2TotalW - v2BodyW  // table column
 
         secHeader("4.2 Verletzungen", x:lx, y:y, w:v2TotalW)
-        secHeader("Spezielle Traumen", x:v2Rx, y:y, w:v2RW)
+        secHeader("Spezielle Traumen", x:v2Rx, y:y, w:min(v2RW, maaX - v2Rx))
         y += 11
 
         // Region table (right of silhouette)
@@ -1289,12 +1463,12 @@ struct DINPDFGenerator {
         y = max(vmY + 20, spezY0 + CGFloat(spezItems.count)*spezH) + 2
 
         // ── SECTION 5 Verlauf (Zeitraster) ─────────────────
-        secHeader("5. Verlauf / Verlaufsbeschreibung", x:lx, y:y, w:rx-lx)
+        secHeader("5. Verlauf / Verlaufsbeschreibung", x:lx, y:y, w:leftW)
         y += 11
 
         let vLabelW: CGFloat = 36
-        let vMaxCols = 8
-        let vColW = (rx - lx - vLabelW) / CGFloat(vMaxCols)
+        let vMaxCols = 6
+        let vColW = (leftW - vLabelW) / CGFloat(vMaxCols)
         let vRowH: CGFloat = 11
         let vTf = DateFormatter(); vTf.dateFormat = "HH:mm"
         let vMess = Array(p.verlaufMessungen.sorted { $0.zeitpunkt < $1.zeitpunkt }.prefix(vMaxCols))
@@ -1338,17 +1512,17 @@ struct DINPDFGenerator {
         y = vGridY + CGFloat(vRows.count + 1) * vRowH + 2
         if !p.diagnose.verlauf.isEmpty {
             let vFtH: CGFloat = 22
-            fillRect(CGRect(x:lx, y:y, width:rx-lx, height:vFtH), .white)
-            strokeRect(CGRect(x:lx, y:y, width:rx-lx, height:vFtH))
-            mtxt(p.diagnose.verlauf, CGRect(x:lx+2, y:y+2, width:rx-lx-4, height:vFtH-4), font:f7)
+            fillRect(CGRect(x:lx, y:y, width:leftW, height:vFtH), .white)
+            strokeRect(CGRect(x:lx, y:y, width:leftW, height:vFtH))
+            mtxt(p.diagnose.verlauf, CGRect(x:lx+2, y:y+2, width:leftW-4, height:vFtH-4), font:f7)
             y += vFtH
         }
 
         // ── SECTION 4.5 Medikamente ───────────────────────
         if !p.medikamente.isEmpty {
-            secHeader("4.5 Medikamente", x:lx, y:y, w:rx-lx)
+            secHeader("4.5 Medikamente", x:lx, y:y, w:leftW)
             y += 11
-            let mTotW = rx - lx
+            let mTotW = leftW
             let mC: [CGFloat] = [mTotW*0.32, mTotW*0.14, mTotW*0.12, mTotW*0.20, mTotW*0.11, mTotW*0.11]
             let mHdr = ["Medikament","Dosis","Einheit","Applikationsweg","Zeit","Max.Dos."]
             fillRect(CGRect(x:lx,y:y,width:mTotW,height:9), vLightB)
@@ -1377,171 +1551,13 @@ struct DINPDFGenerator {
             y += 2
         }
 
-        // ── SECTION 6 Maßnahmen ────────────────────────────
-        secHeader("6. Maßnahmen", x:lx, y:y, w:rx-lx)
-        y += 11
-
-        let totalW = rx - lx
-        let m6W1 = totalW * 0.25
-        let m6W2 = totalW * 0.26
-        let m6W3 = totalW * 0.25
-        let m6W4 = totalW - m6W1 - m6W2 - m6W3
-        let m6x1 = lx
-        let m6x2 = lx + m6W1
-        let m6x3 = lx + m6W1 + m6W2
-        let m6x4 = lx + m6W1 + m6W2 + m6W3
-
-        subHeader("Airway / Stabilisation", x:m6x1, y:y, w:m6W1)
-        subHeader("Kreislauf / Zugänge",    x:m6x2, y:y, w:m6W2)
-        subHeader("Weitere Maßnahmen",      x:m6x3, y:y, w:m6W3)
-        subHeader("Lagerung / Transport",   x:m6x4, y:y, w:m6W4)
-        y += 9.5
-
-        let maH: CGFloat = 9.5
-        let maItems1: [(String,Bool)] = [
-            ("Atemweg freimachen",  p.massnahmen.atemwegFreimachen),
-            ("Cervikalstütze/HWS",  p.massnahmen.cervikalStuetze),
-            ("Absaugung",           p.massnahmen.absaugung),
-            ("Guedel-Tubus (OPA)", p.massnahmen.guedelTubus),
-            ("Wendel-Tubus (NPA)", p.massnahmen.wendlTubus),
-            ("Sauerstoffgabe",      p.massnahmen.sauerstoffgabe),
-            ("Maskenbeatmung",      p.massnahmen.maskenbeatmung),
-            ("Masch. Beatmung",     p.massnahmen.maschinelleBeatmung),
-            ("Mask.beat. unmöglich",p.massnahmen.maskenbeatmungUnmoeglich),
-            ("EGA supraglottisch",  p.massnahmen.supraglottisch),
-            ("Atemweg erschwert",   p.massnahmen.atemwegErschwert),
-            ("CPAP",                p.massnahmen.cpap),
-            ("Heimlich (FK)",       p.massnahmen.heimlich),
-        ]
-        let maItems2: [(String,Bool)] = [
-            ("Peripher-venös",     p.massnahmen.peripherVenoes),
-            ("Defibrillation",     p.massnahmen.defibrillation),
-            ("Kardioversion",      p.massnahmen.kardioversion),
-            ("Intraossär",         p.massnahmen.intraossaer),
-            ("Tourniquet",         p.massnahmen.tourniquet),
-            ("Verband / Wundvers.",p.massnahmen.verband),
-            ("Beckenschlinge",     p.massnahmen.beckenschlinge),
-            ("Krisenintervention", p.massnahmen.krisenintervention),
-            ("Entbindung",         p.massnahmen.entbindung),
-        ]
-        let maItems3: [(String,Bool)] = [
-            ("Wärmeerhalt", p.massnahmen.waermeerhalt),
-            ("Kühlung",     p.massnahmen.kuehlung),
-        ]
-        let maItems4: [(String,Bool)] = [
-            ("OK-Hochlagerung",    p.massnahmen.okHochlagerung),
-            ("Flachlagerung",      p.massnahmen.flachlagerung),
-            ("Schocklagerung",     p.massnahmen.schocklagerung),
-            ("Herz-Tieflage",      p.massnahmen.herzTieflage),
-            ("Linksseitenlage",    p.massnahmen.linksseitenlage),
-            ("Sitzender Transport",p.massnahmen.sitzenderTransport),
-            ("Vakuummatratze",     p.massnahmen.vakuummatratze),
-            ("Schaufeltrage",      p.massnahmen.schaufeltrage),
-            ("Extremit.schienung", p.massnahmen.extremitaetenschienung),
-        ]
-
-        let allCols: [([(String,Bool)], CGFloat, CGFloat)] = [
-            (maItems1, m6x1, m6W1), (maItems2, m6x2, m6W2),
-            (maItems3, m6x3, m6W3), (maItems4, m6x4, m6W4),
-        ]
-        let maY0 = y
-        var maxColH: CGFloat = 0
-        for (items, cx, cw) in allCols {
-            let visible = items.filter { $0.1 }
-            let rows: [(String, Bool)]
-            if visible.isEmpty {
-                rows = [("—", false)]
-            } else {
-                rows = visible
-            }
-            for (i, (label, checked)) in rows.enumerated() {
-                let ry = maY0 + CGFloat(i) * maH
-                let bg: UIColor = i%2==0 ? .white : UIColor(white:0.97,alpha:1)
-                fillRect(CGRect(x:cx, y:ry, width:cw, height:maH), bg)
-                strokeRect(CGRect(x:cx, y:ry, width:cw, height:maH))
-                if label == "—" {
-                    txt("—", CGRect(x:cx+3, y:ry+1.5, width:cw-6, height:maH-3), font:f7, color:.lightGray)
-                } else {
-                    cb(label, checked, x:cx+2, y:ry+1, bs:7, lw:cw-12)
-                }
-            }
-            maxColH = max(maxColH, CGFloat(rows.count) * maH)
-        }
-        y = maY0 + maxColH + 1
-
-        let monItems: [(String,Bool)] = [
-            ("SpO₂", p.massnahmen.monSpo2),
-            ("NIBP", p.massnahmen.monNibp),
-            ("BZ", p.massnahmen.monBz),
-            ("EKG / AED-Monitor", p.massnahmen.monEkg),
-            ("Temperatur", p.massnahmen.monTemperatur),
-        ]
-        // Monitoring — checked items as single text line
-        let monChecked = monItems.filter { $0.1 }.map { $0.0 }
-        if !monChecked.isEmpty {
-            subHeader("Monitoring", x: m6x1, y: y, w: m6W1)
-            let monText = monChecked.joined(separator: " · ")
-            field("", monText, x: m6x1 + m6W1, y: y, w: rx - lx - m6W1, h: 9.5, lw: 0)
-            y += 9.5
-        }
-        y += 2
-
-        // Maßnahmen-Details (nicht-leere Textfelder)
-        var maDetails: [(String,String)] = []
-        if p.massnahmen.supraglottisch && !p.massnahmen.supraglottischTyp.isEmpty {
-            let gr = p.massnahmen.supraglottischGr.isEmpty ? "" : " Gr.\(p.massnahmen.supraglottischGr)"
-            maDetails.append(("EGA-Typ", "\(p.massnahmen.supraglottischTyp)\(gr)"))
-        }
-        if p.massnahmen.peripherVenoes && !p.massnahmen.peripherVenoesOrt.isEmpty {
-            var iv = p.massnahmen.peripherVenoesOrt
-            if !p.massnahmen.peripherVenoesGroesse.isEmpty { iv += " \(p.massnahmen.peripherVenoesGroesse)" }
-            if p.massnahmen.peripherVenoesAnz > 1 { iv += " (\(p.massnahmen.peripherVenoesAnz)×)" }
-            maDetails.append(("IV-Zugang", iv))
-        }
-        if p.massnahmen.tourniquet, let tz = p.massnahmen.tourniquetZeit {
-            maDetails.append(("Tourniquet Zeit", t(tz)))
-        }
-        if p.massnahmen.defibrillation {
-            maDetails.append(("Defi", "\(p.massnahmen.defiJoule) J × \(p.massnahmen.defiAnzahl)"))
-        }
-        if p.massnahmen.kardioversion {
-            maDetails.append(("Kardioversion", "\(p.massnahmen.kardioversionJoule) J"))
-        }
-        if p.massnahmen.cpap && !p.massnahmen.cpapMbar.isEmpty {
-            maDetails.append(("CPAP", "\(p.massnahmen.cpapMbar) mBar"))
-        }
-        if p.massnahmen.intraossaer && !p.massnahmen.intraossaerOrt.isEmpty {
-            maDetails.append(("IO-Zugang", p.massnahmen.intraossaerOrt))
-        }
-        if p.massnahmen.maschinelleBeatmung {
-            let beatTeile: [String] = [
-                p.massnahmen.tidalvolumen.isEmpty ? nil : "TV \(p.massnahmen.tidalvolumen)ml",
-                p.massnahmen.peep.isEmpty         ? nil : "PEEP \(p.massnahmen.peep)cmH₂O",
-                p.massnahmen.fio2.isEmpty         ? nil : "FiO₂ \(p.massnahmen.fio2)%",
-                p.massnahmen.beatmungsfrequenzMasch.isEmpty ? nil : "AF \(p.massnahmen.beatmungsfrequenzMasch)/min",
-            ].compactMap { $0 }
-            if !beatTeile.isEmpty {
-                maDetails.append(("Masch. Beatmung", beatTeile.joined(separator: " · ")))
-            }
-        }
-        if !p.massnahmen.sauerstoffLitMin.isEmpty { maDetails.append(("O₂ (l/min)", p.massnahmen.sauerstoffLitMin)) }
-        if !p.massnahmen.airwaySonstige.isEmpty  { maDetails.append(("Airway sonstige", p.massnahmen.airwaySonstige)) }
-        if !p.massnahmen.circSonstige.isEmpty    { maDetails.append(("Kreislauf sonstige", p.massnahmen.circSonstige)) }
-        if !p.massnahmen.weitereSonstige.isEmpty { maDetails.append(("Weitere sonstige", p.massnahmen.weitereSonstige)) }
-        if !p.massnahmen.lagerungSonstige.isEmpty { maDetails.append(("Lagerung sonstige", p.massnahmen.lagerungSonstige)) }
-        for (lbl, val) in maDetails {
-            if y + 10 > pageSize.height - 15 { break }
-            field(lbl, val, x:lx, y:y, w:rx-lx, h:10, lw:80)
-            y += 10
-        }
-
         // ── SECTION 7 Reanimation / Tod ───────────────────
         let rea = p.reanimation
         let reaRelevant = p.reanimationAktiv || rea.erstHelfer || rea.vorabTelefonRea || rea.aed || rea.dnrOrder || rea.khAufnahmeVorROSC
 
         if reaRelevant {
-            let r7W = (rx-lx) * 0.55
-            let r8W = (rx-lx) * 0.45
+            let r7W = leftW * 0.55
+            let r8W = leftW * 0.45
             let r8x = lx + r7W
 
             secHeader("7. Reanimation / Tod", x:lx, y:y, w:r7W)
@@ -1611,31 +1627,29 @@ struct DINPDFGenerator {
             y = r7y0 + CGFloat(r7RowsCount) * r7H + 2
 
             if !rea.freitext.isEmpty && y + 11 < pageSize.height - 15 {
-                let h = fieldH(rea.freitext, width: rx-lx-93)
-                field("Reanimation – Notizen", rea.freitext, x:lx, y:y, w:rx-lx, h:h, lw:90, multiline: true)
+                let h = fieldH(rea.freitext, width: leftW - 93)
+                field("Reanimation – Notizen", rea.freitext, x:lx, y:y, w:leftW, h:h, lw:90, multiline: true)
                 y += h
             }
         } else if let naca = p.notfallGeschehen.nacaScoreWert {
-            // Section 7 skipped — show NACA standalone at full width
-            secHeader("8. Ergebnis / NACA", x:lx, y:y, w:rx-lx)
+            secHeader("8. Ergebnis / NACA", x:lx, y:y, w:leftW)
             y += 11
-            field("NACA", naca.beschreibung, x:lx, y:y, w:rx-lx, h:10, lw:20)
+            field("NACA", naca.beschreibung, x:lx, y:y, w:leftW, h:10, lw:20)
             y += 12
         }
 
         // ── SECTION 9 Übergabe ────────────────────────────
-        secHeader("9. Übergabe / Transportziel / Einsatzbesonderheiten", x:lx, y:y, w:rx-lx)
+        secHeader("9. Übergabe / Transportziel / Einsatzbesonderheiten", x:lx, y:y, w:leftW)
         y += 11
 
-        // Transportziel Klinik
         let tzItems: [(String, Bool)] = [
             ("ZNA / Notaufnahme", p.ergebnis.transportzielZna),
             ("Stroke Unit",       p.ergebnis.transportzielStrokeUnit),
             ("Kath.-Labor",       p.ergebnis.transportzielKathLabor),
         ]
-        let tzColW = (rx - lx) / CGFloat(tzItems.count + 1)
-        fillRect(CGRect(x:lx, y:y, width:rx-lx, height:10), .white)
-        strokeRect(CGRect(x:lx, y:y, width:rx-lx, height:10))
+        let tzColW = leftW / CGFloat(tzItems.count + 1)
+        fillRect(CGRect(x:lx, y:y, width:leftW, height:10), .white)
+        strokeRect(CGRect(x:lx, y:y, width:leftW, height:10))
         for (i,(label,checked)) in tzItems.enumerated() {
             cb(label, checked, x:lx+CGFloat(i)*tzColW+2, y:y+1.5, bs:7, lw:tzColW-12)
         }
@@ -1645,26 +1659,26 @@ struct DINPDFGenerator {
         }
         y += 10
 
-        field("Übergabe an Rettungsmittel", p.uebergabeAn, x:lx, y:y, w:rx-lx, h:12, lw:100, hl:true)
+        field("Übergabe an Rettungsmittel", p.uebergabeAn, x:lx, y:y, w:leftW, h:12, lw:100, hl:true)
         y += 12
 
-        let p2ValW: CGFloat = rx - lx - 83
+        let p2ValW: CGFloat = leftW - 83
         let zustandH = fieldH(p.zustandBeiUebergabe, width: p2ValW)
-        field("Zustand bei Übergabe", p.zustandBeiUebergabe, x:lx, y:y, w:rx-lx, h:zustandH, lw:80, multiline: true)
+        field("Zustand bei Übergabe", p.zustandBeiUebergabe, x:lx, y:y, w:leftW, h:zustandH, lw:80, multiline: true)
         y += zustandH
         if !p.diagnose.diagnoseFreitext.isEmpty && y + 11 < pageSize.height - 15 {
             let h = fieldH(p.diagnose.diagnoseFreitext, width: p2ValW)
-            field("Diagnose-Freitext", p.diagnose.diagnoseFreitext, x:lx, y:y, w:rx-lx, h:h, lw:80, multiline: true)
+            field("Diagnose-Freitext", p.diagnose.diagnoseFreitext, x:lx, y:y, w:leftW, h:h, lw:80, multiline: true)
             y += h
         }
         if !p.ergebnis.anmerkungen.isEmpty && y + 11 < pageSize.height - 15 {
             let h = fieldH(p.ergebnis.anmerkungen, width: p2ValW)
-            field("Anmerkungen", p.ergebnis.anmerkungen, x:lx, y:y, w:rx-lx, h:h, lw:80, multiline: true)
+            field("Anmerkungen", p.ergebnis.anmerkungen, x:lx, y:y, w:leftW, h:h, lw:80, multiline: true)
             y += h
         }
         if !p.ergebnis.firstResponderBesonderheiten.isEmpty && y + 11 < pageSize.height - 15 {
             let h = fieldH(p.ergebnis.firstResponderBesonderheiten, width: p2ValW)
-            field("FR-Besonderheiten", p.ergebnis.firstResponderBesonderheiten, x:lx, y:y, w:rx-lx, h:h, lw:90, multiline: true)
+            field("FR-Besonderheiten", p.ergebnis.firstResponderBesonderheiten, x:lx, y:y, w:leftW, h:h, lw:90, multiline: true)
             y += h
         }
 
@@ -1680,7 +1694,7 @@ struct DINPDFGenerator {
             .map { "\($0.0) (\($0.1.rawValue))" }
             .joined(separator: " · ")
         if !besatzungNames.isEmpty && y + 11 < p2safe {
-            field("Besatzung", besatzungNames, x:lx, y:y, w:rx-lx, h:11, lw:42)
+            field("Besatzung", besatzungNames, x:lx, y:y, w:leftW, h:11, lw:42)
             y += 11
         }
 
@@ -1704,7 +1718,7 @@ struct DINPDFGenerator {
         ]
         let besH: CGFloat = 9.5
         let besPerCol = (besItems.count + 2) / 3
-        let besColW = (rx-lx) / 3
+        let besColW = leftW / 3
         let besBlockH = CGFloat(besPerCol) * besH
         if y + besBlockH < p2safe {
             for (i,(label,checked)) in besItems.enumerated() {
@@ -1723,16 +1737,16 @@ struct DINPDFGenerator {
         // ── Unterschrift ──────────────────────────────────
         let sigH: CGFloat = min(40, pageSize.height - y - 16)
         if sigH > 15 {
-            fillRect(CGRect(x:lx,y:y,width:rx-lx,height:sigH), .white)
-            strokeRect(CGRect(x:lx,y:y,width:rx-lx,height:sigH))
+            fillRect(CGRect(x:lx,y:y,width:leftW,height:sigH), .white)
+            strokeRect(CGRect(x:lx,y:y,width:leftW,height:sigH))
             let sigDate = DateFormatter()
             sigDate.dateFormat = "dd.MM.yyyy HH:mm"
-            let datumBreite: CGFloat = 160
+            let datumBreite: CGFloat = 140
             txt("Datum / Uhrzeit: \(sigDate.string(from: Date()))",
                 CGRect(x:lx+4, y:y+sigH-12, width:datumBreite, height:10), font:f7)
             txt("Unterschrift:", CGRect(x:lx+datumBreite+10, y:y+sigH-12, width:60, height:10), font:f7)
             if let data = p.unterschriftData, let img = UIImage(data: data) {
-                let sigW: CGFloat = rx - lx - datumBreite - 80
+                let sigW: CGFloat = leftW - datumBreite - 80
                 let sigRect = CGRect(x: lx + datumBreite + 74, y: y + 2, width: sigW, height: sigH - 14)
                 img.draw(in: sigRect)
             }
