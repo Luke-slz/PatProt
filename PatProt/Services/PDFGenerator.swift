@@ -26,6 +26,7 @@ struct DINPDFGenerator {
 
     // Fonts
     private static let f5  = UIFont.systemFont(ofSize: 5.5)
+    private static let f5b = UIFont.boldSystemFont(ofSize: 5.5)
     private static let f6  = UIFont.systemFont(ofSize: 6.0)
     private static let f6b = UIFont.boldSystemFont(ofSize: 6.0)
     private static let f7  = UIFont.systemFont(ofSize: 7.0)
@@ -946,7 +947,7 @@ struct DINPDFGenerator {
             ("etCO₂",      "",                                     ""),
             ("BZ (mg/dL)", p.disability.blutzucker.map { String(format:"%.0f",$0) } ?? "", u.bz),
             ("Temp (°C)",  p.exposure.temperatur.map   { String(format:"%.1f",$0) } ?? "", u.temp),
-            ("Schmerz",    p.disability.schmerz > 0 ? "\(p.disability.schmerz)/10" : "", u.schmerz > 0 ? "\(u.schmerz)/10" : ""),
+            ("Schmerz",    p.disability.schmerz > 0 ? "\(p.disability.schmerz)/10" : "", p.uebergabeBefunde.schmerz > 0 ? "\(p.uebergabeBefunde.schmerz)/10" : ""),
         ]
         for (i,(label,ankVal,uebVal)) in mvItems.enumerated() {
             let ry = mvColY + CGFloat(i)*mvH
