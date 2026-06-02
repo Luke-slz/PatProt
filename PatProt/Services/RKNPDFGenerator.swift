@@ -473,7 +473,139 @@ struct RKNPDFGenerator {
         vline(x4, y+8.5, s3Bottom - y - 8.5)
         hline(lx, s3Bottom, W-8)
     }
-    private static func drawSection4(protokoll: EinsatzProtokoll) {}
+    private static func drawSection4(protokoll: EinsatzProtokoll) {
+        let d = protokoll.diagnose
+        let lx: CGFloat = 4
+        let y0: CGFloat = 465   // under section 3 — calibrate after first export
+
+        secHeader("4. Diagnose", x: lx, y: y0, w: W-8)
+        subHeader("4.1 Erkrankung", x: lx, y: y0+10, w: W-8)
+
+        let cols = 6
+        let cw = (W-8) / CGFloat(cols)
+        let y = y0 + 20
+
+        // ── Spalte 1: ZNS ────────────────────────────────────────────────────
+        var cx = lx+2; var cy = y
+        txt("ZNS", CGRect(x: cx, y: cy, width: cw-4, height: 7), font: f5b); cy += 8
+        for (l, c) in [
+            ("Akutes neuro. Defizit", d.znsAkutNeuro),
+            ("ICB",                   false),
+            ("SAB",                   d.znsSab),
+            ("Transplantat",          d.znsTransplantat),
+            ("Status Epilepticus",    d.znsEpilepsie),
+            ("Fieberkrampf",          d.znsFieberkrampf),
+        ] as [(String,Bool)] { cbLabel(l, checked: c, x: cx, y: cy, labelW: cw-12); cy += 7 }
+
+        // ── Spalte 2: Herz-Kreislauf ─────────────────────────────────────────
+        cx = lx+cw+2; cy = y
+        txt("Herz-Kreislauf", CGRect(x: cx, y: cy, width: cw-4, height: 7), font: f5b); cy += 8
+        for (l, c) in [
+            ("ACS",                    d.herzAcs),
+            ("STEMI",                  d.herzStemi),
+            ("VW",                     d.herzVW),
+            ("HW",                     d.herzHW),
+            ("kardiogener Schock",     false),
+            ("Rhythmusstörung",        d.herzRhythmus),
+            ("PM/ICD Fehlfunktion",    d.herzPmFehlfunktion),
+            ("Herzinsuffizienz dekmp.",d.herzDekomp),
+            ("hypert. Notfall",        d.herzHypertonerNotfall),
+            ("Aortenaneurysma",        d.herzAortenaneurysma),
+            ("Hypotonie",              d.herzHypotonie),
+            ("Synkope",                d.herzSynkope),
+            ("Thrombose/Embolie",      d.herzThromboseEmbolie),
+            ("Schock unkl. Genese",    d.herzSchockUnklarGenese),
+            ("orthostat. Regul.",      d.herzOrthostatisch),
+            ("unkl. Thoraxschmerz",    d.herzUnklarerThoraxschmerz),
+        ] as [(String,Bool)] { cbLabel(l, checked: c, x: cx, y: cy, labelW: cw-12); cy += 7 }
+
+        // ── Spalte 3: Atmung ─────────────────────────────────────────────────
+        cx = lx+2*cw+2; cy = y
+        txt("Atmung", CGRect(x: cx, y: cy, width: cw-4, height: 7), font: f5b); cy += 8
+        for (l, c) in [
+            ("Asthma",                 d.atmungAsthma),
+            ("exazerbiert (COPD)",     d.atmungExazerbiert),
+            ("Pneumonie/Bronchitis",   d.atmungPneumonie),
+            ("LTB",                    d.atmungLtb),
+            ("Epiglottitis",           d.atmungEpiglottitis),
+        ] as [(String,Bool)] { cbLabel(l, checked: c, x: cx, y: cy, labelW: cw-12); cy += 7 }
+        cy += 4
+        txt("Psychiatrie", CGRect(x: cx, y: cy, width: cw-4, height: 7), font: f5b); cy += 8
+        for (l, c) in [
+            ("psych. Akutzustand",  d.psychAkut),
+            ("psychische Krise",    d.psychKrise),
+            ("Manie",               d.psychManie),
+            ("Intoxikation",        d.psychIntoxikation),
+            ("Entzug/Delir",        d.psychEntzug),
+            ("Suizidal",            d.psychSuizidal),
+        ] as [(String,Bool)] { cbLabel(l, checked: c, x: cx, y: cy, labelW: cw-12); cy += 7 }
+
+        // ── Spalte 4: Stoffwechsel + Abdomen ─────────────────────────────────
+        cx = lx+3*cw+2; cy = y
+        txt("Stoffwechsel", CGRect(x: cx, y: cy, width: cw-4, height: 7), font: f5b); cy += 8
+        for (l, c) in [
+            ("Exsikkose",           d.stoffExsikkose),
+            ("Hypoglykämie",        d.stoffHypoglykämie),
+            ("Hyperglykämie",       d.stoffHyperglykämie),
+            ("Urämie",              d.stoffUremie),
+            ("bek. diab.pflichtig", d.stoffDia),
+        ] as [(String,Bool)] { cbLabel(l, checked: c, x: cx, y: cy, labelW: cw-12); cy += 7 }
+        cy += 4
+        txt("Abdomen", CGRect(x: cx, y: cy, width: cw-4, height: 7), font: f5b); cy += 8
+        for (l, c) in [
+            ("akutes Abdomen",  d.abdoAkutes),
+            ("Koliken",         d.abdoKoliken),
+            ("GIB oben",        d.abdoGibOben),
+            ("GIB unten",       d.abdoGibUnten),
+            ("Galle/Niere",     d.abdoGalleNiere),
+        ] as [(String,Bool)] { cbLabel(l, checked: c, x: cx, y: cy, labelW: cw-12); cy += 7 }
+
+        // ── Spalte 5: Gyn/Geb + Infektionen ─────────────────────────────────
+        cx = lx+4*cw+2; cy = y
+        txt("Gyn./Geb.-hilfe", CGRect(x: cx, y: cy, width: cw-4, height: 7), font: f5b); cy += 8
+        for (l, c) in [
+            ("Schwangerschaft >35.SSW", d.gynSchwangerschaft35),
+            ("Geburt",                  d.gynGeburt),
+            ("Eklampsie",               d.gynEklampsie),
+            ("Extrauterine Grav.",       false),
+            ("vaginale Blutung",        d.gynVaginalblutung),
+        ] as [(String,Bool)] { cbLabel(l, checked: c, x: cx, y: cy, labelW: cw-12); cy += 7 }
+        cy += 4
+        txt("Infektionen", CGRect(x: cx, y: cy, width: cw-4, height: 7), font: f5b); cy += 8
+        for (l, c) in [
+            ("HIV",              d.infektHiv),
+            ("hochkont. Erk.",   d.infektHighToxSars),
+            ("Gastroenteritis",  d.infektGastro),
+            ("Anaphylaxie Gr.1/2", d.infektAnaphylaxie12),
+            ("SIDS",             d.infektSids),
+            ("Intoxikation",     d.infektIntoxikation),
+            ("unkl. Fieber",     false),
+            ("offen/MRSA",       false),
+            ("MRE",              false),
+            ("Hepatitis",        false),
+        ] as [(String,Bool)] { cbLabel(l, checked: c, x: cx, y: cy, labelW: cw-12); cy += 7 }
+
+        // ── Spalte 6: Sonstiges ──────────────────────────────────────────────
+        cx = lx+5*cw+2; cy = y
+        txt("Sonstiges", CGRect(x: cx, y: cy, width: cw-4, height: 7), font: f5b); cy += 8
+        for (l, c) in [
+            ("Anaphylaxie Gr.3/4", d.infektAnaphylaxie12),
+            ("unkl. Lumbago",     d.infektAkuteLumbalgie),
+            ("palliative Situation", d.infektPalliativ),
+            ("med. Behandlungskpl.", d.infektBehandlungKompl),
+            ("urologische Erkr.",  d.infektUrologisch),
+        ] as [(String,Bool)] { cbLabel(l, checked: c, x: cx, y: cy, labelW: cw-12); cy += 7 }
+
+        // ── Spalten-Trennlinien ──────────────────────────────────────────────
+        let diagBottom = y0 + 20 + 140
+        for i in 1..<cols {
+            vline(lx + CGFloat(i)*cw, y0+10, diagBottom - y0 - 10)
+        }
+        hline(lx, diagBottom, W-8)
+
+        // ── Diagnose/Leitsymptom ─────────────────────────────────────────────
+        labeledField("Diagnose/Leitsymptom", d.leitsymptom, x: lx, y: diagBottom, w: W-8, h: 14)
+    }
     private static func drawSection42(protokoll: EinsatzProtokoll) {}
     private static func drawSection5(protokoll: EinsatzProtokoll) {}
     private static func drawVerlaufsgrafik(protokoll: EinsatzProtokoll) {}
