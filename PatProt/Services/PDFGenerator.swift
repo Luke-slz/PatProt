@@ -1052,35 +1052,10 @@ struct DINPDFGenerator {
         txt("GCS Üb.: \(ub.gcsGesamt)/15",
             CGRect(x:xD+bW_d/2+2, y:gcsRy+1.5, width:bW_d/2-4, height:dCbH-3), font:f6b)
 
-        // Psyche-Checkboxen hängen an Spalte D (nach den D-Zeilen)
-        let psycheItems: [(String, Bool, Bool)] = [
-            ("unauffällig",  p.psyche.unauffaellig,    false),
-            ("ängstlich",    p.psyche.aengstlich,      false),
-            ("wahnhaft",     p.psyche.wahnhaft,        false),
-            ("suizidal",     p.psyche.suizidal,        false),
-            ("erregt",       p.psyche.erregt,          false),
-            ("verlangsamt",  p.psyche.verlangsamt,     false),
-            ("depressiv",    p.psyche.depressiv,       false),
-            ("euphorisch",   p.psyche.euphorisch,      false),
-            ("verwirrt",     p.psyche.verwirrt,        false),
-            ("motor.unruhig",p.psyche.motorischUnruhig,false),
-            ("aggressiv",    p.psyche.aggressiv,       false),
-            ("n.beurteilb.", p.psyche.nichtBeurteilbar,false),
-        ]
-        // Render Psyche-Spalte unterhalb D-Neurologie in Spalte D
-        let psycheY = mvColY + dRenderedH + dCbH
-        subHeader("Psyche □ unauffällig", x: xD, y: psycheY, w: bW_d, h: 8.0)
-        var psyY = psycheY + 8.0
-        for (i, (label, checked, _)) in psycheItems.enumerated() {
-            let bg: UIColor = i%2==0 ? .white : UIColor(white:0.97,alpha:1)
-            fillRect(CGRect(x:xD, y:psyY, width:bW_d, height:dCbH), bg)
-            strokeRect(CGRect(x:xD, y:psyY, width:bW_d, height:dCbH))
-            cb(label, checked, x:xD+2, y:psyY+0.5, bs:6, lw:bW_d-10)
-            psyY += dCbH
-        }
+        // Psyche wird als kompakte Zeile NACH Section 3 angezeigt, nicht als eigene Spalte
 
         let mvAbsH = CGFloat(mvItems.count) * mvH
-        let dAbsH  = dRenderedH + dCbH + 8.0 + CGFloat(psycheItems.count)*dCbH
+        let dAbsH  = dRenderedH + dCbH
         y = mvColY + max(mvAbsH, abRenderedH, cRenderedH, dAbsH) + 2
 
         // Hautfarbe / Verletzungen kompakt
