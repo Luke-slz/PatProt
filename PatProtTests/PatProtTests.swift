@@ -375,12 +375,26 @@ struct PatProtTests {
         let lines = ["AOK NORDWEST", "MUSTERMANN", "Erika", "15.11.1975", "B234567890"]
         let result = KVKarteParser.parse(lines: lines)
         #expect(result.kostentraeger == "AOK NORDWEST")
+    }
+
+    @Test func kvParserNachNameNachAllCapsKasse() {
+        let lines = ["AOK NORDWEST", "MUSTERMANN", "Erika", "15.11.1975", "B234567890"]
+        let result = KVKarteParser.parse(lines: lines)
         #expect(result.nachname == "Mustermann")
         #expect(result.vorname == "Erika")
     }
 
-    @Test func kvParserLeer() {
+    @Test func kvParserGarbage() {
         let result = KVKarteParser.parse(lines: ["12345", "---", ""])
+        #expect(result.vorname.isEmpty)
+        #expect(result.nachname.isEmpty)
+        #expect(result.versicherungsNummer.isEmpty)
+        #expect(result.geburtsDatum == nil)
+        #expect(result.kostentraeger.isEmpty)
+    }
+
+    @Test func kvParserEchterLeer() {
+        let result = KVKarteParser.parse(lines: [])
         #expect(result.vorname.isEmpty)
         #expect(result.nachname.isEmpty)
         #expect(result.versicherungsNummer.isEmpty)

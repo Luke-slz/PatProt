@@ -1,4 +1,4 @@
-import Vision
+import Vision   // VNRecognizeTextRequest – used in Task 3
 import UIKit
 
 struct ParsedKVDaten {
