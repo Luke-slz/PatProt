@@ -15,7 +15,11 @@ enum KVKarteParser {
         guard let cgImage = image.cgImage else { return ParsedKVDaten() }
         return await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
-                let request = VNRecognizeTextRequest { req, _ in
+                let request = VNRecognizeTextRequest { req, error in
+                    guard error == nil else {
+                        continuation.resume(returning: ParsedKVDaten())
+                        return
+                    }
                     let observations = req.results as? [VNRecognizedTextObservation] ?? []
                     let lines = observations
                         .compactMap { obs -> (String, CGFloat)? in
@@ -29,7 +33,11 @@ enum KVKarteParser {
                 request.recognitionLanguages = ["de-DE", "en-US"]
                 request.recognitionLevel = .accurate
                 request.usesLanguageCorrection = false   // preserve KVNR codes exactly
-                try? VNImageRequestHandler(cgImage: cgImage, options: [:]).perform([request])
+                do {
+                    try VNImageRequestHandler(cgImage: cgImage, options: [:]).perform([request])
+                } catch {
+                    continuation.resume(returning: ParsedKVDaten())
+                }
             }
         }
     }
