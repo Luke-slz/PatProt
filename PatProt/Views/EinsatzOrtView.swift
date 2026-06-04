@@ -22,10 +22,6 @@ struct EinsatzOrtView: View {
     @State private var zeigeEinsatzNrNumpad = false
     @State private var zeigeGewichtNumpad = false
     @State private var zeigeGeburtsdatumNumpad = false
-    @State private var zeigeKVKameraAuswahl = false
-    @State private var zeigeKVKamera = false
-    @State private var zeigeKVBibliothek = false
-
     private var zeitFehler: [String] {
         let alarm = protokoll.einsatzOrt.alarmzeit
         let ankunft = protokoll.einsatzOrt.ankunftzeit
@@ -190,34 +186,6 @@ struct EinsatzOrtView: View {
                 AlterFeld(patientDaten: $protokoll.patientDaten)
                 TextField("Versicherungsnummer", text: $protokoll.patientDaten.versicherungsNummer)
                 TextField("Kostenträger / Krankenkasse", text: $protokoll.patientDaten.kostentraeger)
-                Button {
-                    zeigeKVKameraAuswahl = true
-                } label: {
-                    Label(
-                        protokoll.kvFotos.isEmpty ? "KV-Karte fotografieren" : "KV-Karte ersetzen",
-                        systemImage: "creditcard.viewfinder"
-                    )
-                    .foregroundStyle(Color("RDOrange"))
-                }
-                .buttonStyle(.plain)
-                if let foto = protokoll.kvFotos.first,
-                   let img = UIImage(contentsOfFile: foto.bildURL.path) {
-                    HStack {
-                        Image(uiImage: img)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(height: 60)
-                            .cornerRadius(6)
-                        Spacer()
-                        Button(role: .destructive) {
-                            foto.loeschen()
-                            protokoll.kvFotos = []
-                        } label: {
-                            Image(systemName: "trash")
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
             } header: {
                 Label("Patient", systemImage: "person.circle")
             }
@@ -332,37 +300,6 @@ struct EinsatzOrtView: View {
                 protokoll.patientDaten.gewicht = Double(val.replacingOccurrences(of: ",", with: "."))
             }
         }
-        .confirmationDialog("KV-Karte hinzufügen", isPresented: $zeigeKVKameraAuswahl) {
-            Button("Kamera") {
-                if UIImagePickerController.isSourceTypeAvailable(.camera) {
-                    zeigeKVKamera = true
-                }
-            }
-            Button("Aus Fotoauswahl") { zeigeKVBibliothek = true }
-            Button("Abbrechen", role: .cancel) {}
-        }
-        .sheet(isPresented: $zeigeKVKamera) {
-            KameraController(onCapture: { bild in
-                kvFotoHinzufuegen(bild)
-                zeigeKVKamera = false
-            }, onAbbrechen: { zeigeKVKamera = false })
-        }
-        .sheet(isPresented: $zeigeKVBibliothek) {
-            PHBilderPicker { bild in
-                kvFotoHinzufuegen(bild)
-                zeigeKVBibliothek = false
-            }
-        }
-    }
-
-    private func kvFotoHinzufuegen(_ bild: UIImage) {
-        protokoll.kvFotos.forEach { $0.loeschen() }
-        protokoll.kvFotos = []
-        guard let data = bild.jpegData(compressionQuality: 0.7) else { return }
-        let dateiname = "kvfoto_\(UUID().uuidString).jpg"
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent(dateiname)
-        guard (try? data.write(to: url, options: [.atomicWrite, .completeFileProtection])) != nil else { return }
-        protokoll.kvFotos.append(FotoEintrag(bildDateiname: dateiname))
     }
 }
 

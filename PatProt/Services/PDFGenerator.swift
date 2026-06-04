@@ -324,7 +324,6 @@ struct DINPDFGenerator {
                 drawFotoPages(ctx: ctx,
                               mediFotos: protokoll.medikamentFotos,
                               patFotos: protokoll.fotos,
-                              kvFotos: protokoll.kvFotos,
                               erstelltAm: protokoll.erstelltAm)
             }
             return url
@@ -480,8 +479,8 @@ struct DINPDFGenerator {
             ("Ausfahrt",   ""),
             ("Ankunft",    t(p.einsatzOrt.ankunftzeit)),
             ("Alarm. NA",  ""),
-            ("Abfahrt",    t(p.einsatzOrt.abfahrtzeit)),
-            ("Übergabe",   t(p.einsatzOrt.krankenHausAnkunft)),
+            ("Abfahrt",    t(p.einsatzOrt.endeZeit)),
+            ("Übergabe",   t(p.einsatzOrt.uebergabeZeit)),
             ("Einsatzzeit",""),
             ("Ende",       ""),
         ]
@@ -1069,115 +1068,214 @@ struct DINPDFGenerator {
         secHeader("4. Diagnose", x:lx, y:y, w:rx-lx)
         y += 11
 
-        // Leitsymptom (full width)
-        let leitsymptomText = p.diagnose.leitsymptom.isEmpty
-            ? (p.diagnose.verdachtsdiagnosen.first { $0.wahrscheinlichkeit == .fuehrend }?.name ?? "")
-            : p.diagnose.leitsymptom
-        field("Leitsymptom / Diagnose", leitsymptomText,
-              x:lx, y:y, w:rx-lx, h:13, lw:85, hl:true)
-        y += 13
+        let diag = p.diagnose
+        let rH: CGFloat = 7.0
+        let shH: CGFloat = 8.5   // sub-header height
+        // 4 columns, col4 gets remainder
+        let c1w: CGFloat = 148, c2w: CGFloat = 148, c3w: CGFloat = 148
+        let c1x = lx, c2x = lx+c1w, c3x = lx+c1w+c2w
+        let c4x = lx+c1w+c2w+c3w, c4w = rx-c4x
 
-        // Verdachtsdiagnosen
-        if !p.diagnose.verdachtsdiagnosen.isEmpty {
-            let diagText = DiagnoseWahrscheinlichkeit.allCases
-                .flatMap { stufe in p.diagnose.verdachtsdiagnosen.filter { $0.wahrscheinlichkeit == stufe }.map { "\($0.name) (\(stufe.rawValue))" } }
-                .joined(separator: " · ")
-            let h = fieldH(diagText, width: rx-lx-88)
-            field("Verdachtsdiagnosen", diagText, x:lx, y:y, w:rx-lx, h:h, lw:85, multiline: true)
+        // helper: draw sub-header on blue with "□ Sonstige" label on right
+        func diagSubHeader(_ title: String, x: CGFloat, y: CGFloat, w: CGFloat) {
+            fillRect(CGRect(x:x,y:y,width:w,height:shH), subBlue)
+            txt(title, CGRect(x:x+2,y:y+1.5,width:w-48,height:shH-3), font:f6b, color:.white)
+            let bx = x+w-44, bRect = CGRect(x:bx,y:y+2,width:5,height:5)
+            UIColor(white:0.85,alpha:1).setStroke()
+            let bp = UIBezierPath(rect:bRect); bp.lineWidth=0.4; bp.stroke()
+            txt("Sonstige", CGRect(x:bx+6,y:y+1.5,width:38,height:6), font:f5, color:.white)
+        }
+
+        // helper: one standard checkbox row
+        func diagRow(_ label: String, _ checked: Bool, x: CGFloat, y: CGFloat, w: CGFloat, even: Bool) {
+            fillRect(CGRect(x:x,y:y,width:w,height:rH), even ? .white : UIColor(white:0.97,alpha:1))
+            strokeRect(CGRect(x:x,y:y,width:w,height:rH))
+            cb(label, checked, x:x+2, y:y+0.5, bs:5.5, lw:w-10)
+        }
+
+        // helper: inline multi-checkbox row (for STEMI+VW+HW etc.)
+        func diagRowInline(_ parts: [(String,Bool)], x: CGFloat, y: CGFloat, w: CGFloat, even: Bool) {
+            fillRect(CGRect(x:x,y:y,width:w,height:rH), even ? .white : UIColor(white:0.97,alpha:1))
+            strokeRect(CGRect(x:x,y:y,width:w,height:rH))
+            // first part gets ~55% width, rest split equally
+            let restW = w * 0.45 / CGFloat(parts.count - 1)
+            let firstW = w * 0.55
+            var cx = x + 2
+            for (i, (label, checked)) in parts.enumerated() {
+                let partW = i == 0 ? firstW : restW
+                cb(label, checked, x:cx, y:y+0.5, bs:5.5, lw:partW-8)
+                cx += partW
+            }
+        }
+
+        let sec4StartY = y
+
+        // ── COL 1: ZNS + Herz-Kreislauf ──────────────────
+        var c1y = sec4StartY
+        diagSubHeader("ZNS", x:c1x, y:c1y, w:c1w); c1y += shH
+        let znsItems: [(String,Bool)] = [
+            ("akutes zentral-neurol. Defizit", diag.znsAkutNeuro),
+            ("Schlaganfall", diag.znsSchlaganfall),
+            ("ICB", diag.znsIcb),
+            ("SAB", diag.znsSab),
+            ("Krampfanfall", diag.znsKrampfanfall),
+            ("Status Epilepticus", diag.znsEpilepsie),
+            ("Fieberkrampf", diag.znsFieberkrampf),
+        ]
+        for (i,(lbl,chk)) in znsItems.enumerated() { diagRow(lbl,chk,x:c1x,y:c1y,w:c1w,even:i%2==0); c1y+=rH }
+
+        diagSubHeader("Herz-Kreislauf", x:c1x, y:c1y, w:c1w); c1y += shH
+        diagRow("ACS", diag.herzAcs, x:c1x, y:c1y, w:c1w, even:true); c1y += rH
+        diagRowInline([("STEMI",diag.herzStemi),("VW",diag.herzVW),("HW",diag.herzHW)], x:c1x,y:c1y,w:c1w,even:false); c1y+=rH
+        diagRow("kardiogener Schock", diag.herzKardiogenerSchock, x:c1x, y:c1y, w:c1w, even:true); c1y += rH
+        diagRowInline([("Rhythmusstörung",diag.herzRhythmus),("tachy.",diag.herzRhythmusTachy),("brady.",diag.herzRhythmusBrady)], x:c1x,y:c1y,w:c1w,even:false); c1y+=rH
+        let herzRest: [(String,Bool)] = [
+            ("PM/ICD Fehlfunktion", diag.herzPmFehlfunktion),
+            ("Lungenembolie", diag.herzLungenembolie),
+            ("dekomp. Herzinsuffizienz", diag.herzDekomp),
+            ("hypertensiver Notfall", diag.herzHypertonerNotfall),
+            ("Aortenaneurysma", diag.herzAortenaneurysma),
+            ("Hypotonie", diag.herzHypotonie),
+            ("Synkope", diag.herzSynkope),
+            ("Thrombose/Embolie", diag.herzThromboseEmbolie),
+            ("Herz-Kreislauf-Stillstand", diag.herzStillstand),
+            ("Schock unklarer Genese", diag.herzSchockUnklarGenese),
+            ("orthostatische Fehlregulation", diag.herzOrthostatisch),
+            ("unklarer Thoraxschmerz", diag.herzUnklarerThoraxschmerz),
+        ]
+        for (i,(lbl,chk)) in herzRest.enumerated() { diagRow(lbl,chk,x:c1x,y:c1y,w:c1w,even:i%2==0); c1y+=rH }
+
+        // ── COL 2: Atmung + Stoffwechsel + Abdomen ────────
+        var c2y = sec4StartY
+        diagSubHeader("Atmung", x:c2x, y:c2y, w:c2w); c2y += shH
+        let atmItems: [(String,Bool)] = [
+            ("Asthma", diag.atmungAsthma),
+            ("Status asthm.", diag.atmungStatusAsthmaticus),
+            ("exacerbierte COPD", diag.atmungExazerbiert),
+            ("Aspiration", diag.atmungAspiration),
+            ("Pneumonie / Bronchitis", diag.atmungPneumonie),
+            ("Hyperventilationstetanie", diag.atmungHyperventilation),
+            ("LTB (L/T/Bronchitis)", diag.atmungLtb),
+            ("Epiglottitis", diag.atmungEpiglottitis),
+            ("Spontanpneumothorax", diag.atmungSpontanpneumothorax),
+            ("Hämoptysis", diag.atmungHaemoptysis),
+            ("unkl. Dyspnoe", diag.atmungUnklareDyspnoe),
+            ("Lungenödem", diag.atmungLungenodem),
+            ("Pseudokrupp", diag.atmungPseudokrupp),
+        ]
+        for (i,(lbl,chk)) in atmItems.enumerated() { diagRow(lbl,chk,x:c2x,y:c2y,w:c2w,even:i%2==0); c2y+=rH }
+
+        diagSubHeader("Stoffwechsel", x:c2x, y:c2y, w:c2w); c2y += shH
+        let stoffItems: [(String,Bool)] = [
+            ("Exsikkose", diag.stoffExsikkose),
+            ("Hypoglycämie", diag.stoffHypoglykämie),
+            ("Hyperglycämie", diag.stoffHyperglykämie),
+            ("Urämie/ANV", diag.stoffUremie),
+            ("bek. dialysepflichtig", diag.stoffDialyse),
+        ]
+        for (i,(lbl,chk)) in stoffItems.enumerated() { diagRow(lbl,chk,x:c2x,y:c2y,w:c2w,even:i%2==0); c2y+=rH }
+
+        diagSubHeader("Abdomen", x:c2x, y:c2y, w:c2w); c2y += shH
+        diagRow("akutes Abdomen", diag.abdoAkutes, x:c2x, y:c2y, w:c2w, even:true); c2y+=rH
+        diagRow("Kolik allgemein", diag.abdoKoliken, x:c2x, y:c2y, w:c2w, even:false); c2y+=rH
+        diagRowInline([("GIB",diag.abdoGibOben||diag.abdoGibUnten),("obere",diag.abdoGibOben),("untere",diag.abdoGibUnten)], x:c2x,y:c2y,w:c2w,even:true); c2y+=rH
+        diagRow("Gallenkolik", diag.abdoGallenkolik||diag.abdoGalleNiere, x:c2x, y:c2y, w:c2w, even:false); c2y+=rH
+        diagRow("Nierenkolik", diag.abdoNierenkolik, x:c2x, y:c2y, w:c2w, even:true); c2y+=rH
+
+        // ── COL 3: Psychiatrie + Gyn + Infektionen ────────
+        var c3y = sec4StartY
+        diagSubHeader("Psychiatrie", x:c3x, y:c3y, w:c3w); c3y += shH
+        let psychItems: [(String,Bool)] = [
+            ("psych. Ausnahmezustand", diag.psychAkut),
+            ("psychosoz. Krise", diag.psychKrise),
+            ("Depressionen", diag.psychDepressionen),
+            ("Manie", diag.psychManie),
+            ("Intoxikation", diag.psychIntoxikation),
+            ("Entzug/Delir", diag.psychEntzug),
+            ("Suizidalität", diag.psychSuizidal),
+        ]
+        for (i,(lbl,chk)) in psychItems.enumerated() { diagRow(lbl,chk,x:c3x,y:c3y,w:c3w,even:i%2==0); c3y+=rH }
+
+        diagSubHeader("Gyn./Geb.-hilfe", x:c3x, y:c3y, w:c3w); c3y += shH
+        let gynItems: [(String,Bool)] = [
+            ("Schwangerschaft > 35. SSW", diag.gynSchwangerschaft35),
+            ("Geburt", diag.gynGeburt),
+            ("Extrauterine Gravidität", diag.gynExtrauterine || diag.gynSonstige),
+            ("Eklampsie", diag.gynEklampsie),
+            ("vaginale Blutung", diag.gynVaginalblutung),
+        ]
+        for (i,(lbl,chk)) in gynItems.enumerated() { diagRow(lbl,chk,x:c3x,y:c3y,w:c3w,even:i%2==0); c3y+=rH }
+
+        diagSubHeader("Infektionen", x:c3x, y:c3y, w:c3w); c3y += shH
+        diagRow("unkl. Fieber", diag.infektUnklarFieber, x:c3x, y:c3y, w:c3w, even:true); c3y+=rH
+        diagRow("Meningitis/Enzephalitis", diag.infektMeningitis, x:c3x, y:c3y, w:c3w, even:false); c3y+=rH
+        diagRowInline([("offen -MRSA-",diag.infektMrsaOffen),("gedeckt",diag.infektMrsaGedeckt)], x:c3x,y:c3y,w:c3w,even:true); c3y+=rH
+        diagRow("MRE", diag.infektMre, x:c3x, y:c3y, w:c3w, even:false); c3y+=rH
+        diagRow("Hepatitis", diag.infektHepatitis, x:c3x, y:c3y, w:c3w, even:true); c3y+=rH
+
+        // ── COL 4: HIV-Gruppe + Sonstiges ─────────────────
+        var c4y = sec4StartY
+        let hivItems: [(String,Bool)] = [
+            ("HIV", diag.infektHiv),
+            ("TBC", diag.infektTbc),
+            ("hochkontag. Erreger (SARS)", diag.infektHighToxSars),
+            ("Gastroenteritis", diag.infektGastro),
+        ]
+        for (i,(lbl,chk)) in hivItems.enumerated() { diagRow(lbl,chk,x:c4x,y:c4y,w:c4w,even:i%2==0); c4y+=rH }
+
+        // "Sonstiges" header with "□ unklar" label on right
+        fillRect(CGRect(x:c4x,y:c4y,width:c4w,height:shH), subBlue)
+        txt("Sonstiges", CGRect(x:c4x+2,y:c4y+1.5,width:c4w-50,height:shH-3), font:f6b, color:.white)
+        let ubx = c4x+c4w-46
+        let ubRect2 = CGRect(x:ubx,y:c4y+2,width:5,height:5)
+        UIColor(white:0.85,alpha:1).setStroke()
+        let ubp2 = UIBezierPath(rect:ubRect2); ubp2.lineWidth=0.4; ubp2.stroke()
+        txt("unklar", CGRect(x:ubx+7,y:c4y+1.5,width:39,height:6), font:f5, color:.white)
+        c4y += shH
+
+        let sonstItems: [(String,Bool)] = [
+            ("Anaphylaxie Grad 1/2", diag.infektAnaphylaxie12),
+            ("Anaphylaxie Grad 3/4", diag.infektAnaphylaxie34),
+            ("sept. Schock", diag.infektSeptSchock),
+            ("Hitzeerschöpf./Hitzschl.", diag.infektHitze),
+            ("Unterkül./Erfrierung", diag.infektUnterku),
+            ("Ertrinken", diag.infektErtrinken),
+            ("SIDS", diag.infektSids),
+            ("Intoxikation", diag.infektIntoxikation),
+            ("akute Lumbago", diag.infektAkuteLumbalgie),
+            ("palliative Situation", diag.infektPalliativ),
+            ("med. Behandlungskomplik.", diag.infektBehandlungKompl),
+            ("Epistaxis", diag.infektEpistaxis),
+            ("urologische Erkrankung", diag.infektUrologisch),
+        ]
+        for (i,(lbl,chk)) in sonstItems.enumerated() { diagRow(lbl,chk,x:c4x,y:c4y,w:c4w,even:i%2==0); c4y+=rH }
+
+        // Advance y past tallest column
+        y = max(c1y, c2y, c3y, c4y)
+
+        // Diagnose/Leitsymptom boxes (full width, like reference form)
+        let leitsymptomText = diag.leitsymptom.isEmpty
+            ? (diag.verdachtsdiagnosen.first { $0.wahrscheinlichkeit == .fuehrend }?.name ?? "")
+            : diag.leitsymptom
+        fillRect(CGRect(x:lx, y:y, width:rx-lx, height:9), vLightB)
+        strokeRect(CGRect(x:lx, y:y, width:rx-lx, height:9))
+        txt("Diagnose/Leitsymptom", CGRect(x:lx+2,y:y+1.5,width:90,height:6), font:f6b, color:colBlue)
+        y += 9
+        let leitsH: CGFloat = 13
+        fillRect(CGRect(x:lx, y:y, width:rx-lx, height:leitsH), hlYellow)
+        strokeRect(CGRect(x:lx, y:y, width:rx-lx, height:leitsH))
+        if !leitsymptomText.isEmpty {
+            txt(leitsymptomText, CGRect(x:lx+3,y:y+2,width:rx-lx-6,height:leitsH-4), font:f7b)
+        }
+        y += leitsH
+
+        if !p.diagnose.diagnoseFreitext.isEmpty {
+            let h = fieldH(p.diagnose.diagnoseFreitext, width: rx-lx-6, minH: 11)
+            fillRect(CGRect(x:lx,y:y,width:rx-lx,height:h), .white)
+            strokeRect(CGRect(x:lx,y:y,width:rx-lx,height:h))
+            mtxt(p.diagnose.diagnoseFreitext, CGRect(x:lx+3,y:y+2,width:rx-lx-6,height:h-4), font:f6)
             y += h
         }
-
-        let col1Items: [(String,Bool)] = [
-            ("Akutes neurol. Defizit", p.diagnose.znsAkutNeuro),
-            ("SAB / ICB", p.diagnose.znsSab),
-            ("Status Epilepticus", p.diagnose.znsEpilepsie),
-            ("Fieberkrampf", p.diagnose.znsFieberkrampf),
-            ("Transplantation", p.diagnose.znsTransplantat),
-        ]
-        let col1b: [(String,Bool)] = [
-            ("Asthma", p.diagnose.atmungAsthma),
-            ("Exazerbierte COPD", p.diagnose.atmungExazerbiert),
-            ("Pneumonie", p.diagnose.atmungPneumonie),
-            ("LTB", p.diagnose.atmungLtb),
-            ("Epiglottitis", p.diagnose.atmungEpiglottitis),
-        ]
-
-        let col2Items: [(String,Bool)] = [
-            ("ACS", p.diagnose.herzAcs),
-            ("STEMI", p.diagnose.herzStemi),
-            ("VW (Vorderwand)", p.diagnose.herzVW),
-            ("HW (Hinterwand)", p.diagnose.herzHW),
-            ("PM/ICD-Fehlfunktion", p.diagnose.herzPmFehlfunktion),
-            ("Rhythmusstörung", p.diagnose.herzRhythmus),
-            ("Hypertensiver Notfall", p.diagnose.herzHypertonerNotfall),
-            ("Aortenaneurysma", p.diagnose.herzAortenaneurysma),
-            ("Hypotonie", p.diagnose.herzHypotonie),
-            ("Dekomp. Herzinsuff.", p.diagnose.herzDekomp),
-            ("Synkope", p.diagnose.herzSynkope),
-            ("Thrombose / Embolie", p.diagnose.herzThromboseEmbolie),
-            ("Schock unkl. Genese", p.diagnose.herzSchockUnklarGenese),
-            ("Orthostatisch", p.diagnose.herzOrthostatisch),
-            ("Unkl. Thoraxschmerz", p.diagnose.herzUnklarerThoraxschmerz),
-        ]
-
-        let col3Items: [(String,Bool)] = [
-            ("HIV", p.diagnose.infektHiv),
-            ("Hochkontagiös/SARS", p.diagnose.infektHighToxSars),
-            ("Gastrointestinal", p.diagnose.infektGastro),
-            ("Anaphylaxie Gr 1/2", p.diagnose.infektAnaphylaxie12),
-            ("SIDS", p.diagnose.infektSids),
-            ("Intoxikation", p.diagnose.infektIntoxikation),
-            ("Akute Lumbago", p.diagnose.infektAkuteLumbalgie),
-            ("Palliative Situation", p.diagnose.infektPalliativ),
-            ("Behandlungskompl.", p.diagnose.infektBehandlungKompl),
-            ("Urologisch", p.diagnose.infektUrologisch),
-        ]
-
-        let psyItems: [(String,Bool)] = [
-            ("Psych. Akutzustand", p.diagnose.psychAkut),
-            ("Psych. Krise", p.diagnose.psychKrise),
-            ("Manie / Depression", p.diagnose.psychManie),
-            ("Intoxikation/Drogen", p.diagnose.psychIntoxikation),
-            ("Entzug / Delir", p.diagnose.psychEntzug),
-            ("Suizidal", p.diagnose.psychSuizidal),
-        ]
-        let gynItems: [(String,Bool)] = [
-            ("Schwangersch. >35. SSW", p.diagnose.gynSchwangerschaft35),
-            ("Geburt", p.diagnose.gynGeburt),
-            ("Eklampsie", p.diagnose.gynEklampsie),
-            ("Vaginale Blutung", p.diagnose.gynVaginalblutung),
-            ("Extrauterine Gravidität", p.diagnose.gynSonstige),
-        ]
-        let stoffItems: [(String,Bool)] = [
-            ("Exsikkose", p.diagnose.stoffExsikkose),
-            ("Hypoglykämie", p.diagnose.stoffHypoglykämie),
-            ("Hyperglykämie", p.diagnose.stoffHyperglykämie),
-            ("Urämie / ARI", p.diagnose.stoffUremie),
-            ("Diabetes", p.diagnose.stoffDia),
-            ("Akutes Abdomen", p.diagnose.abdoAkutes),
-            ("Kolik", p.diagnose.abdoKoliken),
-            ("GIB oben", p.diagnose.abdoGibOben),
-            ("GIB unten", p.diagnose.abdoGibUnten),
-            ("Gallen-/Nierenstein", p.diagnose.abdoGalleNiere),
-        ]
-
-        // Section 4: alle Checkboxen in 6 Spalten nebeneinander (wie Referenzprotokoll)
-        let dCols: [(String, [(String,Bool)])] = [
-            ("ZNS / Neurologie",       col1Items),
-            ("Atmung",                 col1b),
-            ("Herz-Kreislauf",         col2Items),
-            ("Psychiatrie",            psyItems),
-            ("Gyn / Geburtshilfe",     gynItems),
-            ("Infektionen / Sonstiges",col3Items + stoffItems),
-        ]
-        let dColW = (rx - lx) / CGFloat(dCols.count)
-        var maxColH: CGFloat = 0
-        for (i, (title, items)) in dCols.enumerated() {
-            let cx = lx + CGFloat(i) * dColW
-            let h = cbCol(title, items: items, x: cx, y: y, w: dColW, rowH: 7.0)
-            maxColH = max(maxColH, h)
-        }
-        y += maxColH + 2
 
         // Footer
         drawFooter(erstelltAm: p.erstelltAm)
@@ -1201,45 +1299,166 @@ struct DINPDFGenerator {
         return .keine
     }
 
+    /// Zeichnet zwei Körpersilhouetten (Rücken + Vorder) nebeneinander, ohne Text innen.
+    /// Layout wie Referenzformular: li [RÜCKEN] re  |  re [VORDER] li
     private static func drawBodySilhouette(_ m: VerletzungsMatrix, rect: CGRect) {
-        let x = rect.minX, y = rect.minY, w = rect.width, h = rect.height
-        let sx = w / 60.0, sy = h / 130.0
-        let cr = 1.5 * min(sx, sy)
 
-        func rr(_ rx: CGFloat, _ ry: CGFloat, _ rw: CGFloat, _ rh: CGFloat) -> UIBezierPath {
-            UIBezierPath(roundedRect: CGRect(x: x + rx*sx, y: y + ry*sy, width: rw*sx, height: rh*sy),
-                         cornerRadius: cr)
-        }
-        func oval(_ rx: CGFloat, _ ry: CGFloat, _ rw: CGFloat, _ rh: CGFloat) -> UIBezierPath {
-            UIBezierPath(ovalIn: CGRect(x: x + rx*sx, y: y + ry*sy, width: rw*sx, height: rh*sy))
-        }
-        func fill(_ path: UIBezierPath, _ grad: Verletzungsgrad) {
-            gradColor(grad).setFill(); UIColor.darkGray.setStroke()
-            path.lineWidth = 0.5; path.fill(); path.stroke()
+        let lblW: CGFloat = 8          // Breite für "li"/"re" Label
+        let gap:  CGFloat = 4          // Abstand zwischen den Figuren
+        let figTotalW = (rect.width - gap) / 2   // Breite pro Figur inkl. Label
+        let bodyW = figTotalW - lblW * 2         // Breite des Körpers
+        let bodyH = rect.height - 2              // Höhe des Körpers (volle Höhe nutzen)
+
+        /// Zeichnet eine Figur. ox/oy = linke obere Ecke des Körper-Bereichs (ohne Label-Spalten)
+        func drawFigure(ox: CGFloat, oy: CGFloat, isFront: Bool) {
+            let bx = ox, by = oy
+            let bw = bodyW, bh = bodyH
+
+            // Proportionen (relativ zu bh)
+            let headR  = bw * 0.18           // Kopfradius
+            let neckH  = bh * 0.055
+            let neckW  = bw * 0.18
+            let torsoH = bh * 0.28
+            let torsoW = bw * 0.50
+            let hipH   = bh * 0.07
+            let hipW   = bw * 0.46
+            let armW   = bw * 0.15
+            let uArmH  = bh * 0.20
+            let lArmH  = bh * 0.18
+            let uLegW  = bw * 0.20
+            let uLegH  = bh * 0.24
+            let lLegH  = bh * 0.24
+            let jR     = bw * 0.055          // Gelenk-Radius
+
+            let cx  = bx + bw * 0.5           // Körpermitte
+            var curY = by + 2
+
+            // ── Kopf ──
+            let headGrad = isFront ? higherGrad(m.schaedelHirn, m.gesicht) : m.schaedelHirn
+            let headRect = CGRect(x: cx - headR, y: curY, width: headR*2, height: headR*2)
+            let headPath = UIBezierPath(ovalIn: headRect)
+            gradColor(headGrad).setFill(); UIColor.darkGray.setStroke()
+            headPath.lineWidth = 0.5; headPath.fill(); headPath.stroke()
+            // Gesicht (Vorderfigur): kleines Gesicht-Oval unten im Kopf
+            if isFront && m.gesicht != .keine {
+                let faceR = headR * 0.55
+                let faceY = curY + headR * 0.7
+                let facePath = UIBezierPath(ovalIn: CGRect(x:cx-faceR, y:faceY, width:faceR*2, height:faceR))
+                gradColor(m.gesicht).setFill(); facePath.fill()
+            }
+            curY += headR * 2 + 1
+
+            // ── Hals ──
+            let neckRect = CGRect(x: cx - neckW/2, y: curY, width: neckW, height: neckH)
+            let neckPath = UIBezierPath(roundedRect: neckRect, cornerRadius: 1)
+            gradColor(m.hws).setFill(); neckPath.lineWidth = 0.5; neckPath.fill(); neckPath.stroke()
+            curY += neckH
+
+            // ── Schultergelenke ──
+            let shoulderY = curY + 1
+            let lShoulderX = cx - torsoW/2 - armW/2
+            let rShoulderX = cx + torsoW/2 + armW/2
+
+            // ── Torso (Thorax + Abdomen) ──
+            let thoraxH = torsoH * 0.55
+            let abdoH   = torsoH * 0.45
+            let torsoX  = cx - torsoW/2
+
+            let thoraxRect = CGRect(x: torsoX, y: curY, width: torsoW, height: thoraxH)
+            let thoraxPath = UIBezierPath(roundedRect: thoraxRect, cornerRadius: 1.5)
+            gradColor(m.thorax).setFill(); thoraxPath.lineWidth = 0.5; thoraxPath.fill(); thoraxPath.stroke()
+
+            let abdoRect = CGRect(x: torsoX, y: curY + thoraxH, width: torsoW, height: abdoH)
+            let abdoPath = UIBezierPath(roundedRect: abdoRect, cornerRadius: 1.5)
+            gradColor(m.abdomen).setFill(); abdoPath.lineWidth = 0.5; abdoPath.fill(); abdoPath.stroke()
+
+            // BWS-Streifen (Rückenfigur)
+            if !isFront && m.bwsLws != .keine {
+                let spineW: CGFloat = bw * 0.08
+                let spinePath = UIBezierPath(roundedRect: CGRect(x:cx-spineW/2, y:curY, width:spineW, height:torsoH), cornerRadius:1)
+                gradColor(m.bwsLws).setFill(); spinePath.fill()
+            }
+            curY += torsoH
+
+            // ── Becken / Hüfte ──
+            let hipRect = CGRect(x: cx - hipW/2, y: curY, width: hipW, height: hipH)
+            let hipPath = UIBezierPath(roundedRect: hipRect, cornerRadius: 1.5)
+            gradColor(m.becken).setFill(); hipPath.lineWidth = 0.5; hipPath.fill(); hipPath.stroke()
+            let hipMidY = curY + hipH/2
+            curY += hipH
+
+            // ── Arme ──
+            let armX_L = cx - torsoW/2 - armW
+            let armX_R = cx + torsoW/2
+            // Oberarm
+            let uArmPathL = UIBezierPath(roundedRect: CGRect(x:armX_L, y:shoulderY, width:armW, height:uArmH), cornerRadius:1.5)
+            let uArmPathR = UIBezierPath(roundedRect: CGRect(x:armX_R, y:shoulderY, width:armW, height:uArmH), cornerRadius:1.5)
+            gradColor(m.obereExtrem).setFill()
+            [uArmPathL, uArmPathR].forEach { $0.lineWidth = 0.5; $0.fill(); $0.stroke() }
+            // Ellenbogengelenke
+            let elbowY = shoulderY + uArmH
+            UIBezierPath(ovalIn: CGRect(x:armX_L+armW/2-jR, y:elbowY-jR, width:jR*2, height:jR*2)).fill()
+            UIBezierPath(ovalIn: CGRect(x:armX_R+armW/2-jR, y:elbowY-jR, width:jR*2, height:jR*2)).fill()
+            // Unterarm
+            let lArmPathL = UIBezierPath(roundedRect: CGRect(x:armX_L, y:elbowY, width:armW, height:lArmH), cornerRadius:1.5)
+            let lArmPathR = UIBezierPath(roundedRect: CGRect(x:armX_R, y:elbowY, width:armW, height:lArmH), cornerRadius:1.5)
+            gradColor(m.obereExtrem).setFill()
+            [lArmPathL, lArmPathR].forEach { $0.lineWidth = 0.5; $0.fill(); $0.stroke() }
+            // Schultergelenke (nach Armen zeichnen, damit sie oben liegen)
+            UIColor.darkGray.setStroke(); gradColor(m.obereExtrem).setFill()
+            [CGPoint(x: lShoulderX, y: shoulderY + armW/2),
+             CGPoint(x: rShoulderX, y: shoulderY + armW/2)].forEach {
+                UIBezierPath(ovalIn: CGRect(x:$0.x-jR, y:$0.y-jR, width:jR*2, height:jR*2)).fill()
+            }
+
+            // ── Beine ──
+            let legSpacing: CGFloat = hipW * 0.05
+            let legX_L = cx - hipW/2 + legSpacing
+            let legX_R = cx + legSpacing
+            // Oberschenkel
+            let uLegPathL = UIBezierPath(roundedRect: CGRect(x:legX_L, y:curY, width:uLegW, height:uLegH), cornerRadius:1.5)
+            let uLegPathR = UIBezierPath(roundedRect: CGRect(x:legX_R, y:curY, width:uLegW, height:uLegH), cornerRadius:1.5)
+            gradColor(m.untereExtrem).setFill()
+            [uLegPathL, uLegPathR].forEach { $0.lineWidth = 0.5; $0.fill(); $0.stroke() }
+            // Hüftgelenke
+            UIColor.darkGray.setStroke()
+            [CGPoint(x: legX_L+uLegW/2, y: hipMidY),
+             CGPoint(x: legX_R+uLegW/2, y: hipMidY)].forEach {
+                UIBezierPath(ovalIn: CGRect(x:$0.x-jR, y:$0.y-jR, width:jR*2, height:jR*2)).fill()
+            }
+            // Knie
+            let kneeY = curY + uLegH
+            UIBezierPath(ovalIn: CGRect(x:legX_L+uLegW/2-jR, y:kneeY-jR, width:jR*2, height:jR*2)).fill()
+            UIBezierPath(ovalIn: CGRect(x:legX_R+uLegW/2-jR, y:kneeY-jR, width:jR*2, height:jR*2)).fill()
+            // Unterschenkel
+            let lLegPathL = UIBezierPath(roundedRect: CGRect(x:legX_L, y:kneeY, width:uLegW, height:lLegH), cornerRadius:1.5)
+            let lLegPathR = UIBezierPath(roundedRect: CGRect(x:legX_R, y:kneeY, width:uLegW, height:lLegH), cornerRadius:1.5)
+            gradColor(m.untereExtrem).setFill()
+            [lLegPathL, lLegPathR].forEach { $0.lineWidth = 0.5; $0.fill(); $0.stroke() }
+            // Knöchel
+            let ankleY = kneeY + lLegH
+            UIColor.darkGray.setStroke()
+            UIBezierPath(ovalIn: CGRect(x:legX_L+uLegW/2-jR, y:ankleY-jR, width:jR*2, height:jR*2)).fill()
+            UIBezierPath(ovalIn: CGRect(x:legX_R+uLegW/2-jR, y:ankleY-jR, width:jR*2, height:jR*2)).fill()
         }
 
-        fill(oval(18, 0, 24, 22),   higherGrad(m.schaedelHirn, m.gesicht))
-        fill(rr(24, 22, 12,  7),    m.hws)
-        fill(rr(12, 29, 36, 24),    m.thorax)
-        fill(rr(12, 53, 36, 18),    m.abdomen)
-        fill(rr(10, 71, 40, 13),    m.becken)
-        fill(rr( 0, 29, 11, 38),    m.obereExtrem)
-        fill(rr(49, 29, 11, 38),    m.obereExtrem)
-        fill(rr(11, 84, 18, 46),    m.untereExtrem)
-        fill(rr(31, 84, 18, 46),    m.untereExtrem)
-        if m.bwsLws != .keine { fill(rr(12, 30, 3.5, 40), m.bwsLws) }
-        if m.weichteile != .keine { fill(rr(55, 50, 4, 12), m.weichteile) }
+        // ── Figur 1: Rückenansicht (links) ──
+        let f1x = rect.minX + lblW        // Körper beginnt nach "li"
+        let f2x = rect.minX + figTotalW + gap + lblW  // Körper Figur 2
+        let fy  = rect.minY + 2
 
-        // Region labels (tiny)
-        let lf = UIFont.systemFont(ofSize: 4.5)
-        func lbl(_ s: String, _ rx: CGFloat, _ ry: CGFloat) {
-            txt(s, CGRect(x: x+rx*sx, y: y+ry*sy, width: 24*sx, height: 6*sy), font:lf, color:.darkGray, align:.center)
-        }
-        lbl("Schädel", 18,  4);  lbl("Gesicht", 18, 11)
-        lbl("HWS",    24, 23);   lbl("Thorax",  12, 38)
-        lbl("Abdomen",12, 58);   lbl("Becken",  10, 75)
-        lbl("OE",      0, 45);   lbl("OE",      49, 45)
-        lbl("UE",     11,104);   lbl("UE",      31,104)
+        drawFigure(ox: f1x, oy: fy, isFront: false)
+        drawFigure(ox: f2x, oy: fy, isFront: true)
+
+        // ── li / re Labels — in der Mitte der Figur-Höhe ──
+        let lf = UIFont.boldSystemFont(ofSize: 5.5)
+        let ly = rect.minY + rect.height * 0.42   // leicht unterhalb der Mitte (Hüft-Höhe)
+        // Rückenfigur: "li" links, "re" rechts
+        txt("li", CGRect(x: rect.minX,                        y: ly, width: lblW, height: 7), font: lf, color: .darkGray, align: .center)
+        txt("re", CGRect(x: rect.minX + figTotalW - lblW,     y: ly, width: lblW, height: 7), font: lf, color: .darkGray, align: .center)
+        // Vorderfigur: "re" links, "li" rechts
+        txt("re", CGRect(x: rect.minX + figTotalW + gap,                   y: ly, width: lblW, height: 7), font: lf, color: .darkGray, align: .center)
+        txt("li", CGRect(x: rect.minX + rect.width - lblW,    y: ly, width: lblW, height: 7), font: lf, color: .darkGray, align: .center)
     }
 
     // ─────────────────────────────────────────────────────
@@ -1416,95 +1635,157 @@ struct DINPDFGenerator {
         // ═══════════════════════════════════════════════════
 
         // ── SECTION 4.2 Verletzungen ──────────────────────
-        let v2TotalW = leftW * 0.42
-        let v2RW     = leftW * 0.58
-        let v2Rx = lx + v2TotalW
-        let v2BodyW: CGFloat = 72          // silhouette column
-        let v2TableX = lx + v2BodyW
-        let v2TableW = v2TotalW - v2BodyW  // table column
+        // Layout (wie Originalformular):
+        //  [Regionen-Tabelle] | [Silhouette] | [Spez.Traumen + Unfallart]
+        //  [Verletzungsmuster (cb)] | [Unfallmechanismus (cb)]
+        let d = p.diagnose
+        let v2LeftW:  CGFloat = leftW * 0.27   // Regionen-Tabelle
+        let v2MidW:   CGFloat = leftW * 0.25   // Silhouette
+        let v2RightW: CGFloat = leftW * 0.48   // Spez. Traumen + Unfallart
+        let v2MidX  = lx + v2LeftW
+        let v2RightX = v2MidX + v2MidW
 
-        secHeader("4.2 Verletzungen", x:lx, y:y, w:v2TotalW)
-        secHeader("Spezielle Traumen", x:v2Rx, y:y, w:min(v2RW, maaX - v2Rx))
+        secHeader("4.2 Verletzungen", x:lx, y:y, w:v2LeftW + v2MidW)
+        cb("keine", d.verletzungNichtBekannt, x:lx + v2LeftW + v2MidW - 35, y:y+2.5, bs:6, lw:30)
+        secHeader("Spezielle Traumen", x:v2RightX, y:y, w:v2RightW * 0.5)
+        secHeader("Unfallart", x:v2RightX + v2RightW * 0.5, y:y, w:v2RightW * 0.5)
         y += 11
 
-        // Region table (right of silhouette)
-        let regions: [(String, Verletzungsgrad)] = [
-            ("Schädel-Hirn", p.diagnose.verletzungsMatrix.schaedelHirn),
-            ("Gesicht",      p.diagnose.verletzungsMatrix.gesicht),
-            ("HWS",          p.diagnose.verletzungsMatrix.hws),
-            ("Thorax",       p.diagnose.verletzungsMatrix.thorax),
-            ("Abdomen",      p.diagnose.verletzungsMatrix.abdomen),
-            ("BWS / LWS",    p.diagnose.verletzungsMatrix.bwsLws),
-            ("Becken",       p.diagnose.verletzungsMatrix.becken),
-            ("Ob. Extrem.",  p.diagnose.verletzungsMatrix.obereExtrem),
-            ("Un. Extrem.",  p.diagnose.verletzungsMatrix.untereExtrem),
-            ("Weichteile",   p.diagnose.verletzungsMatrix.weichteile),
-        ]
-        let colW3 = v2TableW / 3
-        fillRect(CGRect(x:v2TableX, y:y, width:v2TableW, height:9), vLightB)
-        txt("Region",  CGRect(x:v2TableX+2,           y:y+1, width:colW3-4,   height:7), font:f6b, color:colBlue)
-        txt("leicht",  CGRect(x:v2TableX+colW3+2,     y:y+1, width:colW3-4,   height:7), font:f6b, color:colBlue, align:.center)
-        txt("schwer",  CGRect(x:v2TableX+colW3*2+2,   y:y+1, width:colW3-4,   height:7), font:f6b, color:colBlue, align:.center)
-        strokeRect(CGRect(x:v2TableX, y:y, width:v2TableW, height:9))
+        // ── Regionen-Tabelle (links) ──
         let regH: CGFloat = 10
-        let regY0 = y + 9
+        let rColW = v2LeftW / 3
+        // Header
+        fillRect(CGRect(x:lx, y:y, width:v2LeftW, height:8), vLightB)
+        txt("Region", CGRect(x:lx+2, y:y+1, width:rColW-2, height:6), font:f5b, color:colBlue)
+        txt("leicht", CGRect(x:lx+rColW,     y:y+1, width:rColW-2, height:6), font:f5b, color:colBlue, align:.center)
+        txt("schwer", CGRect(x:lx+rColW*2,   y:y+1, width:rColW-2, height:6), font:f5b, color:colBlue, align:.center)
+        strokeRect(CGRect(x:lx, y:y, width:v2LeftW, height:8))
+        let regY0 = y + 8
+        let regions: [(String, Verletzungsgrad)] = [
+            ("Schädel-Hirn", d.verletzungsMatrix.schaedelHirn),
+            ("Gesicht",      d.verletzungsMatrix.gesicht),
+            ("HWS",          d.verletzungsMatrix.hws),
+            ("Thorax",       d.verletzungsMatrix.thorax),
+            ("Abdomen",      d.verletzungsMatrix.abdomen),
+            ("BWS / LWS",    d.verletzungsMatrix.bwsLws),
+            ("Becken",       d.verletzungsMatrix.becken),
+            ("Ob. Extrem.",  d.verletzungsMatrix.obereExtrem),
+            ("Un. Extrem.",  d.verletzungsMatrix.untereExtrem),
+            ("Weichteile",   d.verletzungsMatrix.weichteile),
+        ]
         for (i,(region,grad)) in regions.enumerated() {
             let ry = regY0 + CGFloat(i)*regH
             let bg: UIColor = i%2==0 ? .white : UIColor(white:0.97,alpha:1)
-            fillRect(CGRect(x:v2TableX, y:ry, width:v2TableW, height:regH), bg)
-            strokeRect(CGRect(x:v2TableX, y:ry, width:v2TableW, height:regH))
-            vline(v2TableX+colW3, ry, regH); vline(v2TableX+colW3*2, ry, regH)
-            txt(region, CGRect(x:v2TableX+2, y:ry+1.5, width:colW3-4, height:regH-3), font:f6)
-            cb("", grad == .leicht, x:v2TableX+colW3+colW3/2-4, y:ry+1.5, bs:7, lw:0)
-            cb("", grad == .schwer, x:v2TableX+colW3*2+colW3/2-4, y:ry+1.5, bs:7, lw:0)
+            fillRect(CGRect(x:lx, y:ry, width:v2LeftW, height:regH), bg)
+            strokeRect(CGRect(x:lx, y:ry, width:v2LeftW, height:regH))
+            vline(lx+rColW, ry, regH); vline(lx+rColW*2, ry, regH)
+            txt(region, CGRect(x:lx+2, y:ry+1.5, width:rColW-4, height:regH-3), font:f5)
+            cb("", grad == .leicht, x:lx+rColW+rColW/2-4,   y:ry+1.5, bs:7, lw:0)
+            cb("", grad == .schwer, x:lx+rColW*2+rColW/2-4, y:ry+1.5, bs:7, lw:0)
         }
 
-        // Verletzungsmuster + art
-        let vmY = regY0 + CGFloat(regions.count)*regH
-        field("Verletzungsmuster", p.diagnose.verletzungsMuster,
-              x:v2TableX, y:vmY, w:v2TableW, h:10, lw:65)
-        field("Verletzungsart", p.diagnose.verletzungsArt,
-              x:v2TableX, y:vmY+10, w:v2TableW, h:10, lw:55)
+        let regTableBottom = regY0 + CGFloat(regions.count)*regH
 
-        // Body silhouette (left of table)
-        let silhH = 9 + CGFloat(regions.count)*regH + 20
-        let silhRect = CGRect(x:lx+2, y:y+1, width:v2BodyW-4, height:silhH-2)
+        // ── Silhouette (Mitte) ──
+        // Silhouette: startet bei regY0 (erste Tabellenzeile), genau so hoch wie die Tabelle
+        let silhH = CGFloat(regions.count) * regH
+        let silhRect = CGRect(x:v2MidX+1, y:regY0, width:v2MidW-2, height:silhH)
         if let cgCtx = UIGraphicsGetCurrentContext() {
-            cgCtx.saveGState()
-            cgCtx.clip(to: silhRect)
-            drawBodySilhouette(p.diagnose.verletzungsMatrix, rect: silhRect)
+            cgCtx.saveGState(); cgCtx.clip(to: silhRect)
+            drawBodySilhouette(d.verletzungsMatrix, rect: silhRect)
             cgCtx.restoreGState()
         } else {
-            drawBodySilhouette(p.diagnose.verletzungsMatrix, rect: silhRect)
+            drawBodySilhouette(d.verletzungsMatrix, rect: silhRect)
         }
 
-        // Spezielle Traumen (right side)
-        let spezItems: [(String,Bool)] = [
-            ("Verbrennung / Verbrühung", p.diagnose.spezVerbrVerbrh),
-            ("Tauchunfall", p.diagnose.spezTauchunfall),
-            ("Elektrounfall", p.diagnose.spezElektrounfall),
-            ("PKW / LKW-Insasse", p.diagnose.spezPkwLkw),
-            ("Motorradfahrer", p.diagnose.spezMotorrad),
-            ("Fahrradfahrer", p.diagnose.spezFahrrad),
-            ("Fußgänger", p.diagnose.spezFussgaenger),
-            ("Sturz > 3m Höhe", p.diagnose.spezSturzHoehe),
-            ("And. Verkehrsunfall", p.diagnose.spezAndVerkehr),
-            ("Maschinenunfall", p.diagnose.spezMaschine),
-            ("Gewaltvergehen", p.diagnose.spezGewalt),
-            ("Anderer Unfall", p.diagnose.spezAndererUnfall),
-            ("Nicht bekannt", p.diagnose.verletzungNichtBekannt),
+        // ── Spezielle Traumen (rechts, 2 Spalten) ──
+        let spezColW = v2RightW / 2
+        let spezTraumen: [(String,Bool)] = [
+            ("Verbr./Verbrüh.",     d.spezVerbrVerbrh),
+            ("Inhalationstrauma",   d.spezInhalationstrauma),
+            ("Elektrounfall",       d.spezElektrounfall),
+            ("Verätzung",           d.spezVeraetzung),
+            ("Tauchunfall",         d.spezTauchunfall),
+            ("Sonstige",            d.spezSonstige),
         ]
-        let spezH: CGFloat = 10
-        let spezY0 = y
-        for (i,(label,checked)) in spezItems.enumerated() {
-            let ry = spezY0 + CGFloat(i)*spezH
-            let bg: UIColor = i%2==0 ? .white : UIColor(white:0.97,alpha:1)
-            fillRect(CGRect(x:v2Rx,y:ry,width:v2RW,height:spezH), bg)
-            strokeRect(CGRect(x:v2Rx,y:ry,width:v2RW,height:spezH))
-            cb(label, checked, x:v2Rx+2, y:ry+1.5, bs:7, lw:v2RW-12)
+        let stRows = (spezTraumen.count + 1) / 2  // ceiling
+        for row in 0..<stRows {
+            let ry = y + CGFloat(row)*regH
+            for col in 0..<2 {
+                let idx = row*2 + col
+                guard idx < spezTraumen.count else { continue }
+                let (label, checked) = spezTraumen[idx]
+                let cx = v2RightX + CGFloat(col)*spezColW
+                let bg: UIColor = row%2==0 ? .white : UIColor(white:0.97,alpha:1)
+                fillRect(CGRect(x:cx, y:ry, width:spezColW, height:regH), bg)
+                strokeRect(CGRect(x:cx, y:ry, width:spezColW, height:regH))
+                cb(label, checked, x:cx+2, y:ry+1.5, bs:6, lw:spezColW-10)
+            }
         }
 
-        y = max(vmY + 20, spezY0 + CGFloat(spezItems.count)*spezH) + 2
+        // ── Unfallart (rechts, 2 Spalten, unterhalb Spez.Traumen) ──
+        let uaY = y + CGFloat(stRows)*regH + 1
+        fillRect(CGRect(x:v2RightX, y:uaY, width:v2RightW, height:7), vLightB)
+        txt("Unfallart", CGRect(x:v2RightX+2, y:uaY+1, width:v2RightW*0.5-4, height:5), font:f5b, color:colBlue)
+        cb("nicht bekannt", d.verletzungNichtBekannt,
+           x:v2RightX+v2RightW*0.5, y:uaY+1, bs:6, lw:v2RightW*0.5-8)
+        strokeRect(CGRect(x:v2RightX, y:uaY, width:v2RightW, height:7))
+        let unfallart: [(String,Bool)] = [
+            ("PKW / LKW-Insasse",   d.spezPkwLkw),
+            ("Motorradfahrer",      d.spezMotorrad),
+            ("Fahrradfahrer",       d.spezFahrrad),
+            ("Fußg. angefahren",    d.spezFussgaenger),
+            ("And. Verkehrsm.",     d.spezAndVerkehr),
+            ("Maschinenunfall",     d.spezMaschine),
+            ("Sturz > 3m",          d.spezSturzHoehe),
+            ("Sturz < 3m",          d.spezSturzKlein),
+            ("Schlag",              d.spezSchlag),
+            ("Schuss",              d.spezSchuss),
+            ("Stich",               d.spezStich),
+            ("Gewaltverbrechen",    d.spezGewalt),
+            ("Verschüttung",        d.spezVerschuettung),
+            ("Andere Unfallart",    d.spezAndererUnfall),
+        ]
+        let uaRows = (unfallart.count + 1) / 2
+        for row in 0..<uaRows {
+            let ry = uaY + 7 + CGFloat(row)*regH
+            for col in 0..<2 {
+                let idx = row*2 + col
+                guard idx < unfallart.count else { continue }
+                let (label, checked) = unfallart[idx]
+                let cx = v2RightX + CGFloat(col)*spezColW
+                let bg: UIColor = row%2==0 ? .white : UIColor(white:0.97,alpha:1)
+                fillRect(CGRect(x:cx, y:ry, width:spezColW, height:regH), bg)
+                strokeRect(CGRect(x:cx, y:ry, width:spezColW, height:regH))
+                cb(label, checked, x:cx+2, y:ry+1.5, bs:6, lw:spezColW-10)
+            }
+        }
+
+        let v2Bottom = max(regTableBottom, uaY + 7 + CGFloat(uaRows)*regH)
+
+        // ── Verletzungsmuster + Unfallmechanismus (volle Breite, je 1 Zeile) ──
+        let botH: CGFloat = 9
+        let botLblW: CGFloat = 58
+        let botCbW = (leftW - botLblW) / 3
+
+        fillRect(CGRect(x:lx, y:v2Bottom,    width:leftW, height:botH), vLightB)
+        strokeRect(CGRect(x:lx, y:v2Bottom,  width:leftW, height:botH))
+        txt("Verletzungsmuster", CGRect(x:lx+2, y:v2Bottom+1.5, width:botLblW-4, height:botH-3), font:f5b, color:colBlue)
+        vline(lx+botLblW, v2Bottom, botH)
+        cb("Einzelverletzung",   d.verletzungEinzel,     x:lx+botLblW+2,           y:v2Bottom+1.5, bs:6, lw:botCbW-10)
+        cb("Mehrfachverletzung", d.verletzungMehrfach,   x:lx+botLblW+botCbW+2,    y:v2Bottom+1.5, bs:6, lw:botCbW-10)
+        cb("Polytrauma",         d.verletzungPolytrauma, x:lx+botLblW+botCbW*2+2,  y:v2Bottom+1.5, bs:6, lw:botCbW-10)
+
+        let umBotY = v2Bottom + botH
+        fillRect(CGRect(x:lx, y:umBotY,   width:leftW, height:botH), vLightB)
+        strokeRect(CGRect(x:lx, y:umBotY, width:leftW, height:botH))
+        txt("Unfallmechanismus", CGRect(x:lx+2, y:umBotY+1.5, width:botLblW-4, height:botH-3), font:f5b, color:colBlue)
+        vline(lx+botLblW, umBotY, botH)
+        cb("Stumpf",        d.unfallmechStumpf,       x:lx+botLblW+2,           y:umBotY+1.5, bs:6, lw:botCbW-10)
+        cb("Penetrierend",  d.unfallmechPenetrierend, x:lx+botLblW+botCbW+2,    y:umBotY+1.5, bs:6, lw:botCbW-10)
+        cb("Nicht bekannt", d.unfallmechNichtBekannt, x:lx+botLblW+botCbW*2+2,  y:umBotY+1.5, bs:6, lw:botCbW-10)
+
+        y = umBotY + botH + 2
 
         // ── SECTION 5 Verlauf (Grafischer Chart + Tabelle) ──
         secHeader("5. Verlauf Verlaufsbeschreibung", x:lx, y:y, w:leftW)
@@ -2115,12 +2396,10 @@ struct DINPDFGenerator {
     private static func drawFotoPages(ctx: UIGraphicsPDFRendererContext,
                                        mediFotos: [FotoEintrag],
                                        patFotos: [FotoEintrag],
-                                       kvFotos: [FotoEintrag],
                                        erstelltAm: Date) {
         let groups: [(String, [FotoEintrag])] = [
             ("Medikamentenplan", mediFotos),
             ("Patientenfoto",    patFotos),
-            ("KV-Karte",         kvFotos),
         ].filter { !$1.isEmpty }
 
         for (label, fotos) in groups {

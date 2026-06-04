@@ -38,6 +38,13 @@ enum ABCDEStatus: String, Codable {
     }
 }
 
+enum PupillenGroesse: String, CaseIterable, Codable {
+    case eng = "Eng"
+    case mittel = "Mittel"
+    case weit = "Weit"
+    case entrundet = "Entrundet"
+}
+
 enum InitialRhythmus: String, CaseIterable, Codable {
     case vf = "Kammerflimmern (VF)"
     case vtPulslos = "VT pulslos"
@@ -150,9 +157,6 @@ class EinsatzProtokoll: ObservableObject, Identifiable {
     // Medikamentenplan-Fotos (in-app only, nicht archiviert)
     @Published var medikamentFotos: [FotoEintrag] = []
 
-    // KV-Karten-Foto (in-app only, nicht archiviert)
-    @Published var kvFotos: [FotoEintrag] = []
-
     // Ergebnis
     @Published var ergebnis = ErgebnisData()
     @Published var uebergabeMesswerte = UebergabeMesswerte()
@@ -241,8 +245,6 @@ class EinsatzProtokoll: ObservableObject, Identifiable {
         fotos = []
         medikamentFotos.forEach { $0.loeschen() }
         medikamentFotos = []
-        kvFotos.forEach { $0.loeschen() }
-        kvFotos = []
         ergebnis = ErgebnisData()
         uebergabeMesswerte = UebergabeMesswerte()
         psyche = PsycheBefund()
@@ -269,6 +271,13 @@ struct EinsatzOrt: Codable {
     var ankunftzeit: Date? = nil
     var abfahrtzeit: Date? = nil
     var krankenHausAnkunft: Date? = nil
+    // RKN-Ergänzungen Zeitraster (Sektion 1)
+    var ausfahrtzeit: Date? = nil
+    var uebergabeZeit: Date? = nil
+    var einsatzbereitZeit: Date? = nil
+    var endeZeit: Date? = nil
+    var kmGesamt: String = ""
+    var kmPatient: String = ""
     var einsatzNummer = ""
     var notarzt: Bool = false
     var sondersignal: Bool = false
@@ -386,6 +395,7 @@ struct CirculationBefund: Codable {
     var extrasystolenMonomorph:  Bool = false
     var extrasystolenPolymorph:  Bool = false
     var cNichtBeurteilbar:       Bool = false
+    var ekgSonstige:             String = ""
     var freitext = ""
 }
 
@@ -430,12 +440,15 @@ struct DisabilityBefund: Codable {
     var pupilleLiEntrundet:          Bool = false
     var pupilleLiNichtBeurteilbar:   Bool = false
     var pupilleLiKeineLichtreaktion: Bool = false
-    // Neuro
+    // Isochor (seitengleich) — Default: ja
+    var pupillenIsochor:             Bool = true
+    // Neuro (BE-FAST + weitere)
+    var neuroGleichgewicht:         Bool = false  // B
     var neuroVorbestehendesDefizit: Bool = false
-    var neuroFacialisparese:        Bool = false
-    var neuroArmparese:             Bool = false
-    var neuroSprachstoerung:        Bool = false
-    var neuroSehstoerung:           Bool = false
+    var neuroFacialisparese:        Bool = false  // F
+    var neuroArmparese:             Bool = false  // A
+    var neuroSprachstoerung:        Bool = false  // S
+    var neuroSehstoerung:           Bool = false  // E
     var neuroBabinski:              Bool = false
     var neuroQuerschnitt:           Bool = false
     var neuroMeningismus:           Bool = false
@@ -484,12 +497,14 @@ struct ExposureBefund: Codable {
     var rueckenNackenSchmerz: Bool = false
     var bewegungseinschraenkung: Bool = false
     // RKN-Ergänzungen Haut
+    var hautUnauffaellig:     Bool = false
     var hautNichtUntersucht:  Bool = false
     var stehendeHautfalten:   Bool = false
     var kaltschweissig:       Bool = false
     var dekubitus:            Bool = false
     var exanthem:             Bool = false
     var hautNichtBeurteilbar: Bool = false
+    var hautSonstige:         Bool = false
 
     var freitext = ""
 }
@@ -509,6 +524,7 @@ struct PsycheBefund: Codable {
     var motorischUnruhig: Bool = false
     var nichtBeurteilbar: Bool = false
     var aggressiv:        Bool = false
+    var sonstige:         Bool = false
 }
 
 // MARK: - Übergabe-Befunde
@@ -569,11 +585,12 @@ struct UebergabeBefunde: Codable {
     var pupilleLiEntrundet:          Bool = false
     var pupilleLiNichtBeurteilbar:   Bool = false
     var pupilleLiKeineLichtreaktion: Bool = false
+    var neuroGleichgewicht:          Bool = false  // B
     var neuroVorbestehendesDefizit:  Bool = false
-    var neuroFacialisparese:         Bool = false
-    var neuroArmparese:              Bool = false
-    var neuroSprachstoerung:         Bool = false
-    var neuroSehstoerung:            Bool = false
+    var neuroFacialisparese:         Bool = false  // F
+    var neuroArmparese:              Bool = false  // A
+    var neuroSprachstoerung:         Bool = false  // S
+    var neuroSehstoerung:            Bool = false  // E
     var neuroBabinski:               Bool = false
     var neuroQuerschnitt:            Bool = false
     var neuroMeningismus:            Bool = false
@@ -630,36 +647,58 @@ struct VerletzungsMatrix: Codable {
     var obereExtrem: Verletzungsgrad = .keine
     var untereExtrem: Verletzungsgrad = .keine
     var weichteile: Verletzungsgrad = .keine
+
+    var betroffeneRegionen: Int {
+        [schaedelHirn, gesicht, hws, thorax, abdomen,
+         bwsLws, becken, obereExtrem, untereExtrem, weichteile]
+            .filter { $0 != .keine }.count
+    }
 }
 
 struct DiagnoseBefund: Codable {
     // 4.1 Erkrankung – ZNS
     var znsAkutNeuro: Bool = false
+    var znsSchlaganfall: Bool = false
+    var znsIcb: Bool = false
     var znsSab: Bool = false
-    var znsTransplantat: Bool = false
+    var znsKrampfanfall: Bool = false
     var znsEpilepsie: Bool = false
     var znsFieberkrampf: Bool = false
+    var znsTransplantat: Bool = false   // legacy
 
     // Atmung
     var atmungAsthma: Bool = false
+    var atmungStatusAsthmaticus: Bool = false
     var atmungExazerbiert: Bool = false
+    var atmungAspiration: Bool = false
     var atmungPneumonie: Bool = false
+    var atmungHyperventilation: Bool = false
     var atmungLtb: Bool = false
     var atmungEpiglottitis: Bool = false
+    var atmungSpontanpneumothorax: Bool = false
+    var atmungHaemoptysis: Bool = false
+    var atmungUnklareDyspnoe: Bool = false
+    var atmungLungenodem: Bool = false
+    var atmungPseudokrupp: Bool = false
 
     // Herz-Kreislauf
     var herzAcs: Bool = false
     var herzStemi: Bool = false
     var herzVW: Bool = false
     var herzHW: Bool = false
-    var herzPmFehlfunktion: Bool = false
+    var herzKardiogenerSchock: Bool = false
     var herzRhythmus: Bool = false
+    var herzRhythmusTachy: Bool = false
+    var herzRhythmusBrady: Bool = false
+    var herzPmFehlfunktion: Bool = false
+    var herzLungenembolie: Bool = false
+    var herzDekomp: Bool = false
     var herzHypertonerNotfall: Bool = false
     var herzAortenaneurysma: Bool = false
     var herzHypotonie: Bool = false
-    var herzDekomp: Bool = false
     var herzSynkope: Bool = false
     var herzThromboseEmbolie: Bool = false
+    var herzStillstand: Bool = false
     var herzSchockUnklarGenese: Bool = false
     var herzOrthostatisch: Bool = false
     var herzUnklarerThoraxschmerz: Bool = false
@@ -667,28 +706,47 @@ struct DiagnoseBefund: Codable {
     // Psychiatrie
     var psychAkut: Bool = false
     var psychKrise: Bool = false
+    var psychDepressionen: Bool = false
     var psychManie: Bool = false
     var psychIntoxikation: Bool = false
     var psychEntzug: Bool = false
     var psychSuizidal: Bool = false
 
     // Gyn/Geb.-hilfe
-    var gynSonstige: Bool = false
+    var gynSonstige: Bool = false       // legacy / Extrauterine Gravidität
     var gynSchwangerschaft35: Bool = false
     var gynGeburt: Bool = false
+    var gynExtrauterine: Bool = false
     var gynEklampsie: Bool = false
     var gynVaginalblutung: Bool = false
 
-    // Infektionen
+    // Infektionen (col 3)
+    var infektUnklarFieber: Bool = false
+    var infektMeningitis: Bool = false
+    var infektMrsaOffen: Bool = false
+    var infektMrsaGedeckt: Bool = false
+    var infektMre: Bool = false
+    var infektHepatitis: Bool = false
+
+    // col 4 – HIV-Gruppe
     var infektHiv: Bool = false
+    var infektTbc: Bool = false
     var infektHighToxSars: Bool = false
     var infektGastro: Bool = false
+
+    // Sonstiges (col 4)
     var infektAnaphylaxie12: Bool = false
+    var infektAnaphylaxie34: Bool = false
+    var infektSeptSchock: Bool = false
+    var infektHitze: Bool = false
+    var infektUnterku: Bool = false
+    var infektErtrinken: Bool = false
     var infektSids: Bool = false
     var infektIntoxikation: Bool = false
     var infektAkuteLumbalgie: Bool = false
     var infektPalliativ: Bool = false
     var infektBehandlungKompl: Bool = false
+    var infektEpistaxis: Bool = false
     var infektUrologisch: Bool = false
 
     // Stoffwechsel
@@ -696,34 +754,59 @@ struct DiagnoseBefund: Codable {
     var stoffHypoglykämie: Bool = false
     var stoffHyperglykämie: Bool = false
     var stoffUremie: Bool = false
-    var stoffDia: Bool = false
+    var stoffDia: Bool = false          // legacy
+    var stoffDialyse: Bool = false
 
     // Abdomen
     var abdoAkutes: Bool = false
     var abdoKoliken: Bool = false
     var abdoGibOben: Bool = false
     var abdoGibUnten: Bool = false
-    var abdoGalleNiere: Bool = false
+    var abdoGalleNiere: Bool = false    // legacy
+    var abdoGallenkolik: Bool = false
+    var abdoNierenkolik: Bool = false
 
     // 4.2 Verletzungen
     var verletzungsMatrix = VerletzungsMatrix()
-    var verletzungsMuster: String = ""   // Einzelverletzung, Mehrfachverletzung, Polytrauma
-    var verletzungsArt: String = ""      // oberflächlich, stumpf, Stich, Schuss, penetrierend
     var verletzungNichtBekannt: Bool = false
+
+    // Verletzungsmuster (Checkboxen)
+    var verletzungEinzel: Bool = false
+    var verletzungMehrfach: Bool = false
+    var verletzungPolytrauma: Bool = false
+
+    // Unfallmechanismus (Checkboxen)
+    var unfallmechStumpf: Bool = false
+    var unfallmechPenetrierend: Bool = false
+    var unfallmechNichtBekannt: Bool = false
 
     // Spezielle Traumen
     var spezVerbrVerbrh: Bool = false
-    var spezTauchunfall: Bool = false
+    var spezInhalationstrauma: Bool = false
     var spezElektrounfall: Bool = false
+    var spezVeraetzung: Bool = false
+    var spezTauchunfall: Bool = false
+    var spezSonstige: Bool = false
+
+    // Unfallart
     var spezPkwLkw: Bool = false
     var spezMotorrad: Bool = false
     var spezFahrrad: Bool = false
-    var spezFussgaenger: Bool = false
-    var spezSturzHoehe: Bool = false
+    var spezFussgaenger: Bool = false   // Fußg. angefahren
     var spezAndVerkehr: Bool = false
     var spezMaschine: Bool = false
-    var spezGewalt: Bool = false
+    var spezSturzHoehe: Bool = false    // Sturz > 3m (Legacy-Name beibehalten)
+    var spezSturzKlein: Bool = false    // Sturz < 3m (neu)
+    var spezSchlag: Bool = false
+    var spezSchuss: Bool = false
+    var spezStich: Bool = false
+    var spezGewalt: Bool = false        // Gewaltverbrechen
+    var spezVerschuettung: Bool = false
     var spezAndererUnfall: Bool = false
+
+    // Legacy-Strings (bleiben für Archiv-Kompatibilität, werden nicht mehr genutzt)
+    var verletzungsMuster: String = ""
+    var verletzungsArt: String = ""
 
     // Diagnose/Leitsymptom + Verlauf (Sektion 5)
     var leitsymptom: String = ""
@@ -820,6 +903,18 @@ struct MassnahmenBefund: Codable {
     var monBz: Bool = false
     var monSpo2: Bool = false
     var monTemperatur: Bool = false
+    var mon12KanalEkg: Bool = false
+    var monInvasiveRR: Bool = false
+    var monKapnografie: Bool = false
+
+    // Medizintechnik (RKN Sektion 6)
+    var medUltraschall:        Bool = false
+    var medNotfallspacer:      Bool = false
+    var medVideoLaryngoskop:   Bool = false
+    var medMechThorax:         Bool = false
+    var medFunkEkg:            Bool = false
+    var medSpritzenpumpe:      Bool = false
+    var medTransportinkubator: Bool = false
 }
 
 // MARK: - Übergabe-Messwerte

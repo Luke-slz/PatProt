@@ -167,13 +167,6 @@ struct PatProtTests {
         #expect(migriert[0].qualifikation == .rettungssanitaeter)
     }
 
-    @Test func kvFotosResetLeert() {
-        let protokoll = EinsatzProtokoll()
-        protokoll.kvFotos.append(FotoEintrag(bildDateiname: "test.jpg"))
-        protokoll.reset()
-        #expect(protokoll.kvFotos.isEmpty)
-    }
-
     @Test func breathingBefundHatBrodeln() {
         let b = BreathingBefund()
         #expect(b.brodeln == false)
