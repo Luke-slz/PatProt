@@ -59,7 +59,7 @@ enum KVKarteParser {
                                     .map { String($0).trimmingCharacters(in: .whitespaces) }
                     if parts.count == 2 {
                         result.nachname = parts[0].capitalized
-                        if result.vorname.isEmpty { result.vorname = parts[1] }
+                        if result.vorname.isEmpty { result.vorname = parts[1].capitalized }
                     }
                 } else {
                     result.nachname = line.capitalized
@@ -113,11 +113,15 @@ enum KVKarteParser {
             && line.unicodeScalars.allSatisfy { allowed.contains($0) }
     }
 
-    private static func parseDate(_ string: String) -> Date? {
-        guard string.range(of: #"^\d{2}\.\d{2}\.\d{4}$"#, options: .regularExpression) != nil else { return nil }
+    private static let dateFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "dd.MM.yyyy"
         f.locale = Locale(identifier: "de_DE")
-        return f.date(from: string)
+        return f
+    }()
+
+    private static func parseDate(_ string: String) -> Date? {
+        guard string.range(of: #"^\d{2}\.\d{2}\.\d{4}$"#, options: .regularExpression) != nil else { return nil }
+        return dateFormatter.date(from: string)
     }
 }
