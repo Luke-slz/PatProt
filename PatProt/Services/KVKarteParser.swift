@@ -12,7 +12,26 @@ struct ParsedKVDaten {
 enum KVKarteParser {
 
     static func parse(_ image: UIImage) async -> ParsedKVDaten {
-        ParsedKVDaten()  // Stub – implemented in Task 3
+        guard let cgImage = image.cgImage else { return ParsedKVDaten() }
+        return await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                let request = VNRecognizeTextRequest { req, _ in
+                    let observations = req.results as? [VNRecognizedTextObservation] ?? []
+                    let lines = observations
+                        .compactMap { obs -> (String, CGFloat)? in
+                            guard let text = obs.topCandidates(1).first?.string else { return nil }
+                            return (text, obs.boundingBox.midY)
+                        }
+                        .sorted { $0.1 > $1.1 }   // descending midY = top-to-bottom (Vision: Y=0 at bottom)
+                        .map { $0.0 }
+                    continuation.resume(returning: parse(lines: lines))
+                }
+                request.recognitionLanguages = ["de-DE", "en-US"]
+                request.recognitionLevel = .accurate
+                request.usesLanguageCorrection = false   // preserve KVNR codes exactly
+                try? VNImageRequestHandler(cgImage: cgImage, options: [:]).perform([request])
+            }
+        }
     }
 
     static func parse(lines: [String]) -> ParsedKVDaten {
