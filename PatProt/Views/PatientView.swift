@@ -48,11 +48,11 @@ struct PatientView: View {
 
 
             Section {
-                MedikamentFotoSektion(fotos: $protokoll.kvFotos)
+                KVKarteScanSektion(patientDaten: $protokoll.patientDaten)
             } header: {
                 Label("KV-Karte / Versichertenkarte", systemImage: "creditcard")
             } footer: {
-                Text("Foto der Versichertenkarte – wird nur lokal gespeichert (DSGVO).")
+                Text("Erkannte Daten werden direkt übernommen – nur lokal gespeichert (DSGVO).")
                     .font(.footnote).foregroundStyle(.secondary)
             }
 
