@@ -316,4 +316,76 @@ struct PatProtTests {
         #expect(s.notwendigeMassnahmen.contains("Midazolam"))
     }
 
+    // MARK: - KVKarteParser Tests
+
+    @Test func kvParserKVNR() {
+        let lines = ["Techniker Krankenkasse", "Versichertenkarte", "MUSTERMANN", "Erika", "*12.07.1964", "A123456789"]
+        let result = KVKarteParser.parse(lines: lines)
+        #expect(result.versicherungsNummer == "A123456789")
+    }
+
+    @Test func kvParserKVNRInText() {
+        let lines = ["DAK", "SCHMIDT", "Hans", "01.01.1990", "Vers.-Nr. C345678901"]
+        let result = KVKarteParser.parse(lines: lines)
+        #expect(result.versicherungsNummer == "C345678901")
+    }
+
+    @Test func kvParserGeburtsdatumMitAsterisk() {
+        let lines = ["TK", "MUSTERMANN", "Erika", "*12.07.1964", "A123456789"]
+        let result = KVKarteParser.parse(lines: lines)
+        let cal = Calendar.current
+        #expect(result.geburtsDatum != nil)
+        let comps = cal.dateComponents([.day, .month, .year], from: result.geburtsDatum!)
+        #expect(comps.day == 12)
+        #expect(comps.month == 7)
+        #expect(comps.year == 1964)
+    }
+
+    @Test func kvParserGeburtsdatumOhneAsterisk() {
+        let lines = ["AOK", "MUSTER", "Anna", "03.09.1985", "B987654321"]
+        let result = KVKarteParser.parse(lines: lines)
+        #expect(result.geburtsDatum != nil)
+        let comps = Calendar.current.dateComponents([.day, .month, .year], from: result.geburtsDatum!)
+        #expect(comps.day == 3)
+        #expect(comps.month == 9)
+        #expect(comps.year == 1985)
+    }
+
+    @Test func kvParserNameZweiZeilen() {
+        let lines = ["Techniker Krankenkasse", "Versichertenkarte", "MUSTERMANN", "Erika", "*12.07.1964", "A123456789"]
+        let result = KVKarteParser.parse(lines: lines)
+        #expect(result.nachname == "Mustermann")
+        #expect(result.vorname == "Erika")
+    }
+
+    @Test func kvParserNameKommaFormat() {
+        let lines = ["DAK-Gesundheit", "MUSTERMANN, Erika", "*05.03.1980", "X987654321"]
+        let result = KVKarteParser.parse(lines: lines)
+        #expect(result.nachname == "Mustermann")
+        #expect(result.vorname == "Erika")
+    }
+
+    @Test func kvParserKostentraegerMixedCase() {
+        let lines = ["Techniker Krankenkasse", "Versichertenkarte", "MUSTERMANN", "Erika", "*12.07.1964", "A123456789"]
+        let result = KVKarteParser.parse(lines: lines)
+        #expect(result.kostentraeger == "Techniker Krankenkasse")
+    }
+
+    @Test func kvParserKostentraegerAllCaps() {
+        let lines = ["AOK NORDWEST", "MUSTERMANN", "Erika", "15.11.1975", "B234567890"]
+        let result = KVKarteParser.parse(lines: lines)
+        #expect(result.kostentraeger == "AOK NORDWEST")
+        #expect(result.nachname == "Mustermann")
+        #expect(result.vorname == "Erika")
+    }
+
+    @Test func kvParserLeer() {
+        let result = KVKarteParser.parse(lines: ["12345", "---", ""])
+        #expect(result.vorname.isEmpty)
+        #expect(result.nachname.isEmpty)
+        #expect(result.versicherungsNummer.isEmpty)
+        #expect(result.geburtsDatum == nil)
+        #expect(result.kostentraeger.isEmpty)
+    }
+
 }
