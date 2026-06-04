@@ -57,10 +57,14 @@ enum KVKarteParser {
                 result.versicherungsNummer = String(line[match])
             }
 
-            // Geburtsdatum: optional * prefix + DD.MM.YYYY
+            // Geburtsdatum: optional * prefix, dann Datum irgendwo in der Zeile suchen
+            // Expiry-Zeilen ("Gültig bis", "Valid until") explizit ausschließen
             if result.geburtsDatum == nil {
-                let s = line.hasPrefix("*") ? String(line.dropFirst()).trimmingCharacters(in: .whitespaces) : line
-                result.geburtsDatum = parseDate(s)
+                let isExpiryLine = lower.hasPrefix("gültig") || lower.hasPrefix("valid until") || lower.hasPrefix("ablauf")
+                if !isExpiryLine {
+                    let s = line.hasPrefix("*") ? String(line.dropFirst()).trimmingCharacters(in: .whitespaces) : line
+                    result.geburtsDatum = parseDate(s)
+                }
             }
 
             // Skip known card labels
@@ -93,7 +97,9 @@ enum KVKarteParser {
                     // Peek ahead for Vorname on the next line
                     if result.vorname.isEmpty, i + 1 < filteredLines.count {
                         let next = filteredLines[i + 1]
-                        if looksLikeVorname(next) {
+                        let nextLower = next.lowercased()
+                        let nextIsLabel = knownLabels.contains(where: { nextLower == $0 || nextLower.hasPrefix($0 + " ") })
+                        if !nextIsLabel, looksLikeVorname(next) {
                             result.vorname = next
                         }
                     }
@@ -116,7 +122,9 @@ enum KVKarteParser {
         "versichertenkarte", "gesundheitskarte", "krankenversicherungskarte",
         "europäische krankenversicherungskarte", "european health insurance card",
         "gültig bis", "valid until", "versicherungsnummer",
-        "geburtsdatum", "vorname", "nachname", "zuname", "vor- und zuname"
+        "geburtsdatum", "vorname", "nachname", "zuname", "vor- und zuname",
+        "geb.", "geb.datum", "geb.am",
+        "de", "eu"
     ]
 
     private static func looksLikeNachname(_ line: String) -> Bool {
@@ -148,7 +156,8 @@ enum KVKarteParser {
     }()
 
     private static func parseDate(_ string: String) -> Date? {
-        guard string.range(of: #"^\d{2}\.\d{2}\.\d{4}$"#, options: .regularExpression) != nil else { return nil }
-        return dateFormatter.date(from: string)
+        // Datum-Muster irgendwo im String suchen (deckt "DD.MM.YYYY" und "Geb.: DD.MM.YYYY" ab)
+        guard let match = string.range(of: #"\d{2}\.\d{2}\.\d{4}"#, options: .regularExpression) else { return nil }
+        return dateFormatter.date(from: String(string[match]))
     }
 }

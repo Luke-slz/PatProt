@@ -395,4 +395,41 @@ struct PatProtTests {
         #expect(result.kostentraeger.isEmpty)
     }
 
+    // MARK: - Regression Tests (reported scan failures)
+
+    @Test func kvParserVornameLabelNichtAlsVorname() {
+        // Karte druckt "Vorname" als Label auf eigener Zeile vor dem echten Vornamen
+        let lines = ["Techniker Krankenkasse", "MUSTERMANN", "Vorname", "Erika", "*15.11.1975", "A123456789"]
+        let result = KVKarteParser.parse(lines: lines)
+        #expect(result.vorname == "Erika")
+        #expect(result.nachname == "Mustermann")
+    }
+
+    @Test func kvParserGeburtsdatumMitLabelPraefix() {
+        // Geburtsdatum steht als "Geb.: DD.MM.YYYY" auf der Karte
+        let lines = ["Barmer", "SCHMIDT", "Klaus", "Geb.: 03.09.1985", "B987654321"]
+        let result = KVKarteParser.parse(lines: lines)
+        #expect(result.geburtsDatum != nil)
+        let comps = Calendar.current.dateComponents([.day, .month, .year], from: result.geburtsDatum!)
+        #expect(comps.day == 3)
+        #expect(comps.month == 9)
+        #expect(comps.year == 1985)
+    }
+
+    @Test func kvParserDEKeinKassenname() {
+        // "DE" Ländercode darf nicht als Kassenname erfasst werden
+        let lines = ["DE", "Techniker Krankenkasse", "MUSTERMANN", "Erika", "*15.11.1975", "A123456789"]
+        let result = KVKarteParser.parse(lines: lines)
+        #expect(result.kostentraeger == "Techniker Krankenkasse")
+        #expect(result.nachname == "Mustermann")
+    }
+
+    @Test func kvParserGueltigBisDatumNichtAlsGeburtsdatum() {
+        // "Gültig bis"-Datum darf nicht als Geburtsdatum erfasst werden
+        let lines = ["AOK", "MUSTER", "Anna", "*03.09.1985", "B987654321", "Gültig bis 12/2027"]
+        let result = KVKarteParser.parse(lines: lines)
+        let comps = Calendar.current.dateComponents([.year], from: result.geburtsDatum!)
+        #expect(comps.year == 1985)
+    }
+
 }
