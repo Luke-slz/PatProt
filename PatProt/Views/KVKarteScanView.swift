@@ -85,7 +85,7 @@ struct KVKarteScanSektion: View {
         }
     }
 
-    private func applyAndUpdateStatus(_ daten: ParsedKVDaten) {
+    @MainActor private func applyAndUpdateStatus(_ daten: ParsedKVDaten) {
         if !daten.vorname.isEmpty             { patientDaten.vorname = daten.vorname }
         if !daten.nachname.isEmpty            { patientDaten.nachname = daten.nachname }
         if let geb = daten.geburtsDatum       { patientDaten.geburtsDatum = geb }
