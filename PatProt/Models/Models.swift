@@ -280,6 +280,7 @@ struct EinsatzOrt: Codable {
     var kmPatient: String = ""
     var einsatzNummer = ""
     var notarzt: Bool = false
+    var naAngefordert: Bool = false
     var sondersignal: Bool = false
     var mitPatient: Bool = false
 }

@@ -432,4 +432,10 @@ struct PatProtTests {
         #expect(comps.year == 1985)
     }
 
+    @Test func naAngefordertDefaultFalse() {
+        let ort = EinsatzOrt()
+        #expect(ort.naAngefordert == false)
+        #expect(ort.notarzt == false)
+    }
+
 }

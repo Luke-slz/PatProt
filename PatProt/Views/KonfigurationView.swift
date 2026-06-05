@@ -65,6 +65,7 @@ struct KonfigurationView: View {
                 TextField("Stichwort (z.B. Bewusstlos)", text: $protokoll.einsatzOrt.einsatzArt)
                 Toggle("Sondersignal", isOn: $protokoll.einsatzOrt.sondersignal)
                 Toggle("Notarzt", isOn: $protokoll.einsatzOrt.notarzt)
+                Toggle("NA nachgefordert", isOn: $protokoll.einsatzOrt.naAngefordert)
 
                 Picker("Primärfahrzeug", selection: $protokoll.einsatzOrt.fahrzeugName) {
                     Text("—").tag("")
