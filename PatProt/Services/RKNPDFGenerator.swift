@@ -1526,13 +1526,11 @@ struct RKNPDFGenerator {
         // Local layout constants
         let rH: CGFloat = 9.5
         let rdX = x + 2
-        let naX = rdX + 9
-        let lblX = naX + 9
+        let lblX = rdX + 9
         let lblW = x + w - lblX - 2
 
-        func mRow(_ label: String, rd: Bool, na: Bool = false, atY: CGFloat) {
+        func mRow(_ label: String, rd: Bool, atY: CGFloat) {
             cb(rd, x: rdX, y: atY+2, size: 5)
-            cb(na, x: naX, y: atY+2, size: 5)
             txt(label, CGRect(x: lblX, y: atY+1.5, width: lblW, height: rH-3), font: f5)
         }
         func mHdr(_ title: String, atY: CGFloat, rightLbl: String = "keine") {
@@ -1554,9 +1552,8 @@ struct RKNPDFGenerator {
 
         // ── Airway / Stabilisation ────────────────────────────────────────────
         mHdr("Airway / Stabilisation", atY: cy); cy += 9
-        // RD / NA col headers
+        // RD col header
         txt("RD", CGRect(x: rdX, y: cy, width: 9, height: 6), font: f5, align: .center)
-        txt("NA", CGRect(x: naX, y: cy, width: 9, height: 6), font: f5, align: .center)
         cy += 7
 
         mRow("Atemweg freimachen/freihalten", rd: m.atemwegFreimachen,        atY: cy); cy += rH
@@ -1592,8 +1589,7 @@ struct RKNPDFGenerator {
 
         // ── Atmung ────────────────────────────────────────────────────────────
         mHdr("Atmung", atY: cy); cy += 9
-        txt("RD", CGRect(x: rdX,   y: cy, width: 9, height: 6), font: f5, align: .center)
-        txt("NA", CGRect(x: naX,   y: cy, width: 9, height: 6), font: f5, align: .center)
+        txt("RD", CGRect(x: rdX, y: cy, width: 9, height: 6), font: f5, align: .center)
         txt("FiO₂", CGRect(x: x+w-42, y: cy, width: 18, height: 6), font: f5)
         txt("CPAP/PEEP", CGRect(x: x+w-22, y: cy, width: 20, height: 6), font: f5)
         cy += 7
@@ -1642,7 +1638,6 @@ struct RKNPDFGenerator {
         txt("keine", CGRect(x: x+w-22, y: cy+1.5, width: 20, height: 6.5), font: f5)
         cy += 9
         txt("RD", CGRect(x: rdX, y: cy, width: 9, height: 6), font: f5, align: .center)
-        txt("NA", CGRect(x: naX, y: cy, width: 9, height: 6), font: f5, align: .center)
         cy += 7
 
         // 2 Zugänge mit je einem Beschreibungsfeld (Ort/Größe)
