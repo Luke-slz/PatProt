@@ -432,6 +432,58 @@ struct PatProtTests {
         #expect(comps.year == 1985)
     }
 
+    @Test func kvParserEHICKomplett() {
+        // Vollständiger OCR-Output der echten EHIC-Rückseite (eGK Mustermann)
+        // Inklusive Hotline, Inschrift, Nummernpräfix-Feldbezeichner, Schrägstrich-Datum
+        let lines = [
+            "EUROPÄISCHE KRANKENVERSICHERUNGSKARTE",
+            "KOSTENFREIE HOTLINE",
+            "0800 – 123456",
+            "Mit meiner Unterschrift bestätige ich, dass ich bei der",
+            "AOK Muster versichert bin. Diese Karte ist nicht übertragbar.",
+            "DE",
+            "3. Name",
+            "MUSTERMANN",
+            "4. Vornamen",
+            "5. Geburtsdatum",
+            "ERIKA",
+            "12/08/1964",
+            "6. Persönliche Kennnummer",
+            "7. Kennnummer des Trägers",
+            "A123456789",
+            "106415300 - AOK MUSTER",
+            "8 Kennnummer der Karte",
+            "9 Ablaufdatum",
+            "80276153001234567890",
+            "31/10/2014"
+        ]
+        let result = KVKarteParser.parse(lines: lines)
+        #expect(result.nachname == "Mustermann")
+        #expect(result.vorname == "Erika")
+        #expect(result.versicherungsNummer == "A123456789")
+        #expect(result.kostentraeger == "AOK MUSTER")
+        let comps = Calendar.current.dateComponents([.day, .month, .year], from: result.geburtsDatum!)
+        #expect(comps.day == 12)
+        #expect(comps.month == 8)
+        #expect(comps.year == 1964)
+    }
+
+    @Test func kvParserDatumSchraegstrich() {
+        let lines = ["TK", "SCHMIDT", "Hans", "15/03/1978", "B987654321"]
+        let result = KVKarteParser.parse(lines: lines)
+        let comps = Calendar.current.dateComponents([.day, .month, .year], from: result.geburtsDatum!)
+        #expect(comps.day == 15)
+        #expect(comps.month == 3)
+        #expect(comps.year == 1978)
+    }
+
+    @Test func kvParserIKNummer() {
+        // Feld 7: IK-Nummer + Kassenname in einer Zeile
+        let lines = ["MUSTERMANN", "ERIKA", "A123456789", "106415300 - AOK MUSTER"]
+        let result = KVKarteParser.parse(lines: lines)
+        #expect(result.kostentraeger == "AOK MUSTER")
+    }
+
     @Test func kvParserEHICVornameAllCaps() {
         // EHIC druckt Vorname AUCH in Großbuchstaben (z.B. "MAX")
         let lines = [

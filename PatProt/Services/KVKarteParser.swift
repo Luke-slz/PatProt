@@ -100,9 +100,18 @@ enum KVKarteParser {
                 continue
             }
 
-            // Kassenname: first remaining qualifying line (topmost on front-side cards,
-            // or bottommost on EHIC – whichever appears first in the sorted order).
-            if result.kostentraeger.isEmpty {
+            // EHIC field 7: "106415300 - AOK MUSTER" → extract kassenname after IK number.
+            // Always overrides a previously wrongly captured kassenname.
+            if let range = line.range(of: #"^\d{7,9}\s*[-–]\s*"#, options: .regularExpression) {
+                let name = String(line[range.upperBound...]).trimmingCharacters(in: .whitespaces)
+                if !name.isEmpty { result.kostentraeger = name }
+                continue
+            }
+
+            // Kassenname: first short, non-sentence qualifying line.
+            // Skip inscription text (commas) and very long lines that are clearly sentences.
+            let looksLikeSentence = line.contains(",") || (line.contains(".") && line.count > 25)
+            if result.kostentraeger.isEmpty, !looksLikeSentence {
                 result.kostentraeger = line
             }
         }
@@ -115,25 +124,37 @@ enum KVKarteParser {
     private static let knownLabels: [String] = [
         "versichertenkarte", "gesundheitskarte", "krankenversicherungskarte",
         "europäische krankenversicherungskarte", "european health insurance card",
+        "kostenfreie hotline", "hotline",
         "gültig bis", "valid until", "versicherungsnummer",
-        "geburtsdatum", "vorname", "nachname", "zuname", "vor- und zuname",
+        "geburtsdatum", "vorname", "vornamen", "nachname", "nachnamen",
+        "zuname", "vor- und zuname", "name",
         "geb.", "geb.datum", "geb.am",
         // EHIC (Rückseite eGK) Feldbezeichner
         "persönliche kennnummer", "persönl. kennnummer",
-        "kennnummer der zuständigen", "kennnummer des",
-        "ablaufdatum", "expiry date",
+        "kennnummer",           // deckt alle "Kennnummer …"-Varianten ab
+        "ablaufdatum", "expiry date", "expiry",
         "surname", "given name", "date of birth",
         "personal identification", "identification number",
         "de", "eu"
     ]
 
+    /// Strips leading field numbers like "3. " or "8 " from EHIC label lines.
+    private static func withoutNumberedPrefix(_ s: String) -> String {
+        guard let r = s.range(of: #"^\d+\.?\s+"#, options: .regularExpression) else { return s }
+        return String(s[r.upperBound...])
+    }
+
     private static func isKnownLabel(_ lower: String) -> Bool {
-        knownLabels.contains(where: {
-            lower == $0
-                || lower.hasPrefix($0 + " ")
-                || lower.hasPrefix($0 + "(")
-                || lower.hasPrefix($0 + "/")
-        })
+        let stripped = withoutNumberedPrefix(lower)
+        for text in [lower, stripped] {
+            if knownLabels.contains(where: {
+                text == $0
+                    || text.hasPrefix($0 + " ")
+                    || text.hasPrefix($0 + "(")
+                    || text.hasPrefix($0 + "/")
+            }) { return true }
+        }
+        return false
     }
 
     private static func looksLikeNachname(_ line: String) -> Bool {
@@ -166,8 +187,15 @@ enum KVKarteParser {
     }()
 
     private static func parseDate(_ string: String) -> Date? {
-        // Datum-Muster irgendwo im String suchen (deckt "DD.MM.YYYY" und "Geb.: DD.MM.YYYY" ab)
-        guard let match = string.range(of: #"\d{2}\.\d{2}\.\d{4}"#, options: .regularExpression) else { return nil }
-        return dateFormatter.date(from: String(string[match]))
+        // Punkt-Format: "12.08.1964" (auch mit Präfix "Geb.: …")
+        if let match = string.range(of: #"\d{2}\.\d{2}\.\d{4}"#, options: .regularExpression) {
+            return dateFormatter.date(from: String(string[match]))
+        }
+        // Schrägstrich-Format auf EHIC: "12/08/1964" → als DD/MM/YYYY interpretieren
+        if let match = string.range(of: #"\d{2}/\d{2}/\d{4}"#, options: .regularExpression) {
+            let s = String(string[match]).replacingOccurrences(of: "/", with: ".")
+            return dateFormatter.date(from: s)
+        }
+        return nil
     }
 }
