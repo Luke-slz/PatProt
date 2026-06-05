@@ -1049,6 +1049,12 @@ struct RKNPDFGenerator {
     }
     private static func drawSection4(protokoll: EinsatzProtokoll) {
         let d = protokoll.diagnose
+        let vdNames = Set(protokoll.diagnose.verdachtsdiagnosen.map(\.name))
+        var matchedNames = Set<String>()
+        func check(_ flag: Bool, _ names: String...) -> Bool {
+            for name in names where vdNames.contains(name) { matchedNames.insert(name) }
+            return flag || names.contains(where: { vdNames.contains($0) })
+        }
         let lx: CGFloat = 4
         let y0: CGFloat = 490
         let rH: CGFloat = 6.5   // Zeilenhöhe
@@ -1075,121 +1081,121 @@ struct RKNPDFGenerator {
         let c1x = lx + 2; var c1y = y
         grpHeader("ZNS", x: c1x, atY: c1y, colW: cw); c1y += ghH
         for (l, c) in [
-            ("akutes zentral-neurol. Defizit", d.znsAkutNeuro),
-            ("Schlaganfall",                   d.znsSchlaganfall),
-            ("ICB",                            d.znsIcb),
-            ("SAB",                            d.znsSab),
-            ("Krampfanfall",                   d.znsKrampfanfall),
-            ("Status Epilepticus",             d.znsEpilepsie),
-            ("Fieberkrampf",                   d.znsFieberkrampf),
+            ("akutes zentral-neurol. Defizit", check(d.znsAkutNeuro,   "Bewusstlosigkeit unklarer Genese", "TIA (transitorische ischämische Attacke)")),
+            ("Schlaganfall",                   check(d.znsSchlaganfall, "Schlaganfall / Apoplex")),
+            ("ICB",                            check(d.znsIcb,          "ICB (Intrakranielle Blutung)")),
+            ("SAB",                            check(d.znsSab,          "Subarachnoidalblutung (SAB)")),
+            ("Krampfanfall",                   check(d.znsKrampfanfall, "Epilepsie / Krampfanfall")),
+            ("Status Epilepticus",             check(d.znsEpilepsie,    "Epilepsie / Krampfanfall")),
+            ("Fieberkrampf",                   check(d.znsFieberkrampf, "Fieberkrampf")),
         ] as [(String,Bool)] { row(l, c, x: c1x, atY: c1y, colW: cw); c1y += rH }
 
         grpHeader("Herz-Kreislauf", x: c1x, atY: c1y, colW: cw); c1y += ghH
-        row("ACS", d.herzAcs, x: c1x, atY: c1y, colW: cw); c1y += rH
+        row("ACS", check(d.herzAcs, "ACS / Herzinfarkt (STEMI)", "ACS / Herzinfarkt (NSTEMI)", "Angina pectoris"), x: c1x, atY: c1y, colW: cw); c1y += rH
         // STEMI □ VW □ HW inline
-        cbLabel("STEMI", checked: d.herzStemi, x: c1x, y: c1y, cbSize: 5, gap: 2, labelW: cw*0.42)
-        cbLabel("VW", checked: d.herzVW, x: c1x+cw*0.50, y: c1y, cbSize: 5, gap: 2, labelW: 16)
-        cbLabel("HW", checked: d.herzHW, x: c1x+cw*0.69, y: c1y, cbSize: 5, gap: 2, labelW: 16)
+        cbLabel("STEMI", checked: check(d.herzStemi,  "ACS / Herzinfarkt (STEMI)"), x: c1x,         y: c1y, cbSize: 5, gap: 2, labelW: cw*0.42)
+        cbLabel("VW",    checked: d.herzVW,                                          x: c1x+cw*0.50, y: c1y, cbSize: 5, gap: 2, labelW: 16)
+        cbLabel("HW",    checked: d.herzHW,                                          x: c1x+cw*0.69, y: c1y, cbSize: 5, gap: 2, labelW: 16)
         c1y += rH
-        row("kardiogener Schock", d.herzKardiogenerSchock, x: c1x, atY: c1y, colW: cw); c1y += rH
+        row("kardiogener Schock", check(d.herzKardiogenerSchock, "Hypotonie / Schock"), x: c1x, atY: c1y, colW: cw); c1y += rH
         // Rhythmusstörung □ tachy. □ brady. inline
-        cbLabel("Rhythmusstörung", checked: d.herzRhythmus, x: c1x, y: c1y, cbSize: 5, gap: 2, labelW: cw*0.46)
-        cbLabel("tachy.", checked: d.herzRhythmusTachy, x: c1x+cw*0.53, y: c1y, cbSize: 5, gap: 2, labelW: 18)
-        cbLabel("brady.", checked: d.herzRhythmusBrady, x: c1x+cw*0.73, y: c1y, cbSize: 5, gap: 2, labelW: 18)
+        cbLabel("Rhythmusstörung", checked: check(d.herzRhythmus,     "Herzrhythmusstörung"), x: c1x,         y: c1y, cbSize: 5, gap: 2, labelW: cw*0.46)
+        cbLabel("tachy.",          checked: d.herzRhythmusTachy,                            x: c1x+cw*0.53, y: c1y, cbSize: 5, gap: 2, labelW: 18)
+        cbLabel("brady.",          checked: d.herzRhythmusBrady,                            x: c1x+cw*0.73, y: c1y, cbSize: 5, gap: 2, labelW: 18)
         c1y += rH
         for (l, c) in [
-            ("PM/ICD Fehlfunktion",          d.herzPmFehlfunktion),
-            ("Lungenembolie",                d.herzLungenembolie),
-            ("dekomp. Herzinsuffizienz",     d.herzDekomp),
-            ("hypertensiver Notfall",        d.herzHypertonerNotfall),
-            ("Aortenaneurysma",              d.herzAortenaneurysma),
-            ("Hypotonie",                    d.herzHypotonie),
-            ("Synkope",                      d.herzSynkope),
-            ("Thrombose/Embolie",            d.herzThromboseEmbolie),
-            ("Herz-Kreislauf-Stillstand",    d.herzStillstand),
-            ("Schock unklarer Genese",       d.herzSchockUnklarGenese),
-            ("orthostatische Fehlregulation",d.herzOrthostatisch),
-            ("unklarer Thoraxschmerz",       d.herzUnklarerThoraxschmerz),
+            ("PM/ICD Fehlfunktion",           check(d.herzPmFehlfunktion,        "PM / ICD-Fehlfunktion")),
+            ("Lungenembolie",                 check(d.herzLungenembolie,          "Lungenembolie")),
+            ("dekomp. Herzinsuffizienz",      check(d.herzDekomp,                 "Herzinsuffizienz / Dekompensation")),
+            ("hypertensiver Notfall",         check(d.herzHypertonerNotfall,      "Hypertensive Krise")),
+            ("Aortenaneurysma",               check(d.herzAortenaneurysma,        "Aortenaneurysma / Dissektion")),
+            ("Hypotonie",                     check(d.herzHypotonie,              "Hypotonie / Schock")),
+            ("Synkope",                       check(d.herzSynkope,                "Synkope", "Synkope (kardial)")),
+            ("Thrombose/Embolie",             check(d.herzThromboseEmbolie,       "Lungenembolie")),
+            ("Herz-Kreislauf-Stillstand",     check(d.herzStillstand,             "Herz-Kreislauf-Stillstand")),
+            ("Schock unklarer Genese",        check(d.herzSchockUnklarGenese,     "Schock unklarer Genese")),
+            ("orthostatische Fehlregulation", check(d.herzOrthostatisch,          "Orthostatische Dysregulation")),
+            ("unklarer Thoraxschmerz",        check(d.herzUnklarerThoraxschmerz,  "Unklarer Thoraxschmerz")),
         ] as [(String,Bool)] { row(l, c, x: c1x, atY: c1y, colW: cw); c1y += rH }
 
         // ── Spalte 2: Atmung + Stoffwechsel + Abdomen ─────────────────────────
         let c2x = lx + cw + 2; var c2y = y
         grpHeader("Atmung", x: c2x, atY: c2y, colW: cw); c2y += ghH
         for (l, c) in [
-            ("Asthma",                   d.atmungAsthma),
-            ("Status asthm.",            d.atmungStatusAsthmaticus),
-            ("exacerbierte COPD",        d.atmungExazerbiert),
-            ("Aspiration",               d.atmungAspiration),
-            ("Pneumonie / Bronchitis",   d.atmungPneumonie),
-            ("Hyperventilationstetanie", d.atmungHyperventilation),
-            ("LTB (L/T/Bronchitis)",     d.atmungLtb),
-            ("Epiglottitis",             d.atmungEpiglottitis),
-            ("Spontanpneumothorax",      d.atmungSpontanpneumothorax),
-            ("Hämoptysis",               d.atmungHaemoptysis),
-            ("unkl. Dyspnoe",            d.atmungUnklareDyspnoe),
-            ("Lungenödem",               d.atmungLungenodem),
-            ("Pseudokrupp",              d.atmungPseudokrupp),
+            ("Asthma",                   check(d.atmungAsthma,             "Asthma-Anfall")),
+            ("Status asthm.",            check(d.atmungStatusAsthmaticus,  "Asthma-Anfall")),
+            ("exacerbierte COPD",        check(d.atmungExazerbiert,        "COPD-Exazerbation")),
+            ("Aspiration",               check(d.atmungAspiration,         "Fremdkörperaspiration")),
+            ("Pneumonie / Bronchitis",   check(d.atmungPneumonie,          "Pneumonie", "Pneumonie (infektiös)")),
+            ("Hyperventilationstetanie", check(d.atmungHyperventilation,   "Hyperventilation")),
+            ("LTB (L/T/Bronchitis)",     check(d.atmungLtb,                "Krupp-Syndrom")),
+            ("Epiglottitis",             check(d.atmungEpiglottitis,       "Epiglottitis")),
+            ("Spontanpneumothorax",      check(d.atmungSpontanpneumothorax,"Spontanpneumothorax")),
+            ("Hämoptysis",               check(d.atmungHaemoptysis,        "Hämoptysis")),
+            ("unkl. Dyspnoe",            check(d.atmungUnklareDyspnoe,     "Unklare Dyspnoe")),
+            ("Lungenödem",               check(d.atmungLungenodem,         "Lungenödem (kardial)")),
+            ("Pseudokrupp",              check(d.atmungPseudokrupp,        "Krupp-Syndrom")),
         ] as [(String,Bool)] { row(l, c, x: c2x, atY: c2y, colW: cw); c2y += rH }
 
         grpHeader("Stoffwechsel", x: c2x, atY: c2y, colW: cw); c2y += ghH
         for (l, c) in [
-            ("Exsikkose",             d.stoffExsikkose),
-            ("Hypoglycämie",          d.stoffHypoglykämie),
-            ("Hyperglycämie",         d.stoffHyperglykämie),
-            ("Urämie/ANV",            d.stoffUremie),
-            ("bek. dialysepflichtig", d.stoffDialyse),
+            ("Exsikkose",             check(d.stoffExsikkose,     "Exsikkose / Dehydration")),
+            ("Hypoglycämie",          check(d.stoffHypoglykämie,  "Hypoglykämie")),
+            ("Hyperglycämie",         check(d.stoffHyperglykämie, "Hyperglykämie", "Diabetisches Koma")),
+            ("Urämie/ANV",            check(d.stoffUremie,        "Urämie")),
+            ("bek. dialysepflichtig", check(d.stoffDialyse,       "Dialysepflicht / Niereninsuffizienz")),
         ] as [(String,Bool)] { row(l, c, x: c2x, atY: c2y, colW: cw); c2y += rH }
 
         grpHeader("Abdomen", x: c2x, atY: c2y, colW: cw); c2y += ghH
-        row("akutes Abdomen", d.abdoAkutes, x: c2x, atY: c2y, colW: cw); c2y += rH
-        row("Kolik allgemein", d.abdoKoliken, x: c2x, atY: c2y, colW: cw); c2y += rH
+        row("akutes Abdomen",  check(d.abdoAkutes,  "Akutes Abdomen", "Appendizitisverdacht", "Ileus", "Ulkus-Perforation"), x: c2x, atY: c2y, colW: cw); c2y += rH
+        row("Kolik allgemein", check(d.abdoKoliken, "Gallenkolik", "Nierenkolik"),                                            x: c2x, atY: c2y, colW: cw); c2y += rH
         // GIB □ obere □ untere inline
-        cbLabel("GIB", checked: d.abdoGibOben||d.abdoGibUnten, x: c2x, y: c2y, cbSize: 5, gap: 2, labelW: 16)
-        cbLabel("obere", checked: d.abdoGibOben, x: c2x+cw*0.24, y: c2y, cbSize: 5, gap: 2, labelW: 20)
-        cbLabel("untere", checked: d.abdoGibUnten, x: c2x+cw*0.57, y: c2y, cbSize: 5, gap: 2, labelW: 20)
+        cbLabel("GIB",    checked: check(d.abdoGibOben||d.abdoGibUnten, "GI-Blutung (obere)", "GI-Blutung (untere)"), x: c2x,         y: c2y, cbSize: 5, gap: 2, labelW: 16)
+        cbLabel("obere",  checked: check(d.abdoGibOben,                 "GI-Blutung (obere)"),                        x: c2x+cw*0.24, y: c2y, cbSize: 5, gap: 2, labelW: 20)
+        cbLabel("untere", checked: check(d.abdoGibUnten,                "GI-Blutung (untere)"),                       x: c2x+cw*0.57, y: c2y, cbSize: 5, gap: 2, labelW: 20)
         c2y += rH
-        row("Gallenkolik", d.abdoGallenkolik||d.abdoGalleNiere, x: c2x, atY: c2y, colW: cw); c2y += rH
-        row("Nierenkolik", d.abdoNierenkolik, x: c2x, atY: c2y, colW: cw); c2y += rH
+        row("Gallenkolik", check(d.abdoGallenkolik||d.abdoGalleNiere, "Gallenkolik"),  x: c2x, atY: c2y, colW: cw); c2y += rH
+        row("Nierenkolik", check(d.abdoNierenkolik,                   "Nierenkolik"),  x: c2x, atY: c2y, colW: cw); c2y += rH
 
         // ── Spalte 3: Psychiatrie + Gyn./Geb.-hilfe + Infektionen ─────────────
         let c3x = lx + 2*cw + 2; var c3y = y
         grpHeader("Psychiatrie", x: c3x, atY: c3y, colW: cw); c3y += ghH
         for (l, c) in [
-            ("psych. Ausnahmezustand", d.psychAkut),
-            ("psychosoz. Krise",       d.psychKrise),
-            ("Depressionen",           d.psychDepressionen),
-            ("Manie",                  d.psychManie),
-            ("Intoxikation",           d.psychIntoxikation),
-            ("Entzug/Delir",           d.psychEntzug),
-            ("Suizidalität",           d.psychSuizidal),
+            ("psych. Ausnahmezustand", check(d.psychAkut,        "Akute Psychose / Erregungszustand")),
+            ("psychosoz. Krise",       check(d.psychKrise,        "Psychiatrische Krise", "Panikattacke")),
+            ("Depressionen",           check(d.psychDepressionen, "Depressionen")),
+            ("Manie",                  check(d.psychManie,        "Manie")),
+            ("Intoxikation",           check(d.psychIntoxikation, "Alkoholintoxikation", "Medikamenten-Intoxikation", "Drogenintoxikation")),
+            ("Entzug/Delir",           check(d.psychEntzug,       "Alkoholentzugsdelir")),
+            ("Suizidalität",           check(d.psychSuizidal,     "Suizidversuch")),
         ] as [(String,Bool)] { row(l, c, x: c3x, atY: c3y, colW: cw); c3y += rH }
 
         grpHeader("Gyn./Geb.-hilfe", x: c3x, atY: c3y, colW: cw); c3y += ghH
         for (l, c) in [
-            ("Schwangerschaft > 35. SSW", d.gynSchwangerschaft35),
-            ("Geburt",                    d.gynGeburt),
-            ("Extrauterine Gravidität",   d.gynExtrauterine||d.gynSonstige),
-            ("Eklampsie",                 d.gynEklampsie),
-            ("vaginale Blutung",          d.gynVaginalblutung),
+            ("Schwangerschaft > 35. SSW", check(d.gynSchwangerschaft35,           "Schwangerschaftskomplikation")),
+            ("Geburt",                    check(d.gynGeburt,                       "Drohende / stattfindende Geburt")),
+            ("Extrauterine Gravidität",   check(d.gynExtrauterine||d.gynSonstige, "Extrauteringravidität")),
+            ("Eklampsie",                 check(d.gynEklampsie,                   "Eklampsie / Präeklampsie")),
+            ("vaginale Blutung",          check(d.gynVaginalblutung,              "Vaginale Blutung", "Fehlgeburt / Abort")),
         ] as [(String,Bool)] { row(l, c, x: c3x, atY: c3y, colW: cw); c3y += rH }
 
         grpHeader("Infektionen", x: c3x, atY: c3y, colW: cw); c3y += ghH
-        row("unkl. Fieber", d.infektUnklarFieber, x: c3x, atY: c3y, colW: cw); c3y += rH
-        row("Meningitis/Enzephalitis", d.infektMeningitis, x: c3x, atY: c3y, colW: cw); c3y += rH
+        row("unkl. Fieber",            check(d.infektUnklarFieber, "Fieber unklarer Genese"),                             x: c3x, atY: c3y, colW: cw); c3y += rH
+        row("Meningitis/Enzephalitis", check(d.infektMeningitis,   "Meningitis / Enzephalitis", "Meningitis (bakteriell)"), x: c3x, atY: c3y, colW: cw); c3y += rH
         // offen -MRSA- □ gedeckt inline
-        cbLabel("offen -MRSA-", checked: d.infektMrsaOffen, x: c3x, y: c3y, cbSize: 5, gap: 2, labelW: cw*0.47)
-        cbLabel("gedeckt", checked: d.infektMrsaGedeckt, x: c3x+cw*0.56, y: c3y, cbSize: 5, gap: 2, labelW: 28)
+        cbLabel("offen -MRSA-", checked: check(d.infektMrsaOffen,   "MRSA offen"),   x: c3x,         y: c3y, cbSize: 5, gap: 2, labelW: cw*0.47)
+        cbLabel("gedeckt",      checked: check(d.infektMrsaGedeckt, "MRSA gedeckt"), x: c3x+cw*0.56, y: c3y, cbSize: 5, gap: 2, labelW: 28)
         c3y += rH
-        row("MRE", d.infektMre, x: c3x, atY: c3y, colW: cw); c3y += rH
-        row("Hepatitis", d.infektHepatitis, x: c3x, atY: c3y, colW: cw); c3y += rH
+        row("MRE",       check(d.infektMre,       "MRE (multiresistente Erreger)"), x: c3x, atY: c3y, colW: cw); c3y += rH
+        row("Hepatitis", check(d.infektHepatitis, "Hepatitis"),                      x: c3x, atY: c3y, colW: cw); c3y += rH
 
         // ── Spalte 4: HIV-Gruppe + Sonstiges ──────────────────────────────────
         let c4x = lx + 3*cw + 2; let c4w = W - 8 - 3*cw; var c4y = y
         for (l, c) in [
-            ("HIV",                        d.infektHiv),
-            ("TBC",                        d.infektTbc),
-            ("hochkontag. Erreger (SARS)", d.infektHighToxSars),
-            ("Gastroenteritis",            d.infektGastro),
+            ("HIV",                        check(d.infektHiv,         "HIV / AIDS")),
+            ("TBC",                        check(d.infektTbc,         "Tuberkulose (TBC)")),
+            ("hochkontag. Erreger (SARS)", check(d.infektHighToxSars, "COVID-19 / SARS")),
+            ("Gastroenteritis",            check(d.infektGastro,      "Gastroenteritis")),
         ] as [(String,Bool)] { row(l, c, x: c4x, atY: c4y, colW: c4w); c4y += rH }
 
         // "Sonstiges" + "□ unklar"
@@ -1198,19 +1204,19 @@ struct RKNPDFGenerator {
         txt("unklar", CGRect(x: c4x+c4w-16, y: c4y+0.5, width: 16, height: 6), font: f5)
         c4y += ghH
         for (l, c) in [
-            ("Anaphylaxie Grad 1/2",      d.infektAnaphylaxie12),
-            ("Anaphylaxie Grad 3/4",      d.infektAnaphylaxie34),
-            ("sept. Schock",              d.infektSeptSchock),
-            ("Hitzeerschöpf./Hitzschl.", d.infektHitze),
-            ("Unterkül./Erfrierung",      d.infektUnterku),
-            ("Ertrinken",                 d.infektErtrinken),
-            ("SIDS",                      d.infektSids),
-            ("Intoxikation",              d.infektIntoxikation),
-            ("akute Lumbago",             d.infektAkuteLumbalgie),
-            ("palliative Situation",      d.infektPalliativ),
-            ("med. Behandlungskomplik.",  d.infektBehandlungKompl),
-            ("Epistaxis",                 d.infektEpistaxis),
-            ("urologische Erkrankung",    d.infektUrologisch),
+            ("Anaphylaxie Grad 1/2",      check(d.infektAnaphylaxie12,    "Allergische Reaktion (leicht)")),
+            ("Anaphylaxie Grad 3/4",      check(d.infektAnaphylaxie34,    "Anaphylaxie (schwer)")),
+            ("sept. Schock",              check(d.infektSeptSchock,        "Sepsis / septischer Schock")),
+            ("Hitzeerschöpf./Hitzschl.", check(d.infektHitze,             "Hitzeerschöpfung", "Hitzschlag")),
+            ("Unterkül./Erfrierung",      check(d.infektUnterku,          "Unterkühlung")),
+            ("Ertrinken",                 check(d.infektErtrinken,         "Ertrinken / Beinaheertrinken")),
+            ("SIDS",                      check(d.infektSids,              "SIDS-Verdacht")),
+            ("Intoxikation",              check(d.infektIntoxikation,      "Alkoholintoxikation", "Medikamenten-Intoxikation", "Drogenintoxikation")),
+            ("akute Lumbago",             check(d.infektAkuteLumbalgie,   "Akute Lumbago / Rückenschmerzen")),
+            ("palliative Situation",      check(d.infektPalliativ,         "Palliativversorgung")),
+            ("med. Behandlungskomplik.",  check(d.infektBehandlungKompl,  "Medizinische Behandlungskomplikation")),
+            ("Epistaxis",                 check(d.infektEpistaxis,         "Epistaxis (Nasenbluten)")),
+            ("urologische Erkrankung",    check(d.infektUrologisch,        "Harnwegsinfekt / Urosepsis")),
         ] as [(String,Bool)] { row(l, c, x: c4x, atY: c4y, colW: c4w); c4y += rH }
 
         // ── Trennlinien ────────────────────────────────────────────────────────
@@ -1219,12 +1225,18 @@ struct RKNPDFGenerator {
         hline(lx, diagBottom, W-8)
 
         // ── Diagnose/Leitsymptom ───────────────────────────────────────────────
+        let unmatchedVD = protokoll.diagnose.verdachtsdiagnosen
+            .filter { !matchedNames.contains($0.name) }
+            .map(\.name)
+
         var diagText: [String] = []
         if !d.leitsymptom.isEmpty { diagText.append(d.leitsymptom) }
-        let vd = d.verdachtsdiagnosen.map(\.name).filter { !$0.isEmpty }
-        if !vd.isEmpty { diagText.append("V.a. " + vd.joined(separator: ", ")) }
+        if !unmatchedVD.isEmpty { diagText.append(unmatchedVD.joined(separator: ", ")) }
         if !d.diagnoseFreitext.isEmpty { diagText.append(d.diagnoseFreitext) }
-        labeledField("Diagnose/Leitsymptom", diagText.joined(separator: " · "), x: lx, y: diagBottom, w: W-8, h: 14)
+
+        let joined = diagText.joined(separator: " · ")
+        let fieldH = max(14, min(40, CGFloat(diagText.filter { !$0.isEmpty }.count) * 8 + 4))
+        labeledField("Diagnose/Leitsymptom", joined, x: lx, y: diagBottom, w: W-8, h: fieldH)
     }
     @discardableResult
     private static func drawSection42(protokoll: EinsatzProtokoll, y0: CGFloat) -> CGFloat {
