@@ -355,34 +355,29 @@ struct RKNPDFGenerator {
         cbLabel("mit Patient",  checked: e.mitPatient,   x: gx+18,y: 11, cbSize: 4, labelW: 32)
         cbLabel("Notarzt nachgefordert", checked: e.naAngefordert,  x: gx+1, y: 17, cbSize: 4, labelW: 64)
         hline(gx-2, 23, gw+2)
-        // □Eintr. vor NA / □Eintr. nach NA (Spaltenköpfe)
-        txt("□ Eintr. vor NA",  CGRect(x: gx+1,    y: 24, width: gw/2-2, height: 5), font: small)
-        txt("□ Eintr. nach NA", CGRect(x: gx+gw/2, y: 24, width: gw/2-2, height: 5), font: small)
+        txt("Uhrzeit", CGRect(x: gx+45, y: 24, width: gw-46, height: 5), font: small, align: .center)
         hline(gx-2, 30, gw+2)
 
         // Zeitraster-Zeilen
         let grH: CGFloat = 10
         let lblW: CGFloat = 44
-        let tW = (gw - lblW) / 2
+        let valW = gw - lblW
         var gy: CGFloat = 30
-        let zeilen: [(String, String, String)] = [
-            ("Alarm",          t(e.alarmzeit),    ""),
-            ("Ausfahrt",       t(e.ausfahrtzeit), ""),
-            ("Ankunft",        "",                t(e.ankunftzeit)),
-            ("Alarmierung NA", "",                ""),
-            ("Abfahrt",        "",                t(e.abfahrtzeit)),
-            ("Übergabe",       "",                t(e.uebergabeZeit ?? e.krankenHausAnkunft)),
-            ("Einsatzbereit",  "",                t(e.einsatzbereitZeit)),
-            ("Ende",           "",                t(e.endeZeit)),
+        let zeilen: [(String, String)] = [
+            ("Alarm",         t(e.alarmzeit)),
+            ("Ausfahrt",      t(e.ausfahrtzeit)),
+            ("Ankunft",       t(e.ankunftzeit)),
+            ("Abfahrt",       t(e.abfahrtzeit)),
+            ("Übergabe",      t(e.uebergabeZeit ?? e.krankenHausAnkunft)),
+            ("Einsatzbereit", t(e.einsatzbereitZeit)),
+            ("Ende",          t(e.endeZeit)),
         ]
-        for (label, vVor, vNach) in zeilen {
-            fillR(CGRect(x: gx,      y: gy, width: lblW, height: grH), cLight)
-            strokeR(CGRect(x: gx,    y: gy, width: lblW, height: grH), lw: 0.3)
+        for (label, val) in zeilen {
+            fillR(CGRect(x: gx,   y: gy, width: lblW, height: grH), cLight)
+            strokeR(CGRect(x: gx, y: gy, width: lblW, height: grH), lw: 0.3)
             txt(label, CGRect(x: gx+2, y: gy+2, width: lblW-3, height: 5), font: small)
-            strokeR(CGRect(x: gx+lblW,     y: gy, width: tW, height: grH), lw: 0.3)
-            strokeR(CGRect(x: gx+lblW+tW,  y: gy, width: tW, height: grH), lw: 0.3)
-            txt(vVor,  CGRect(x: gx+lblW+1,    y: gy+2, width: tW-2, height: 5), font: f5b, align: .center)
-            txt(vNach, CGRect(x: gx+lblW+tW+1, y: gy+2, width: tW-2, height: 5), font: f5b, align: .center)
+            strokeR(CGRect(x: gx+lblW, y: gy, width: valW, height: grH), lw: 0.3)
+            txt(val, CGRect(x: gx+lblW+1, y: gy+2, width: valW-2, height: 5), font: f5b, align: .center)
             gy += grH
         }
         // km Gesamt / km Patient (einspaltig)
