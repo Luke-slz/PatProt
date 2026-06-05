@@ -1086,7 +1086,7 @@ struct RKNPDFGenerator {
             ("ICB",                            check(d.znsIcb,          "ICB (Intrakranielle Blutung)")),
             ("SAB",                            check(d.znsSab,          "Subarachnoidalblutung (SAB)")),
             ("Krampfanfall",                   check(d.znsKrampfanfall, "Epilepsie / Krampfanfall")),
-            ("Status Epilepticus",             check(d.znsEpilepsie,    "Epilepsie / Krampfanfall")),
+            ("Status Epilepticus",             check(d.znsEpilepsie)),
             ("Fieberkrampf",                   check(d.znsFieberkrampf, "Fieberkrampf")),
         ] as [(String,Bool)] { row(l, c, x: c1x, atY: c1y, colW: cw); c1y += rH }
 
@@ -1097,7 +1097,7 @@ struct RKNPDFGenerator {
         cbLabel("VW",    checked: d.herzVW,                                          x: c1x+cw*0.50, y: c1y, cbSize: 5, gap: 2, labelW: 16)
         cbLabel("HW",    checked: d.herzHW,                                          x: c1x+cw*0.69, y: c1y, cbSize: 5, gap: 2, labelW: 16)
         c1y += rH
-        row("kardiogener Schock", check(d.herzKardiogenerSchock, "Hypotonie / Schock"), x: c1x, atY: c1y, colW: cw); c1y += rH
+        row("kardiogener Schock", check(d.herzKardiogenerSchock), x: c1x, atY: c1y, colW: cw); c1y += rH
         // Rhythmusstörung □ tachy. □ brady. inline
         cbLabel("Rhythmusstörung", checked: check(d.herzRhythmus,     "Herzrhythmusstörung"), x: c1x,         y: c1y, cbSize: 5, gap: 2, labelW: cw*0.46)
         cbLabel("tachy.",          checked: d.herzRhythmusTachy,                            x: c1x+cw*0.53, y: c1y, cbSize: 5, gap: 2, labelW: 18)
@@ -1111,7 +1111,7 @@ struct RKNPDFGenerator {
             ("Aortenaneurysma",               check(d.herzAortenaneurysma,        "Aortenaneurysma / Dissektion")),
             ("Hypotonie",                     check(d.herzHypotonie,              "Hypotonie / Schock")),
             ("Synkope",                       check(d.herzSynkope,                "Synkope", "Synkope (kardial)")),
-            ("Thrombose/Embolie",             check(d.herzThromboseEmbolie,       "Lungenembolie")),
+            ("Thrombose/Embolie",             check(d.herzThromboseEmbolie)),
             ("Herz-Kreislauf-Stillstand",     check(d.herzStillstand,             "Herz-Kreislauf-Stillstand")),
             ("Schock unklarer Genese",        check(d.herzSchockUnklarGenese,     "Schock unklarer Genese")),
             ("orthostatische Fehlregulation", check(d.herzOrthostatisch,          "Orthostatische Dysregulation")),
@@ -1134,7 +1134,7 @@ struct RKNPDFGenerator {
             ("Hämoptysis",               check(d.atmungHaemoptysis,        "Hämoptysis")),
             ("unkl. Dyspnoe",            check(d.atmungUnklareDyspnoe,     "Unklare Dyspnoe")),
             ("Lungenödem",               check(d.atmungLungenodem,         "Lungenödem (kardial)")),
-            ("Pseudokrupp",              check(d.atmungPseudokrupp,        "Krupp-Syndrom")),
+            ("Pseudokrupp",              check(d.atmungPseudokrupp)),
         ] as [(String,Bool)] { row(l, c, x: c2x, atY: c2y, colW: cw); c2y += rH }
 
         grpHeader("Stoffwechsel", x: c2x, atY: c2y, colW: cw); c2y += ghH
@@ -1211,7 +1211,7 @@ struct RKNPDFGenerator {
             ("Unterkül./Erfrierung",      check(d.infektUnterku,          "Unterkühlung")),
             ("Ertrinken",                 check(d.infektErtrinken,         "Ertrinken / Beinaheertrinken")),
             ("SIDS",                      check(d.infektSids,              "SIDS-Verdacht")),
-            ("Intoxikation",              check(d.infektIntoxikation,      "Alkoholintoxikation", "Medikamenten-Intoxikation", "Drogenintoxikation")),
+            ("Intoxikation",              check(d.infektIntoxikation)),
             ("akute Lumbago",             check(d.infektAkuteLumbalgie,   "Akute Lumbago / Rückenschmerzen")),
             ("palliative Situation",      check(d.infektPalliativ,         "Palliativversorgung")),
             ("med. Behandlungskomplik.",  check(d.infektBehandlungKompl,  "Medizinische Behandlungskomplikation")),
@@ -1231,11 +1231,13 @@ struct RKNPDFGenerator {
 
         var diagText: [String] = []
         if !d.leitsymptom.isEmpty { diagText.append(d.leitsymptom) }
-        if !unmatchedVD.isEmpty { diagText.append(unmatchedVD.joined(separator: ", ")) }
+        if !unmatchedVD.isEmpty { diagText.append("V.a. " + unmatchedVD.joined(separator: ", ")) }
         if !d.diagnoseFreitext.isEmpty { diagText.append(d.diagnoseFreitext) }
 
         let joined = diagText.joined(separator: " · ")
-        let fieldH = max(14, min(40, CGFloat(diagText.filter { !$0.isEmpty }.count) * 8 + 4))
+        let charsPerLine: CGFloat = 80
+        let lines = max(1, (CGFloat(joined.count) / charsPerLine).rounded(.up))
+        let fieldH = max(14, min(40, lines * 7 + 4))
         labeledField("Diagnose/Leitsymptom", joined, x: lx, y: diagBottom, w: W-8, h: fieldH)
     }
     @discardableResult
