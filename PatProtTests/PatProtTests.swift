@@ -432,6 +432,37 @@ struct PatProtTests {
         #expect(comps.year == 1985)
     }
 
+    @Test func kvParserEHIC() {
+        // Rückseite eGK – Vision OCR liefert Feldbezeichner als eigene Zeilen
+        let lines = [
+            "Europäische Krankenversicherungskarte",
+            "European Health Insurance Card",
+            "Nachname(n) / Surname(s)",
+            "MUSTERMANN",
+            "Vorname(n) / Given name(s)",
+            "Max",
+            "Geburtsdatum / Date of birth",
+            "01.01.1970",
+            "Persönliche Kennnummer / Personal identification number",
+            "A123456789",
+            "Kennnummer der zuständigen Institution",
+            "108310400",
+            "Ablaufdatum / Expiry date",
+            "12/2027",
+            "DE",
+            "AOK Bayern"
+        ]
+        let result = KVKarteParser.parse(lines: lines)
+        #expect(result.nachname == "Mustermann")
+        #expect(result.vorname == "Max")
+        #expect(result.versicherungsNummer == "A123456789")
+        #expect(result.kostentraeger == "AOK Bayern")
+        let comps = Calendar.current.dateComponents([.day, .month, .year], from: result.geburtsDatum!)
+        #expect(comps.day == 1)
+        #expect(comps.month == 1)
+        #expect(comps.year == 1970)
+    }
+
     @Test func naAngefordertDefaultFalse() {
         let ort = EinsatzOrt()
         #expect(ort.naAngefordert == false)

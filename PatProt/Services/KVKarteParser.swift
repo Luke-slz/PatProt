@@ -48,7 +48,7 @@ enum KVKarteParser {
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
 
-        for (i, line) in filteredLines.enumerated() {
+        for line in filteredLines {
             let lower = line.lowercased()
 
             // KVNR: 1 uppercase letter + 9 digits, anywhere in the line
@@ -57,8 +57,7 @@ enum KVKarteParser {
                 result.versicherungsNummer = String(line[match])
             }
 
-            // Geburtsdatum: optional * prefix, dann Datum irgendwo in der Zeile suchen
-            // Expiry-Zeilen ("Gültig bis", "Valid until") explizit ausschließen
+            // Geburtsdatum: optional * prefix; exclude expiry lines
             if result.geburtsDatum == nil {
                 let isExpiryLine = lower.hasPrefix("gültig") || lower.hasPrefix("valid until") || lower.hasPrefix("ablauf")
                 if !isExpiryLine {
@@ -67,23 +66,17 @@ enum KVKarteParser {
                 }
             }
 
-            // Skip known card labels
-            guard !knownLabels.contains(where: { lower == $0 || lower.hasPrefix($0 + " ") }),
+            // Skip known card labels and non-text lines
+            guard !isKnownLabel(lower),
                   line.count >= 2,
                   line.contains(where: { $0.isLetter }) else { continue }
 
-            // Skip pure KVNR or date-only lines for name/kassenname logic
             let isKVNR = line.range(of: #"^[A-Z][0-9]{9}$"#, options: .regularExpression) != nil
             let isDate = line.range(of: #"^\*?\d{2}\.\d{2}\.\d{4}$"#, options: .regularExpression) != nil
             guard !isKVNR, !isDate else { continue }
 
-            // Kassenname: first qualifying line (topmost on card after sorting)
-            if result.kostentraeger.isEmpty {
-                result.kostentraeger = line
-                continue
-            }
-
-            // Nachname: first ALL-CAPS line after kassenname
+            // Nachname: first ALL-CAPS line (no internal spaces – distinguishes names from
+            // multi-word institution names like "AOK NORDWEST"); comma format splits both fields.
             if result.nachname.isEmpty, looksLikeNachname(line) {
                 if line.contains(",") {
                     let parts = line.split(separator: ",", maxSplits: 1)
@@ -94,22 +87,21 @@ enum KVKarteParser {
                     }
                 } else {
                     result.nachname = line.capitalized
-                    // Peek ahead for Vorname on the next line
-                    if result.vorname.isEmpty, i + 1 < filteredLines.count {
-                        let next = filteredLines[i + 1]
-                        let nextLower = next.lowercased()
-                        let nextIsLabel = knownLabels.contains(where: { nextLower == $0 || nextLower.hasPrefix($0 + " ") })
-                        if !nextIsLabel, looksLikeVorname(next) {
-                            result.vorname = next
-                        }
-                    }
                 }
                 continue
             }
 
-            // Vorname: first mixed-case line after nachname is known
+            // Vorname: first qualifying mixed-case line once nachname is known.
+            // Checked before kassenname so EHIC layout (kassenname at bottom) works correctly.
             if !result.nachname.isEmpty, result.vorname.isEmpty, looksLikeVorname(line) {
                 result.vorname = line
+                continue
+            }
+
+            // Kassenname: first remaining qualifying line (topmost on front-side cards,
+            // or bottommost on EHIC – whichever appears first in the sorted order).
+            if result.kostentraeger.isEmpty {
+                result.kostentraeger = line
             }
         }
 
@@ -124,19 +116,35 @@ enum KVKarteParser {
         "gültig bis", "valid until", "versicherungsnummer",
         "geburtsdatum", "vorname", "nachname", "zuname", "vor- und zuname",
         "geb.", "geb.datum", "geb.am",
+        // EHIC (Rückseite eGK) Feldbezeichner
+        "persönliche kennnummer", "persönl. kennnummer",
+        "kennnummer der zuständigen", "kennnummer des",
+        "ablaufdatum", "expiry date",
+        "surname", "given name", "date of birth",
+        "personal identification", "identification number",
         "de", "eu"
     ]
 
+    private static func isKnownLabel(_ lower: String) -> Bool {
+        knownLabels.contains(where: {
+            lower == $0
+                || lower.hasPrefix($0 + " ")
+                || lower.hasPrefix($0 + "(")
+                || lower.hasPrefix($0 + "/")
+        })
+    }
+
     private static func looksLikeNachname(_ line: String) -> Bool {
         guard line.count >= 2 else { return false }
-        // Handle "NACHNAME, Vorname" comma format: only the part before the comma must be ALL-CAPS
+        // Comma format "NACHNAME, Vorname": only the part before the comma must be ALL-CAPS
         if line.contains(",") {
             let beforeComma = String(line.prefix(while: { $0 != "," }))
             let allowed = CharacterSet.uppercaseLetters.union(CharacterSet(charactersIn: " -"))
             return beforeComma.unicodeScalars.allSatisfy { allowed.contains($0) }
                 && beforeComma.contains(where: { $0.isLetter })
         }
-        let allowed = CharacterSet.uppercaseLetters.union(CharacterSet(charactersIn: " -"))
+        // No spaces: distinguishes "MUSTERMANN" (nachname) from "AOK NORDWEST" (kassenname)
+        let allowed = CharacterSet.uppercaseLetters.union(CharacterSet(charactersIn: "-"))
         return line.unicodeScalars.allSatisfy { allowed.contains($0) }
             && line.contains(where: { $0.isLetter })
     }
