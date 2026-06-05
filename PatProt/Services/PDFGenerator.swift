@@ -409,7 +409,7 @@ struct DINPDFGenerator {
         // Notarzt-Zeile
         fillRect(CGRect(x:rx1, y:ry, width:rw, height:9), .white)
         strokeRect(CGRect(x:rx1, y:ry, width:rw, height:9))
-        cb("Notarzt nachgefordert", p.einsatzOrt.notarzt, x:rx1+2, y:ry+1, bs:7, lw:80)
+        cb("Notarzt nachgefordert", p.einsatzOrt.naAngefordert, x:rx1+2, y:ry+1, bs:7, lw:80)
         field("Weitere Rettungsmittel", p.einsatzOrt.weitereEinsatzmittel.joined(separator:","),
               x:rx1+rw*0.35, y:ry, w:rw*0.65, h:9, lw:60)
         ry += 9
