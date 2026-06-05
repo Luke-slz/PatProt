@@ -432,6 +432,26 @@ struct PatProtTests {
         #expect(comps.year == 1985)
     }
 
+    @Test func kvParserEHICVornameAllCaps() {
+        // EHIC druckt Vorname AUCH in Großbuchstaben (z.B. "MAX")
+        let lines = [
+            "Europäische Krankenversicherungskarte",
+            "Nachname(n) / Surname(s)",
+            "MUSTERMANN",
+            "Vorname(n) / Given name(s)",
+            "MAX",
+            "Geburtsdatum / Date of birth",
+            "01.01.1970",
+            "A123456789",
+            "DE",
+            "AOK Bayern"
+        ]
+        let result = KVKarteParser.parse(lines: lines)
+        #expect(result.nachname == "Mustermann")
+        #expect(result.vorname == "Max")
+        #expect(result.versicherungsNummer == "A123456789")
+    }
+
     @Test func kvParserEHIC() {
         // Rückseite eGK – Vision OCR liefert Feldbezeichner als eigene Zeilen
         let lines = [

@@ -91,10 +91,12 @@ enum KVKarteParser {
                 continue
             }
 
-            // Vorname: first qualifying mixed-case line once nachname is known.
-            // Checked before kassenname so EHIC layout (kassenname at bottom) works correctly.
-            if !result.nachname.isEmpty, result.vorname.isEmpty, looksLikeVorname(line) {
-                result.vorname = line
+            // Vorname: first qualifying line once nachname is known.
+            // Accepts mixed-case ("Max") AND single-word ALL-CAPS ("MAX") since EHIC cards
+            // print given names in uppercase. .capitalized normalises "MAX" → "Max".
+            if !result.nachname.isEmpty, result.vorname.isEmpty,
+               looksLikeVorname(line) || looksLikeNachname(line) {
+                result.vorname = line.capitalized
                 continue
             }
 
