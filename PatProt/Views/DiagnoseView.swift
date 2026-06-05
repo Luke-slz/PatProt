@@ -12,18 +12,27 @@ struct DiagnoseKategorie: Identifiable {
             "Schlaganfall / Apoplex", "TIA (transitorische ischämische Attacke)",
             "Epilepsie / Krampfanfall", "Fieberkrampf", "Synkope",
             "Bewusstlosigkeit unklarer Genese", "Meningitis / Enzephalitis",
-            "Migräne / Kopfschmerz", "Subarachnoidalblutung (SAB)"
+            "Migräne / Kopfschmerz", "Subarachnoidalblutung (SAB)",
+            "ICB (Intrakranielle Blutung)"
         ]),
         DiagnoseKategorie(name: "Herz-Kreislauf Erkrankungen", diagnosen: [
             "ACS / Herzinfarkt (STEMI)", "ACS / Herzinfarkt (NSTEMI)",
             "Angina pectoris", "Herzrhythmusstörung", "Herzinsuffizienz / Dekompensation",
             "Hypertensive Krise", "Hypotonie / Schock", "Lungenembolie",
-            "Synkope (kardial)", "Aortenaneurysma / Dissektion", "Perikarditis"
+            "Synkope (kardial)", "Aortenaneurysma / Dissektion", "Perikarditis",
+            "PM / ICD-Fehlfunktion",
+            "Herz-Kreislauf-Stillstand",
+            "Schock unklarer Genese",
+            "Orthostatische Dysregulation",
+            "Unklarer Thoraxschmerz"
         ]),
         DiagnoseKategorie(name: "Atemwegserkrankungen", diagnosen: [
             "COPD-Exazerbation", "Asthma-Anfall", "Pneumonie",
             "Lungenödem (kardial)", "Lungenembolie", "Hyperventilation",
-            "Fremdkörperaspiration", "Epiglottitis", "Krupp-Syndrom"
+            "Fremdkörperaspiration", "Epiglottitis", "Krupp-Syndrom",
+            "Spontanpneumothorax",
+            "Hämoptysis",
+            "Unklare Dyspnoe"
         ]),
         DiagnoseKategorie(name: "Abdominelle Erkrankungen", diagnosen: [
             "Akutes Abdomen", "Appendizitisverdacht", "Übelkeit / Erbrechen",
@@ -34,12 +43,14 @@ struct DiagnoseKategorie: Identifiable {
             "Akute Psychose / Erregungszustand", "Suizidversuch",
             "Alkoholintoxikation", "Medikamenten-Intoxikation",
             "Drogenintoxikation", "Panikattacke",
-            "Psychiatrische Krise", "Manie", "Alkoholentzugsdelir"
+            "Psychiatrische Krise", "Manie", "Alkoholentzugsdelir",
+            "Depressionen"
         ]),
         DiagnoseKategorie(name: "Stoffwechsel Erkrankungen", diagnosen: [
             "Hypoglykämie", "Hyperglykämie", "Diabetisches Koma",
             "Elektrolytentgleisung", "Exsikkose / Dehydration",
-            "Schilddrüsenkrise", "Addison-Krise", "Urämie"
+            "Schilddrüsenkrise", "Addison-Krise", "Urämie",
+            "Dialysepflicht / Niereninsuffizienz"
         ]),
         DiagnoseKategorie(name: "Gyn-/Geburtshilfe Notfälle", diagnosen: [
             "Drohende / stattfindende Geburt", "Schwangerschaftskomplikation",
@@ -49,23 +60,33 @@ struct DiagnoseKategorie: Identifiable {
         DiagnoseKategorie(name: "sonst. Erkrankungen", diagnosen: [
             "Allergische Reaktion (leicht)", "Anaphylaxie (schwer)",
             "Hitzeerschöpfung", "Hitzschlag", "Unterkühlung",
-            "Ertrinken / Beinaheertrinken", "SIDS-Verdacht", "Palliativversorgung"
+            "Ertrinken / Beinaheertrinken", "SIDS-Verdacht", "Palliativversorgung",
+            "Akute Lumbago / Rückenschmerzen",
+            "Medizinische Behandlungskomplikation",
+            "Epistaxis (Nasenbluten)"
         ]),
         DiagnoseKategorie(name: "Infektionen", diagnosen: [
             "Sepsis / septischer Schock", "Fieber unklarer Genese",
             "Meningitis (bakteriell)", "Gastroenteritis",
             "Pneumonie (infektiös)", "COVID-19 / SARS",
-            "Harnwegsinfekt / Urosepsis"
+            "Harnwegsinfekt / Urosepsis",
+            "MRE (multiresistente Erreger)",
+            "Hepatitis",
+            "HIV / AIDS",
+            "Tuberkulose (TBC)",
+            "MRSA offen",
+            "MRSA gedeckt"
         ]),
-        DiagnoseKategorie(name: "Traumen und Verletzungen", diagnosen: [
-            "SHT leicht (Commotio)", "SHT mittel", "SHT schwer",
-            "Wirbelsäulenverletzung", "Thoraxtrauma",
-            "Abdominaltrauma", "Beckentrauma",
-            "Extremitätentrauma", "Polytrauma",
-            "Verbrennung / Verbrühung", "Stromunfall",
-            "Tauchunfall / Barotrauma", "Einzelverletzung (oberflächlich)"
-        ])
     ]
+
+    static let trauma = DiagnoseKategorie(name: "Traumen und Verletzungen", diagnosen: [
+        "SHT leicht (Commotio)", "SHT mittel", "SHT schwer",
+        "Wirbelsäulenverletzung", "Thoraxtrauma",
+        "Abdominaltrauma", "Beckentrauma",
+        "Extremitätentrauma", "Polytrauma",
+        "Verbrennung / Verbrühung", "Stromunfall",
+        "Tauchunfall / Barotrauma", "Einzelverletzung (oberflächlich)"
+    ])
 }
 
 // MARK: - Hauptliste
@@ -131,6 +152,33 @@ struct DiagnoseView: View {
                         }
                     }
                 }
+            }
+
+            // ── Verletzungen ─────────────────────────────────
+            Section {
+                NavigationLink {
+                    VerletzungenView(befund: $befund)
+                } label: {
+                    HStack {
+                        Label("Verletzungen / Unfallart", systemImage: "cross.case")
+                        Spacer()
+                        let anzahl = befund.verletzungsMatrix.betroffeneRegionen
+                        let flags: [Bool] = [
+                            befund.verletzungEinzel, befund.verletzungMehrfach, befund.verletzungPolytrauma,
+                            befund.spezVerbrVerbrh, befund.spezInhalationstrauma, befund.spezElektrounfall,
+                            befund.spezVeraetzung, befund.spezTauchunfall, befund.spezPkwLkw,
+                            befund.spezSchlag, befund.spezSchuss, befund.spezStich,
+                            befund.spezVerschuettung, befund.verletzungNichtBekannt
+                        ]
+                        let ausgefuellt = anzahl > 0 || flags.contains(true)
+                        if ausgefuellt {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                        }
+                    }
+                }
+            } header: {
+                Label("Verletzungen", systemImage: "bandage")
             }
 
             Section {
