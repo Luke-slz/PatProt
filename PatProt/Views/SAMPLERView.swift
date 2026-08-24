@@ -57,22 +57,27 @@ struct SAMPLERView: View {
                     if let fehler = scanFehler {
                         Text(fehler).font(.caption).foregroundColor(.red)
                     }
-                    Button {
-                        zeigeBMPScanner = true
-                    } label: {
-                        Label("Medikationsplan QR scannen", systemImage: "qrcode.viewfinder")
-                            .font(.subheadline)
-                    }
-                    .sheet(isPresented: $zeigeBMPScanner) {
-                        BMPScannerSheet { payload in
-                            if let text = BMPParser.medikamenteText(payload) {
-                                befund.medikamente = text
-                                scanFehler = nil
-                            } else {
-                                scanFehler = "Kein gültiger BMP-Medikationsplan erkannt."
-                            }
-                        }
-                    }
+                    // TODO: BMP-QR-Scan-Feature (BMPScannerSheet / BMPParser) ist noch nicht
+                    // implementiert – auskommentiert, um den Build für den TestFlight-Upload
+                    // zu entsperren. Vor dem Wiederaktivieren erst BMPScannerSheet und
+                    // BMPParser fertig implementieren (analog zu KVKarteScanView / KVKarteParser).
+                    //
+                    // Button {
+                    //     zeigeBMPScanner = true
+                    // } label: {
+                    //     Label("Medikationsplan QR scannen", systemImage: "qrcode.viewfinder")
+                    //         .font(.subheadline)
+                    // }
+                    // .sheet(isPresented: $zeigeBMPScanner) {
+                    //     BMPScannerSheet { payload in
+                    //         if let text = BMPParser.medikamenteText(payload) {
+                    //             befund.medikamente = text
+                    //             scanFehler = nil
+                    //         } else {
+                    //             scanFehler = "Kein gültiger BMP-Medikationsplan erkannt."
+                    //         }
+                    //     }
+                    // }
                     Text("→ PDF S. 1 · SAMPLER · M").font(.caption2).foregroundColor(.secondary)
                     Divider()
                     Text("Medikamentenplan als Foto").font(.caption).foregroundColor(.secondary)
